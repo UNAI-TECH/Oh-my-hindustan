@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.navigation.NavController
 import com.viewer.app.ui.components.AppBottomNavBar
 import com.viewer.app.ui.theme.*
@@ -28,7 +29,7 @@ fun CreatorDashboardScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Creator Studio", fontWeight = FontWeight.Bold) },
+                title = { Text("Analyst Studio", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.Menu, null)
@@ -59,95 +60,82 @@ fun CreatorDashboardScreen(navController: NavController) {
                 .padding(16.dp)
         ) {
             // Welcome Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("Welcome back, Jane", style = MaterialTheme.typography.headlineSmall)
-                    Text("Here's your channel update", style = MaterialTheme.typography.bodySmall, color = Slate500)
-                }
-                Button(
-                    onClick = { navController.navigate("content_editor") },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                    contentPadding = PaddingValues(0.dp),
-                    modifier = Modifier.height(44.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Brush.horizontalGradient(listOf(WarmOrange, PrimaryRed)), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Upload, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Upload", color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text("Welcome back, Kamal", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Analyst performance for the last 28 days", style = MaterialTheme.typography.bodySmall, color = Slate500)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Stats Grid
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                CreatorStatCard("Subscribers", "124,502", "+12%", Modifier.weight(1f))
-                CreatorStatCard("Total Views", "1.2M", "+8%", Modifier.weight(1f))
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                CreatorStatCard("Watch Time", "45.2K", "-2%", Modifier.weight(1f), isNegative = true)
-                CreatorStatCard("Revenue", "$3,420", "+24%", Modifier.weight(1f))
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Recent Videos
+            // Main Analytics Card
             Surface(
                 color = Color.White,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9))
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(20.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Recent Videos", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("See all", color = PrimaryRed, style = MaterialTheme.typography.labelLarge)
+                        Column {
+                            Text("Total Briefing Reach", style = MaterialTheme.typography.labelMedium, color = Slate500)
+                            Text("1,245,602", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+                        }
+                        Surface(
+                            color = Color(0xFF16A34A).copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                "↑ 12.5%", 
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                color = Color(0xFF16A34A),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    RecentVideoRow("How to design better UI in 2024", "12,450", "342", "1.2K")
-                    HorizontalDivider(color = Color(0xFFF8FAFC), modifier = Modifier.padding(vertical = 12.dp))
-                    RecentVideoRow("10 Tips for Creative Growth", "45,210", "891", "4.5K")
-                    HorizontalDivider(color = Color(0xFFF8FAFC), modifier = Modifier.padding(vertical = 12.dp))
-                    RecentVideoRow("Monetizing your passion", "8,902", "156", "902")
+                    Spacer(modifier = Modifier.height(20.dp))
+                    // Simple Chart Placeholder
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .background(PrimaryRed.copy(alpha = 0.03f), RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Analytics Visualization", color = PrimaryRed.copy(alpha = 0.3f), style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Action Cards
-            CreatorActionCard(
-                "Upload New Video", 
-                "Share your latest masterpiece", 
-                Icons.Default.VideoCall, 
-                WarmOrange,
-                onClick = { navController.navigate("content_editor") }
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            CreatorActionCard(
-                "Write New Blog", 
-                "Engage your audience with text", 
-                Icons.Default.EditNote, 
-                PrimaryRed,
-                onClick = { navController.navigate("content_editor") }
-            )
+            // Secondary Stats
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                CreatorMiniStat("Followers", "12.4k", "+240", Modifier.weight(1f))
+                CreatorMiniStat("Engagement", "4.2k hr", "+12%", Modifier.weight(1f))
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Quick Actions
+            Text("Quick Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(modifier = Modifier.weight(1f)) {
+                    CreatorSquareAction("New Briefing", Icons.Default.Campaign, WarmOrange) { navController.navigate("content_editor") }
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    CreatorSquareAction("Policy Analysis", Icons.Default.EditNote, PrimaryRed) { navController.navigate("content_editor") }
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    CreatorSquareAction("Political Live", Icons.Default.Podcasts, Color(0xFF9333EA)) {}
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
             
             Spacer(modifier = Modifier.height(100.dp))
         }
@@ -155,7 +143,7 @@ fun CreatorDashboardScreen(navController: NavController) {
 }
 
 @Composable
-fun CreatorStatCard(label: String, value: String, change: String, modifier: Modifier, isNegative: Boolean = false) {
+fun CreatorMiniStat(label: String, value: String, change: String, modifier: Modifier) {
     Surface(
         modifier = modifier,
         color = Color.White,
@@ -163,25 +151,39 @@ fun CreatorStatCard(label: String, value: String, change: String, modifier: Modi
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = Slate500)
+            Text(label, style = MaterialTheme.typography.labelSmall, color = Slate500)
             Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.width(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        if (isNegative) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
-                        null,
-                        modifier = Modifier.size(12.dp),
-                        tint = if (isNegative) Color.Red else Color(0xFF16A34A)
-                    )
-                    Text(
-                        change,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isNegative) Color.Red else Color(0xFF16A34A)
-                    )
-                }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(change, style = MaterialTheme.typography.labelSmall, color = Color(0xFF16A34A))
             }
+        }
+    }
+}
+
+@Composable
+fun CreatorSquareAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        color = Color.White,
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.2f))
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Surface(
+                color = color.copy(alpha = 0.1f),
+                shape = CircleShape,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(icon, null, tint = color, modifier = Modifier.padding(10.dp))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         }
     }
 }

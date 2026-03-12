@@ -5,7 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -41,26 +41,21 @@ fun SplashScreen(navController: NavController) {
                 .border(1.dp, PrimaryRed.copy(alpha = 0.2f), RoundedCornerShape(24.dp)),
             contentAlignment = Alignment.Center
         ) {
-            AsyncImage(
-                model = "https://lh3.googleusercontent.com/aida-public/AB6AXuDfPpBi7n7KtkXvzgbNg5DbRu2UTV4kGF5wR0fFLc1ZPmue3yutAOInzZRMZrnV5yHUqTrZsjZ7mvNUXA3uIEPSPxajGg4I9AiBedesosZ3m0hYge4drLEHS_eoK936wmYTVx4QtiXbSJVhVZGtkYr0pnSgWmOGIavhdci826FW_Gm6R4kn9lPSoRmhlJc0YGWOmc5VT-M2VcorrPztunE3eYp-hCX8EHXO5i3nB_ey6UPejit43I72OVSEr1nuQn2AqRhTMWXbNkfF",
-                contentDescription = "Logo Image",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
             Icon(
-                imageVector = Icons.Default.PlayCircle,
+                imageVector = Icons.Default.Public,
                 contentDescription = null,
-                modifier = Modifier.size(60.dp),
-                tint = PrimaryRed.copy(alpha = 0.2f)
+                modifier = Modifier.size(120.dp),
+                tint = PrimaryRed
             )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Cinema in your pocket.",
+            text = "Jan Samvad",
             style = MaterialTheme.typography.displayLarge.copy(
-                fontSize = 30.sp,
+                fontSize = 36.sp,
+                fontWeight = FontWeight.ExtraBold,
                 textAlign = TextAlign.Center
             ),
             modifier = Modifier.padding(horizontal = 16.dp)
@@ -69,7 +64,7 @@ fun SplashScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Discover, watch, and share the best short films from around the globe.",
+            text = "Empowering every citizen with real political insights, news, and debate.",
             style = MaterialTheme.typography.bodyLarge.copy(
                 color = Color.Gray,
                 textAlign = TextAlign.Center

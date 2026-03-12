@@ -25,7 +25,7 @@ fun AdminOverviewScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("ADMIN_HUB", fontWeight = FontWeight.Bold) },
+                title = { Text("GOVERNANCE_HUB", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     Surface(color = PrimaryRed, shape = RoundedCornerShape(8.dp), modifier = Modifier.padding(8.dp).size(32.dp)) {
                         Icon(Icons.Default.DashboardCustomize, null, tint = Color.White, modifier = Modifier.padding(4.dp))
@@ -50,20 +50,20 @@ fun AdminOverviewScreen(navController: NavController) {
                 .padding(16.dp)
         ) {
             // Header
-            Text("Dashboard Overview", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("System level statistics", style = MaterialTheme.typography.bodySmall, color = Slate500)
+            Text("Governance Overview", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("National level platform statistics", style = MaterialTheme.typography.bodySmall, color = Slate500)
             
             Spacer(modifier = Modifier.height(24.dp))
 
             // KPI Cards
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                AdminKpiCard("Total Users", "125,432", "+12.5%", Icons.Default.Person, Color(0xFFE0F2FE), Color(0xFF0284C7), Modifier.weight(1f))
-                AdminKpiCard("Active Today", "12,240", "+5.2%", Icons.Default.Bolt, Color(0xFFDCFCE7), Color(0xFF16A34A), Modifier.weight(1f))
+                AdminKpiCard("Verified Citizens", "125,432", "+12.5%", Icons.Default.Person, Color(0xFFE0F2FE), Color(0xFF0284C7), Modifier.weight(1f))
+                AdminKpiCard("Active Debates", "12,240", "+5.2%", Icons.Default.Bolt, Color(0xFFDCFCE7), Color(0xFF16A34A), Modifier.weight(1f))
             }
             Spacer(modifier = Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                AdminKpiCard("Total Revenue", "$45.2K", "+18.1%", Icons.Default.MonetizationOn, Color(0xFFFEF3C7), Color(0xFFD97706), Modifier.weight(1f))
-                AdminKpiCard("Moderation", "12 New", "Queue", Icons.Default.Flag, Color(0xFFFEE2E2), Color(0xFFDC2626), Modifier.weight(1f))
+                AdminKpiCard("Platform Fund", "₹4.52Cr", "+18.1%", Icons.Default.AccountBalance, Color(0xFFFEF3C7), Color(0xFFD97706), Modifier.weight(1f))
+                AdminKpiCard("Fact Check", "12 New", "Queue", Icons.Default.FactCheck, Color(0xFFFEE2E2), Color(0xFFDC2626), Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -75,14 +75,14 @@ fun AdminOverviewScreen(navController: NavController) {
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Recent Payments", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Recent Contributions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    AdminPaymentRow("johndoe", "$49.99", "Completed", Color(0xFFDCFCE7), Color(0xFF16A34A))
+                    AdminPaymentRow("amit_s", "₹499", "Verified", Color(0xFFDCFCE7), Color(0xFF16A34A))
                     HorizontalDivider(color = Color(0xFFF8FAFC), modifier = Modifier.padding(vertical = 12.dp))
-                    AdminPaymentRow("sarah_w", "$120.00", "Pending", Color(0xFFFEF3C7), Color(0xFFD97706))
+                    AdminPaymentRow("raj_bjp", "₹1,200", "Review", Color(0xFFFEF3C7), Color(0xFFD97706))
                     HorizontalDivider(color = Color(0xFFF8FAFC), modifier = Modifier.padding(vertical = 12.dp))
-                    AdminPaymentRow("mike_r", "$15.50", "Completed", Color(0xFFDCFCE7), Color(0xFF16A34A))
+                    AdminPaymentRow("priya_m", "₹150", "Verified", Color(0xFFDCFCE7), Color(0xFF16A34A))
                 }
             }
 
@@ -94,7 +94,7 @@ fun AdminOverviewScreen(navController: NavController) {
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryRed),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("View Monetization Details", fontWeight = FontWeight.Bold)
+                Text("View Economic Details", fontWeight = FontWeight.Bold)
             }
             
             Spacer(modifier = Modifier.height(32.dp))
@@ -133,7 +133,7 @@ fun AdminPaymentRow(user: String, amount: String, status: String, statusBg: Colo
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text("@$user", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-            Text("Subscription", style = MaterialTheme.typography.labelSmall, color = Slate400)
+            Text("Citizen Support", style = MaterialTheme.typography.labelSmall, color = Slate400)
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(amount, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)

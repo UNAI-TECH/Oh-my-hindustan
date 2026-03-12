@@ -19,10 +19,15 @@ fun AppBottomNavBar(navController: NavController, currentRoute: String?) {
         tonalElevation = 8.dp
     ) {
         val items = listOf(
-            BottomNavItem("Home", "home", Icons.Default.Home),
+            BottomNavItem("Briefings", "home", Icons.Default.Home),
             BottomNavItem("Explore", "explore", Icons.Default.Explore),
+<<<<<<< HEAD
             BottomNavItem("Post", "content_editor", Icons.Default.AddBox),
             BottomNavItem("Library", "library", Icons.Default.Bookmarks),
+=======
+            BottomNavItem("Analyst", "content_editor", Icons.Default.Campaign), // Replaced Post icon
+            BottomNavItem("Archive", "profile", Icons.Default.History), // Replaced Library icon
+>>>>>>> 4473c6944d3e177f6118396c8a9049ea75a78d9e
             BottomNavItem("Profile", "profile", Icons.Default.Person)
         )
 
@@ -30,7 +35,7 @@ fun AppBottomNavBar(navController: NavController, currentRoute: String?) {
             val isSelected = currentRoute == item.route
             NavigationBarItem(
                 icon = { 
-                    if (item.label == "Post") {
+                    if (item.label == "Analyst") {
                         Surface(
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                             color = PrimaryRed,
@@ -47,7 +52,7 @@ fun AppBottomNavBar(navController: NavController, currentRoute: String?) {
                         Icon(item.icon, contentDescription = item.label)
                     }
                 },
-                label = { if (item.label != "Post") Text(item.label, style = MaterialTheme.typography.labelSmall) },
+                label = { if (item.label != "Analyst") Text(item.label, style = MaterialTheme.typography.labelSmall) },
                 selected = isSelected,
                 onClick = {
                     if (currentRoute != item.route) {

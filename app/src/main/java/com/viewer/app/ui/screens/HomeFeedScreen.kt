@@ -60,13 +60,32 @@ fun HomeFeedScreen(navController: NavController) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
                             color = PrimaryRed,
-                            shape = RoundedCornerShape(4.dp),
+                            shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.size(32.dp)
                         ) {
+<<<<<<< HEAD
                             Icon(Icons.Default.GridView, null, tint = Color.White, modifier = Modifier.padding(4.dp))
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("VIEWER", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = PrimaryRed))
+=======
+                            Icon(
+                                Icons.Default.Public,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.padding(4.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "JAN SAMVAD",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 1.sp,
+                                color = PrimaryRed
+                            )
+                        )
+>>>>>>> 4473c6944d3e177f6118396c8a9049ea75a78d9e
                     }
                 },
                 actions = {
