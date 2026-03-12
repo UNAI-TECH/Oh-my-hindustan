@@ -13,6 +13,9 @@ fun NavigationGraph() {
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash") { SplashScreen(navController) }
         composable("login") { LoginScreen(navController) }
+        composable("signup") { SignUpScreen(navController) }
+        composable("profile_setup") { ProfileSetupScreen(navController) }
+        composable("interests_selection") { InterestsSelectionScreen(navController) }
         composable("home") { HomeFeedScreen(navController) }
         composable("article_detail/{articleId}") { backStackEntry -> 
             val articleId = backStackEntry.arguments?.getString("articleId")

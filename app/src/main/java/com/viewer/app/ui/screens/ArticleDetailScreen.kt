@@ -63,7 +63,7 @@ fun ArticleDetailScreen(navController: NavController, articleId: String?) {
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            "INSIGHTS",
+                            "POLICY ANALYSIS",
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             style = MaterialTheme.typography.labelMedium,
                             color = PrimaryRed,
@@ -72,7 +72,7 @@ fun ArticleDetailScreen(navController: NavController, articleId: String?) {
                     }
                     Spacer(modifier = Modifier.height(20.dp))
                     Text(
-                        text = "The Future of Sustainable Urban Development in Modern Metropolises",
+                        text = "The Future of Digital Governance: Building a Viksit Bharat by 2047",
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.ExtraBold,
                         lineHeight = 44.sp,
@@ -89,8 +89,8 @@ fun ArticleDetailScreen(navController: NavController, articleId: String?) {
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Elena Rostova", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text("Published 2 hours ago • 8 min read", style = MaterialTheme.typography.labelSmall, color = Slate500)
+                            Text("Amit Sharma", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("Political Analyst • 2 hours ago • 8 min read", style = MaterialTheme.typography.labelSmall, color = Slate500)
                         }
                         Button(
                             onClick = {},
@@ -118,13 +118,13 @@ fun ArticleDetailScreen(navController: NavController, articleId: String?) {
                 // Article Body
                 Column(modifier = Modifier.padding(24.dp)) {
                     Text(
-                        text = "As urban populations continue to surge, the architectural landscape of our cities is undergoing a radical transformation. Beyond the glass and steel of yesterday, a new paradigm is emerging—one that prioritizes biological integration and sustainable infrastructure.",
+                        text = "As India marches towards becoming a developed nation by 2047, the role of digital infrastructure cannot be overstated. The 'Digital India' initiative has already laid a robust foundation, transforming how citizens interact with governance and access essential services.",
                         style = MaterialTheme.typography.bodyLarge,
                         lineHeight = 28.sp
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
-                        text = "Architects and urban planners are now looking toward \"living buildings\" that can process their own waste and generate energy. This shift isn't just aesthetic; it's a necessary evolution in response to the climate challenges of the 21st century.",
+                        text = "From G2C interactions to the democratization of information, the digital revolution is empowering every Indian. The focus is now shifting towards AI-driven governance and a fully integrated national data ecosystem that ensures transparency and efficiency.",
                         style = MaterialTheme.typography.bodyLarge,
                         lineHeight = 28.sp
                     )
@@ -139,7 +139,7 @@ fun ArticleDetailScreen(navController: NavController, articleId: String?) {
                         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
                             Box(modifier = Modifier.width(4.dp).fillMaxHeight().background(PrimaryRed))
                             Text(
-                                "\"The city of tomorrow is not a machine for living, but an ecosystem for thriving.\"",
+                                "\"Digital governance is not just about technology; it's about shifting the paradigm of service delivery to every corner of the nation.\"",
                                 modifier = Modifier.padding(24.dp),
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
@@ -151,7 +151,7 @@ fun ArticleDetailScreen(navController: NavController, articleId: String?) {
                     
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
-                        text = "The integration of vertical forests, carbon-sequestering concrete, and micro-grid energy systems is becoming standard practice in new high-density developments. These innovations are paving the way for a more resilient urban future.",
+                        text = "The vision for 2047 involves a paperless, faceless, and cashless governance model that reaches the last mile. This journey of Viksit Bharat is fueled by innovation and the collective spirit of 1.4 billion Indians.",
                         style = MaterialTheme.typography.bodyLarge,
                         lineHeight = 28.sp
                     )

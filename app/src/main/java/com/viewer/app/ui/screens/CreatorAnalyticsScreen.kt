@@ -33,7 +33,7 @@ fun CreatorAnalyticsScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Creator Analytics", fontWeight = FontWeight.Bold) },
+                title = { Text("Briefing Insights", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.Analytics, null, tint = PrimaryRed)
@@ -67,13 +67,13 @@ fun CreatorAnalyticsScreen(navController: NavController) {
 
             // Quick Stats
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                SmallStatCard("Total Views", "1.2M", "+12%", Modifier.weight(1f))
-                SmallStatCard("Watch Time", "45.2K", "+8%", Modifier.weight(1f))
+                SmallStatCard("Briefing Reach", "1.2M", "+12%", Modifier.weight(1f))
+                SmallStatCard("Engagement", "45.2K", "+8%", Modifier.weight(1f))
             }
             Spacer(modifier = Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                SmallStatCard("New Subs", "2,480", "-2%", Modifier.weight(1f), isNegative = true)
-                SmallStatCard("Revenue", "$12.4K", "+15%", Modifier.weight(1f))
+                SmallStatCard("New Followers", "2,480", "-2%", Modifier.weight(1f), isNegative = true)
+                SmallStatCard("Influence", "12.4K", "+15%", Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -85,7 +85,7 @@ fun CreatorAnalyticsScreen(navController: NavController) {
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9))
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
-                    Text("Views over time", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Reach over time", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(24.dp))
                     Box(modifier = Modifier.fillMaxWidth().height(160.dp)) {
                         Canvas(modifier = Modifier.fillMaxSize()) {

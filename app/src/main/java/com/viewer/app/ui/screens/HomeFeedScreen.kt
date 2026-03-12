@@ -44,11 +44,11 @@ fun HomeFeedScreen(navController: NavController) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
                             color = PrimaryRed,
-                            shape = RoundedCornerShape(4.dp),
+                            shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                Icons.Default.GridView,
+                                Icons.Default.Public,
                                 contentDescription = null,
                                 tint = Color.White,
                                 modifier = Modifier.padding(4.dp)
@@ -56,10 +56,10 @@ fun HomeFeedScreen(navController: NavController) {
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "VIEWER",
+                            "JAN SAMVAD",
                             style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.5.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 1.sp,
                                 color = PrimaryRed
                             )
                         )

@@ -29,7 +29,7 @@ fun CreatorDashboardScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Creator Studio", fontWeight = FontWeight.Bold) },
+                title = { Text("Analyst Studio", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.Menu, null)
@@ -61,8 +61,8 @@ fun CreatorDashboardScreen(navController: NavController) {
         ) {
             // Welcome Header
             Column(modifier = Modifier.fillMaxWidth()) {
-                Text("Welcome back, Jane", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text("Channel performance for the last 28 days", style = MaterialTheme.typography.bodySmall, color = Slate500)
+                Text("Welcome back, Kamal", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Analyst performance for the last 28 days", style = MaterialTheme.typography.bodySmall, color = Slate500)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -80,7 +80,7 @@ fun CreatorDashboardScreen(navController: NavController) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("Total Channel Views", style = MaterialTheme.typography.labelMedium, color = Slate500)
+                            Text("Total Briefing Reach", style = MaterialTheme.typography.labelMedium, color = Slate500)
                             Text("1,245,602", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
                         }
                         Surface(
@@ -114,8 +114,8 @@ fun CreatorDashboardScreen(navController: NavController) {
 
             // Secondary Stats
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                CreatorMiniStat("Subscribers", "12.4k", "+240", Modifier.weight(1f))
-                CreatorMiniStat("Watch Time", "4.2k hr", "+12%", Modifier.weight(1f))
+                CreatorMiniStat("Followers", "12.4k", "+240", Modifier.weight(1f))
+                CreatorMiniStat("Engagement", "4.2k hr", "+12%", Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -125,13 +125,13 @@ fun CreatorDashboardScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(modifier = Modifier.weight(1f)) {
-                    CreatorSquareAction("Upload Video", Icons.Default.VideoCall, WarmOrange) { navController.navigate("content_editor") }
+                    CreatorSquareAction("New Briefing", Icons.Default.Campaign, WarmOrange) { navController.navigate("content_editor") }
                 }
                 Box(modifier = Modifier.weight(1f)) {
-                    CreatorSquareAction("Write Blog", Icons.Default.EditNote, PrimaryRed) { navController.navigate("content_editor") }
+                    CreatorSquareAction("Policy Analysis", Icons.Default.EditNote, PrimaryRed) { navController.navigate("content_editor") }
                 }
                 Box(modifier = Modifier.weight(1f)) {
-                    CreatorSquareAction("Live Stream", Icons.Default.Podcasts, Color(0xFF9333EA)) {}
+                    CreatorSquareAction("Political Live", Icons.Default.Podcasts, Color(0xFF9333EA)) {}
                 }
             }
 

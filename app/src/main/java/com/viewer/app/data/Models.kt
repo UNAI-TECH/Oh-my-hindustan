@@ -25,7 +25,7 @@ object SampleData {
         FeedItem(
             id = "1",
             type = FeedItemType.NEWS,
-            title = "Global Tech Summit 2024: AI Regulation Takes Center Stage",
+            title = "BJP set to announce major economic policy for 2024",
             category = "Breaking News",
             timestamp = "2h ago",
             votes = "12.4k",
@@ -35,35 +35,35 @@ object SampleData {
         FeedItem(
             id = "2",
             type = FeedItemType.VIDEO,
-            title = "The Future of Minimalist UI Design: Trends for 2025",
-            subtitle = "Design Insider • 458k views • 1 day ago",
-            authorName = "Design Insider",
+            title = "Inside Look: The Digital India Transformation",
+            subtitle = "News Hub • 1.2M views • 2 hours ago",
+            authorName = "Political Analyst",
             authorImage = "https://lh3.googleusercontent.com/aida-public/AB6AXuDAopBRY6ijsAKZORCF7EklqIRL1BD4G5MdVEf_sdSpKtsL8YMiDEkQNGqMWykYHmSF_u2WnQPflfk46IT9plwZ0o7Wi8AOI36dTmLGfAfIB7n_oB_Qpbl34uoAmgbKsaWgd9lo0plZ26kSXt7MLA707yvhmpy9BePXUQBSfG_4ppJmuodjRrgmv6k10NSWrVa97o9vC3YDm4A66LTVO-tCgvG5vbrDpnVJSjs1zezyiaNjySkb4rpVNkGsf7DfqjV7u5hDYhbUzsdM",
             thumbnail = "https://lh3.googleusercontent.com/aida-public/AB6AXuBK2jFvIsnmaW1R3KrYGmPsp4nXywhmtdTVhbT_UU6S8pIDXWpcQr3nGvuz9JMrMNUcUuaj3k_zXwSCsj_YV35sgIGOP3xkRv9antEeS5g47dFJKbOlE0JoBIHw5j6l5S9O-4EkuQhZTCa-ja276H-PeC4H7Hp8mWg9-lIpsPVoBCVaR_uhgY9_Dv32QIvvNwd-tSgPRRIknt4UPumtgqa7pLRRUGCaRdV-zvtvo7uhibziwZKy9g1TBo5O0SChYUSoumbMNBPMl5g0",
-            videoDuration = "14:22"
+            videoDuration = "10:45"
         ),
         FeedItem(
             id = "3",
             type = FeedItemType.BLOG,
-            title = "Exploring the intersection of form and function in modern apps.",
-            excerpt = "Minimalism isn't just about white space anymore. It's about reducing cognitive load through intelligent motion and contextual layouts...",
-            authorName = "Jane Doe",
-            subtitle = "in Design Matters",
+            title = "Why Atmanirbhar Bharat is the key to India's future.",
+            excerpt = "Understanding the shift towards self-reliance in manufacturing and technology and how it strengthens national security...",
+            authorName = "Expert Voice",
+            subtitle = "in Policy Matters",
             authorImage = "https://lh3.googleusercontent.com/aida-public/AB6AXuBb-o9NdcF70jNcEQ3X2H_XUtZa4RnVthLcJWwq3gKgt0ByjZTXV6MMnYJhpbu8wCusPeMy1n3pJFMt1T5dTLBtIyRUtRZmj4K1LHJDMmv2DaWsCxMpNsi8BzyfvH2plhtcG3n4DOWA24S-9q2-B-tiEKyS_ONNzXkSgzM98ClQFyeJn5Oq3kW9jsMzZtCHz1jfRUyLK_YdNe0QorRE1GbZrE46dy9bcu3fZWDwhEEZe4KKTpF0Lh9ZU3pRrY_eIUZKVvJ_ebX2dDvc",
-            votes = "1.2k",
-            comments = 42
+            votes = "5.8k",
+            comments = 124
         ),
         FeedItem(
             id = "4",
             type = FeedItemType.PROMO,
-            title = "Stay Updated",
-            subtitle = "Get the best stories delivered to your inbox every morning."
+            title = "Join the Dialogue",
+            subtitle = "Get direct notifications on major policy changes and political news."
         ),
         FeedItem(
             id = "5",
             type = FeedItemType.NEWS,
-            title = "Global Markets Rally Amid Economic Optimism and New Trade Deals",
-            category = "Economy",
+            title = "Foreign Policy: India's growing influence in the Global South",
+            category = "Diplomacy",
             timestamp = "4h ago",
             votes = "3.1k",
             comments = 156,

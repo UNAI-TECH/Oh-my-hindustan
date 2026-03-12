@@ -25,7 +25,7 @@ fun AdminMonetizationScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Monetization & Ads", fontWeight = FontWeight.Bold) },
+                title = { Text("Platform Economics", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, null)
@@ -50,7 +50,7 @@ fun AdminMonetizationScreen(navController: NavController) {
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9))
             ) {
                 Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Revenue Distribution", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Start))
+                    Text("Contribution Distribution", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Start))
                     Spacer(modifier = Modifier.height(24.dp))
                     
                     // Pie Chart Placeholder
@@ -62,15 +62,15 @@ fun AdminMonetizationScreen(navController: NavController) {
                             border = androidx.compose.foundation.BorderStroke(16.dp, Color(0xFFF1F5F9))
                         ) {}
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Total Rev", style = MaterialTheme.typography.labelSmall, color = Slate500)
-                            Text("$128.4K", style = MaterialTheme.typography.titleLarge, color = PrimaryRed, fontWeight = FontWeight.Bold)
+                            Text("Total Fund", style = MaterialTheme.typography.labelSmall, color = Slate500)
+                            Text("₹12.8Cr", style = MaterialTheme.typography.titleLarge, color = PrimaryRed, fontWeight = FontWeight.Bold)
                         }
                     }
                     
                     Spacer(modifier = Modifier.height(24.dp))
-                    DistributionRow("Subscription", "$57,780", PrimaryRed)
-                    DistributionRow("Ad Revenue", "$38,520", Slate200)
-                    DistributionRow("Creator Payouts", "$32,100", Slate600)
+                    DistributionRow("Premium Membership", "₹5.77Cr", PrimaryRed)
+                    DistributionRow("Corporate Support", "₹3.85Cr", Slate200)
+                    DistributionRow("Analyst Grants", "₹3.21Cr", Slate600)
                 }
             }
 
@@ -83,12 +83,12 @@ fun AdminMonetizationScreen(navController: NavController) {
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9))
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
-                    Text("Launch New Campaign", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Launch Community Initiative", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    OutlinedTextField(value = "", onValueChange = {}, label = { Text("Advertiser Name") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = "", onValueChange = {}, label = { Text("Initiative Name") }, modifier = Modifier.fillMaxWidth())
                     Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(value = "", onValueChange = {}, label = { Text("Budget ($)") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = "", onValueChange = {}, label = { Text("Allocation (₹)") }, modifier = Modifier.fillMaxWidth())
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
                         onClick = {},
@@ -96,7 +96,7 @@ fun AdminMonetizationScreen(navController: NavController) {
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryRed),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Create Campaign", fontWeight = FontWeight.Bold)
+                        Text("Create Initiative", fontWeight = FontWeight.Bold)
                     }
                 }
             }

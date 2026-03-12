@@ -29,6 +29,9 @@ fun LoginScreen(navController: NavController) {
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    val slate300 = Color(0xFFCBD5E1)
+    val slate500 = Color(0xFF64748B)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -37,27 +40,36 @@ fun LoginScreen(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.LockOpen,
-            contentDescription = null,
-            tint = PrimaryRed,
-            modifier = Modifier.size(64.dp)
-        )
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = PrimaryRed.copy(alpha = 0.1f),
+            modifier = Modifier.size(80.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.Campaign,
+                    contentDescription = null,
+                    tint = PrimaryRed,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+        }
         
         Spacer(modifier = Modifier.height(24.dp))
         
         Text(
-            "Welcome Back",
+            "Welcome to the Forum",
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = Color.Black
         )
         Text(
-            "Enter your details to continue",
+            "Sign in to participate in Jan Samvad",
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.Gray
+            color = slate500
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(40.dp))
 
         OutlinedTextField(
             value = email,
@@ -65,9 +77,17 @@ fun LoginScreen(navController: NavController) {
             label = { Text("Email Address") },
             placeholder = { Text("admin@viewer.app") },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(16.dp),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            singleLine = true
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = slate300,
+                focusedBorderColor = PrimaryRed,
+                unfocusedLabelColor = slate500,
+                focusedLabelColor = PrimaryRed,
+                unfocusedContainerColor = Color.White,
+                focusedContainerColor = Color.White
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -78,10 +98,18 @@ fun LoginScreen(navController: NavController) {
             label = { Text("Password") },
             placeholder = { Text("admin123") },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(16.dp),
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            singleLine = true
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = slate300,
+                focusedBorderColor = PrimaryRed,
+                unfocusedLabelColor = slate500,
+                focusedLabelColor = PrimaryRed,
+                unfocusedContainerColor = Color.White,
+                focusedContainerColor = Color.White
+            )
         )
 
         if (errorMessage != null) {
@@ -97,27 +125,23 @@ fun LoginScreen(navController: NavController) {
 
         Button(
             onClick = {
-                when {
-                    email == "admin@viewer.app" && password == "admin123" -> {
-                        navController.navigate("admin_overview") {
-                            popUpTo("splash") { inclusive = true }
-                        }
+                if (email == "admin@viewer.app" && password == "admin123") {
+                    navController.navigate("admin_overview") {
+                        popUpTo("splash") { inclusive = true }
                     }
-                    email.isNotEmpty() && password.isNotEmpty() -> {
-                        navController.navigate("home") {
-                            popUpTo("splash") { inclusive = true }
-                        }
+                } else if (email.isNotEmpty() && password.isNotEmpty()) {
+                    navController.navigate("profile_setup") {
+                        popUpTo("splash") { inclusive = true }
                     }
-                    else -> {
-                        errorMessage = "Please enter valid credentials"
-                    }
+                } else {
+                    errorMessage = "Please enter valid credentials"
                 }
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
             contentPadding = PaddingValues(0.dp),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
         ) {
             Box(
@@ -125,34 +149,63 @@ fun LoginScreen(navController: NavController) {
                     .fillMaxSize()
                     .background(
                         brush = Brush.horizontalGradient(listOf(PrimaryRed, WarmOrange)),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(16.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Log In", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Enter Forum", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
             }
         }
         
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        TextButton(onClick = { navController.popBackStack() }) {
-            Text("Back to Splash", color = Color.Gray)
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp)) {
+            HorizontalDivider(modifier = Modifier.weight(1f), color = slate300)
+            Text("  OR CONNECT WITH  ", style = MaterialTheme.typography.labelSmall, color = slate500, fontWeight = FontWeight.Bold)
+            HorizontalDivider(modifier = Modifier.weight(1f), color = slate300)
         }
-        
-        Spacer(modifier = Modifier.height(48.dp))
-        
-        // Hint for the user
-        Surface(
-            color = Color.White,
-            shape = RoundedCornerShape(8.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray),
-            modifier = Modifier.fillMaxWidth()
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Social Logins
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Mock Credentials:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
-                Text("Admin: admin@viewer.app / admin123", style = MaterialTheme.typography.labelSmall)
-                Text("User: Any other credentials", style = MaterialTheme.typography.labelSmall)
+            SocialLoginButton(Icons.Default.Android, "Google", Modifier.weight(1f)) {
+                navController.navigate("profile_setup")
             }
+            SocialLoginButton(Icons.Default.PhoneIphone, "Apple", Modifier.weight(1f)) {
+                navController.navigate("profile_setup")
+            }
+            SocialLoginButton(Icons.Default.GridView, "Microsoft", Modifier.weight(1f)) {
+                navController.navigate("profile_setup")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Don't have an account?", style = MaterialTheme.typography.bodySmall, color = slate500)
+            TextButton(onClick = { navController.navigate("signup") }) {
+                Text("Sign Up", color = PrimaryRed, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+fun SocialLoginButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1)),
+        color = Color.White,
+        shadowElevation = 1.dp
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            Icon(icon, contentDescription = label, modifier = Modifier.size(24.dp), tint = Color.DarkGray)
         }
     }
 }

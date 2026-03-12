@@ -48,7 +48,7 @@ fun ExploreScreen(navController: NavController) {
                 OutlinedTextField(
                     value = "",
                     onValueChange = {},
-                    placeholder = { Text("Search topics, news, or creators...", style = MaterialTheme.typography.bodyMedium) },
+                    placeholder = { Text("Search political analysts, news, or debates...", style = MaterialTheme.typography.bodyMedium) },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(12.dp),
                     leadingIcon = { Icon(Icons.Default.Search, null, tint = PrimaryRed) },
@@ -67,10 +67,10 @@ fun ExploreScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                CategoryIconButton("News", Icons.Default.Newspaper, true)
-                CategoryIconButton("Blogs", Icons.Default.Article, false)
-                CategoryIconButton("Videos", Icons.Default.PlayCircle, false)
-                CategoryIconButton("Trending", Icons.Default.TrendingUp, false)
+                CategoryIconButton("Forum", Icons.Default.Groups, true)
+                CategoryIconButton("Policy", Icons.Default.Gavel, false)
+                CategoryIconButton("Debates", Icons.Default.RecordVoiceOver, false)
+                CategoryIconButton("Updates", Icons.Default.WifiTethering, false)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -80,18 +80,18 @@ fun ExploreScreen(navController: NavController) {
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                val topics = listOf("Technology", "Finance", "Lifestyle", "Politics", "Sports")
+                val topics = listOf("BJP", "Digital India", "Viksit Bharat", "Parliament", "Foreign Policy")
                 items(topics) { topic ->
-                    val isTech = topic == "Technology"
+                    val isBjp = topic == "BJP"
                     Surface(
-                        color = if (isTech) PrimaryRed else PrimaryRed.copy(alpha = 0.1f),
+                        color = if (isBjp) PrimaryRed else PrimaryRed.copy(alpha = 0.1f),
                         shape = RoundedCornerShape(50),
-                        shadowElevation = if (isTech) 4.dp else 0.dp
+                        shadowElevation = if (isBjp) 4.dp else 0.dp
                     ) {
                         Text(
                             topic,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                            color = if (isTech) Color.White else PrimaryRed,
+                            color = if (isBjp) Color.White else PrimaryRed,
                             style = MaterialTheme.typography.labelLarge
                         )
                     }
@@ -99,29 +99,29 @@ fun ExploreScreen(navController: NavController) {
             }
 
             // Trending News Section
-            SectionHeader("Trending News")
+            SectionHeader("Top Narratives")
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 item { 
                     TrendingCard(
-                        "Global Markets Rally as Inflation Data Cools Down",
-                        "BREAKING",
+                        "BJP outlines vision for Viksit Bharat by 2047",
+                        "POLICY",
                         "https://lh3.googleusercontent.com/aida-public/AB6AXuACoN2DQoiSOe691QocUxZH-3L_9fZYlxuyMgSzGjDK2IpGvbB_-azsNPYHY4uxdn4UY0asiiiKrX5nUtoBykk3U9xtzsGZHuX_evX_7MrbWm1trxzICNcIfPKMGTejyLgozoYi0kBcCT_9Of7LoXhmA67nlvO9ZMnPeY_ZKrBdTYC6tugUWh25hs3AnBBznJefESaEDqY9k9uGax1eERKSfzHbO7F-0wkMY89VzJcSUw25br-siVe7G4Z3jQ4YZovGxVjAyYjPXQ3K"
                     )
                 }
                 item {
                     TrendingCard(
-                        "New Superconducting Material Discovered in Lab",
-                        "SCIENCE",
+                        "Digital India Revolution: Bridging the Rural-Urban Divide",
+                        "NATIONAL",
                         "https://lh3.googleusercontent.com/aida-public/AB6AXuBNPp7D5HnjPznxYo5iXMHnH_X2PMhRGCHcfVJzAYwdcypyYKWiBziknmQ34zlmVGnZXeB_qIxg7MIO6nap_4GfsawTJB9nh1bH-Qvt_svGEZsYR1NHsiNM84_45jqH0jg19wyMZMhVatm3enN7R6SGyUN0ffgOJFbC4jemWHdEsOSlW95PQWEz4XlKMjyfMRKXqfW4CJRRrnf-EUNfinh9ezmiZ_jdBdCbXZIMI11-okK_RN22HxxnabXAaUcyJB7XRqyNdUbArGfG"
                     )
                 }
             }
 
             // Viral Videos Section
-            SectionHeader("Viral Videos", showAll = false)
+            SectionHeader("Expert Briefings", showAll = false)
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -143,17 +143,17 @@ fun ExploreScreen(navController: NavController) {
             }
 
             // Popular Blogs
-            SectionHeader("Popular Blogs", showAll = false)
+            SectionHeader("Policy Analysis", showAll = false)
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     BlogGridItem(
-                        "10 Tips for Remote Work Productivity",
-                        "5 min read",
+                        "Atmanirbhar Bharat: A Blueprint for Global manufacturing Hub",
+                        "10 min read",
                         "https://lh3.googleusercontent.com/aida-public/AB6AXuDkc1IIZ5iqASKkcQrJVHaCUR4f0tU7Uhg5uXeqkWAheofObj62ZwOBRHvcS5Bw2Kg3UEtxQzBtHgpxSiiglVBgq20YAvsdX5CBTKGIaZVXfx3qRohj249nEW5_WVv4ltH6JzOdWjuEUZUIISRpe-Nqc_o0ywilUo0JMvGev-gizdOtQlmVT8n0xPKL52oGzNtMBizD4ZeycLwwsc4eJbpb3MqTPVfn_ddaZjkFZeK827FFjvtPzqTzZVCLb5iYCNXQcyVWRK-xCErO",
                         Modifier.weight(1f)
                     )
                     BlogGridItem(
-                        "The Ultimate Solo Travel Guide",
+                        "Strengthening Grassroots Governance: Gram Swaraj Updates",
                         "8 min read",
                         "https://lh3.googleusercontent.com/aida-public/AB6AXuByGcQD2EPIk2dyqKhMeAWjdGBbKjjtTpJd6J8MfjjI-NjGuNxxWE8GV05T62hO16HTZ8Y2PpWcWXnf5nF79I4CahOwvBobsYKXz3c0Plu4zVOUTFc5bv7Ch9wnHk0Dt1WL6DmRUXUR7b30Ci0KlS4s555a5rBEwrfXe9whdbdZDlPfrsBNQT6tzJsbzhYifdgqQ6oVSfH_pMCfD2MfR8HGZOICdBMBlDEYmehFEOsX9UeVYXDNpR7OIGNKyoev4qdjNo38rZzDFcyL",
                         Modifier.weight(1f)
