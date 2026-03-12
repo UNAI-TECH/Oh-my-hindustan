@@ -91,15 +91,52 @@ fun ProfileScreen(navController: NavController) {
                             Icon(Icons.Default.Edit, null, tint = Color.White, modifier = Modifier.padding(6.dp))
                         }
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Alex Rivera", style = MaterialTheme.typography.headlineSmall)
-                    Text("12,450 Karma", style = MaterialTheme.typography.bodySmall, color = Slate500)
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Alex Rivera", style = MaterialTheme.typography.headlineSmall)
+            Text("12,450 Karma", style = MaterialTheme.typography.bodySmall, color = Slate500)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Creator Studio Action
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                color = PrimaryRed.copy(alpha = 0.05f),
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryRed.copy(alpha = 0.2f)),
+                onClick = { navController.navigate("creator_dashboard") }
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        color = PrimaryRed,
+                        shape = CircleShape,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.PlayCircle,
+                            null,
+                            tint = Color.White,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Creator Studio", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Manage your content and analytics", style = MaterialTheme.typography.labelSmall, color = Slate500)
+                    }
+                    Icon(Icons.Default.ChevronRight, null, tint = PrimaryRed)
                 }
             }
+        }
+    }
 
-            Spacer(modifier = Modifier.height(80.dp))
+    Spacer(modifier = Modifier.height(24.dp))
 
-            // Stats
+    // Stats
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)

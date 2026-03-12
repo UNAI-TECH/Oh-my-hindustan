@@ -1,6 +1,7 @@
 package com.viewer.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -56,46 +57,49 @@ fun ArticleDetailScreen(navController: NavController, articleId: String?) {
                     .padding(bottom = 100.dp) // Space for floating bar
             ) {
                 // Header Content
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(24.dp)) {
                     Surface(
-                        color = PrimaryRed.copy(alpha = 0.2f),
+                        color = PrimaryRed.copy(alpha = 0.1f),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            "NEWS",
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = PrimaryRed
+                            "INSIGHTS",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = PrimaryRed,
+                            fontWeight = FontWeight.Bold
                         )
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     Text(
                         text = "The Future of Sustainable Urban Development in Modern Metropolises",
                         style = MaterialTheme.typography.headlineLarge,
-                        lineHeight = 40.sp
+                        fontWeight = FontWeight.ExtraBold,
+                        lineHeight = 44.sp,
+                        color = Color(0xFF1F1413)
                     )
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
                     // Author Row
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         AsyncImage(
                             model = "https://lh3.googleusercontent.com/aida-public/AB6AXuBpygkaztYdAvrMVY7-WMcElyKx3mFHF7Fwe4KxQ-8wvNhJP70J52TyQuYr3bRV8rY5jaEUmBwXe0l87K4RJ8Z1GRnaHFOB-W15CTReHYfq8WFnUzzz5KzlBU7grUoLkzLlYx0XucoeUKY0n1t_4Yfz-PWardBhYVJL34Ncjp9OM7LN59ep6RASY3DAe3kVDr2nV-mDwUHPTXOnbaXyzJ4VqrW-1IKiLsnFlrlI5hYoOUGzAqKBYmQ3Xgn99MBu99paMRWxpdX3-L3A",
                             contentDescription = null,
-                            modifier = Modifier.size(48.dp).clip(CircleShape)
+                            modifier = Modifier.size(52.dp).clip(CircleShape).border(2.dp, Color.White, CircleShape)
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Elena Rostova", style = MaterialTheme.typography.titleMedium)
-                            Text("Published 2 hours ago • 8 min read", style = MaterialTheme.typography.bodySmall, color = Slate500)
+                            Text("Elena Rostova", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("Published 2 hours ago • 8 min read", style = MaterialTheme.typography.labelSmall, color = Slate500)
                         }
-                        OutlinedButton(
+                        Button(
                             onClick = {},
-                            border = androidx.compose.foundation.BorderStroke(2.dp, PrimaryRed),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryRed),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-                            modifier = Modifier.height(36.dp)
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryRed),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            modifier = Modifier.height(40.dp)
                         ) {
-                            Text("Follow", fontWeight = FontWeight.Bold)
+                            Text("Follow", fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
                 }
@@ -158,46 +162,49 @@ fun ArticleDetailScreen(navController: NavController, articleId: String?) {
             Surface(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 24.dp, start = 24.dp, end = 24.dp)
-                    .fillMaxWidth(0.9f)
-                    .height(56.dp),
+                    .padding(bottom = 32.dp, start = 24.dp, end = 24.dp)
+                    .fillMaxWidth(0.95f)
+                    .height(64.dp),
                 shape = CircleShape,
-                color = Color.White.copy(alpha = 0.9f),
-                shadowElevation = 12.dp,
-                tonalElevation = 4.dp
+                color = Color.White.copy(alpha = 0.95f),
+                shadowElevation = 16.dp,
+                tonalElevation = 6.dp,
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9))
             ) {
                 Row(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
-                        modifier = Modifier.background(Color(0xFFF1F5F9), CircleShape).padding(horizontal = 4.dp, vertical = 2.dp),
+                        modifier = Modifier.background(Color(0xFFF8FAFC), CircleShape).padding(horizontal = 6.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = {}) { Icon(Icons.Default.ArrowUpward, null, tint = Slate500) }
-                        Text("1.2k", style = MaterialTheme.typography.labelLarge, color = Slate500)
-                        VerticalDivider(modifier = Modifier.height(16.dp).padding(horizontal = 4.dp), color = Color.LightGray)
-                        IconButton(onClick = {}) { Icon(Icons.Default.ArrowDownward, null, tint = Slate500) }
+                        IconButton(onClick = {}) { Icon(Icons.Default.ArrowUpward, null, tint = Slate500, modifier = Modifier.size(20.dp)) }
+                        Text("1,245", style = MaterialTheme.typography.labelLarge, color = Slate500, fontWeight = FontWeight.Bold)
+                        VerticalDivider(modifier = Modifier.height(16.dp).padding(horizontal = 8.dp), color = Color.LightGray)
+                        IconButton(onClick = {}) { Icon(Icons.Default.ArrowDownward, null, tint = Slate500, modifier = Modifier.size(20.dp)) }
                     }
                     
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.ChatBubbleOutline, null, tint = Slate500, modifier = Modifier.size(22.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("342", style = MaterialTheme.typography.labelLarge, color = Slate500)
+                        Surface(color = Color(0xFFF1F5F9), shape = CircleShape) {
+                            Icon(Icons.Outlined.ChatBubbleOutline, null, tint = Slate500, modifier = Modifier.padding(8.dp).size(20.dp))
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("342", style = MaterialTheme.typography.labelLarge, color = Slate500, fontWeight = FontWeight.Bold)
                     }
                     
                     Surface(
                         color = PrimaryRed,
                         shape = CircleShape,
-                        modifier = Modifier.size(44.dp),
+                        modifier = Modifier.size(48.dp),
                         onClick = {}
                     ) {
                         Icon(
-                            Icons.Outlined.IosShare, 
+                            Icons.Outlined.Share, 
                             contentDescription = null, 
                             tint = Color.White,
-                            modifier = Modifier.padding(10.dp)
+                            modifier = Modifier.padding(12.dp)
                         )
                     }
                 }
