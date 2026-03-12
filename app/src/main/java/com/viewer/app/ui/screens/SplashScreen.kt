@@ -42,7 +42,7 @@ fun SplashScreen(navController: NavController) {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Public,
+                imageVector = Icons.Default.Language,
                 contentDescription = null,
                 modifier = Modifier.size(120.dp),
                 tint = PrimaryRed

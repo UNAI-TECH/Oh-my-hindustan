@@ -63,14 +63,8 @@ fun HomeFeedScreen(navController: NavController) {
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.size(32.dp)
                         ) {
-<<<<<<< HEAD
-                            Icon(Icons.Default.GridView, null, tint = Color.White, modifier = Modifier.padding(4.dp))
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("VIEWER", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = PrimaryRed))
-=======
                             Icon(
-                                Icons.Default.Public,
+                                Icons.Default.Language,
                                 contentDescription = null,
                                 tint = Color.White,
                                 modifier = Modifier.padding(4.dp)
@@ -85,7 +79,6 @@ fun HomeFeedScreen(navController: NavController) {
                                 color = PrimaryRed
                             )
                         )
->>>>>>> 4473c6944d3e177f6118396c8a9049ea75a78d9e
                     }
                 },
                 actions = {

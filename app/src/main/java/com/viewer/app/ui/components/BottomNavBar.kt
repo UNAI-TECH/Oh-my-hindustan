@@ -21,13 +21,9 @@ fun AppBottomNavBar(navController: NavController, currentRoute: String?) {
         val items = listOf(
             BottomNavItem("Briefings", "home", Icons.Default.Home),
             BottomNavItem("Explore", "explore", Icons.Default.Explore),
-<<<<<<< HEAD
-            BottomNavItem("Post", "content_editor", Icons.Default.AddBox),
-            BottomNavItem("Library", "library", Icons.Default.Bookmarks),
-=======
-            BottomNavItem("Analyst", "content_editor", Icons.Default.Campaign), // Replaced Post icon
-            BottomNavItem("Archive", "profile", Icons.Default.History), // Replaced Library icon
->>>>>>> 4473c6944d3e177f6118396c8a9049ea75a78d9e
+            BottomNavItem("Analyst", "content_editor", Icons.Default.Campaign), 
+            BottomNavItem("Archive", "library", Icons.Default.History), 
+
             BottomNavItem("Profile", "profile", Icons.Default.Person)
         )
 

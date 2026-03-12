@@ -37,9 +37,9 @@ val CreamBg = Color(0xFFFFF9F2)
 fun ExploreScreen(navController: NavController) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf("News") }
-    var selectedCategory by remember { mutableStateOf("Technology") }
+    var selectedCategory by remember { mutableStateOf("Politics") }
 
-    val categories = listOf("Technology", "Finance", "Lifestyle", "Politics")
+    val categories = listOf("Politics", "Policy", "Economy", "Digital India", "Viksit Bharat")
     val contentTypes = listOf("News", "Blogs", "Videos", "Trending")
 
     // Dynamic filtering based on search, type, and category
@@ -53,11 +53,11 @@ fun ExploreScreen(navController: NavController) {
                 "News" -> item.type == FeedItemType.NEWS
                 "Blogs" -> item.type == FeedItemType.BLOG
                 "Videos" -> item.type == FeedItemType.VIDEO
-                "Trending" -> true // Allow all for trending but maybe sort by votes later
+                "Trending" -> true
                 else -> true
             }
             
-            val matchesCategory = item.category == selectedCategory
+            val matchesCategory = item.category?.contains(selectedCategory, ignoreCase = true) ?: false
             
             matchesSearch && matchesType && (selectedType == "Trending" || matchesCategory)
         }
@@ -68,19 +68,10 @@ fun ExploreScreen(navController: NavController) {
             Column(modifier = Modifier.background(CreamBg).padding(horizontal = 16.dp)) {
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
-<<<<<<< HEAD
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search topics, news, or creators...") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-=======
-                    value = "",
-                    onValueChange = {},
                     placeholder = { Text("Search political analysts, news, or debates...", style = MaterialTheme.typography.bodyMedium) },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
->>>>>>> 4473c6944d3e177f6118396c8a9049ea75a78d9e
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(12.dp),
                     leadingIcon = { Icon(Icons.Default.Search, null, tint = PrimaryRed) },
                     colors = OutlinedTextFieldDefaults.colors(
@@ -91,24 +82,18 @@ fun ExploreScreen(navController: NavController) {
                     ),
                     singleLine = true
                 )
-<<<<<<< HEAD
                 
                 Spacer(modifier = Modifier.height(20.dp))
                 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    contentTypes.forEach { type ->
-                        CategoryIconButton(
-                            label = type,
-                            icon = when(type) {
-                                "News" -> Icons.Default.Newspaper
-                                "Blogs" -> Icons.Default.Description
-                                "Videos" -> Icons.Default.PlayCircle
-                                else -> Icons.Default.TrendingUp
-                            },
-                            isActive = selectedType == type,
-                            onClick = { selectedType = type }
-                        )
-                    }
+                // Category Grid
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    CategoryIconButton("Forum", Icons.Default.Groups, selectedType == "News") { selectedType = "News" }
+                    CategoryIconButton("Policy", Icons.Default.Gavel, selectedType == "Blogs") { selectedType = "Blogs" }
+                    CategoryIconButton("Debates", Icons.Default.RecordVoiceOver, selectedType == "Videos") { selectedType = "Videos" }
+                    CategoryIconButton("Updates", Icons.Default.WifiTethering, selectedType == "Trending") { selectedType = "Trending" }
                 }
                 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -143,15 +128,34 @@ fun ExploreScreen(navController: NavController) {
             contentPadding = PaddingValues(16.dp)
         ) {
             item { 
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                SectionHeader("Top Narratives")
+            }
+
+            item {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(bottom = 24.dp)
                 ) {
-                    Text("$selectedType in $selectedCategory", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text("View all", color = PrimaryRed, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    item { 
+                        TrendingCard(
+                            "BJP outlines vision for Viksit Bharat by 2047",
+                            "POLICY",
+                            "https://lh3.googleusercontent.com/aida-public/AB6AXuACoN2DQoiSOe691QocUxZH-3L_9fZYlxuyMgSzGjDK2IpGvbB_-azsNPYHY4uxdn4UY0asiiiKrX5nUtoBykk3U9xtzsGZHuX_evX_7MrbWm1trxzICNcIfPKMGTejyLgozoYi0kBcCT_9Of7LoXhmA67nlvO9ZMnPeY_ZKrBdTYC6tugUWh25hs3AnBBznJefESaEDqY9k9uGax1eERKSfzHbO7F-0wkMY89VzJcSUw25br-siVe7G4Z3jQ4YZovGxVjAyYjPXQ3K"
+                        ) {
+                             // Navigate to specific item if id exists in SampleData
+                        }
+                    }
+                    item {
+                        TrendingCard(
+                            "Digital India Revolution: Bridging the Rural-Urban Divide",
+                            "NATIONAL",
+                            "https://lh3.googleusercontent.com/aida-public/AB6AXuBNPp7D5HnjPznxYo5iXMHnH_X2PMhRGCHcfVJzAYwdcypyYKWiBziknmQ34zlmVGnZXeB_qIxg7MIO6nap_4GfsawTJB9nh1bH-Qvt_svGEZsYR1NHsiNM84_45jqH0jg19wyMZMhVatm3enN7R6SGyUN0ffgOJFbC4jemWHdEsOSlW95PQWEz4XlKMjyfMRKXqfW4CJRRrnf-EUNfinh9ezmiZ_jdBdCbXZIMI11-okK_RN22HxxnabXAaUcyJB7XRqyNdUbArGfG"
+                        ) { }
+                    }
                 }
             }
+
+            item { SectionHeader("Selected Feed") }
 
             if (selectedType == "Videos") {
                 items(filteredItems.chunked(2)) { pair ->
@@ -160,85 +164,6 @@ fun ExploreScreen(navController: NavController) {
                             VideoCard(item, modifier = Modifier.weight(1f)) {
                                 navController.navigate("article_detail/${item.id}")
                             }
-=======
-            }
-
-            // Category Grid
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                CategoryIconButton("Forum", Icons.Default.Groups, true)
-                CategoryIconButton("Policy", Icons.Default.Gavel, false)
-                CategoryIconButton("Debates", Icons.Default.RecordVoiceOver, false)
-                CategoryIconButton("Updates", Icons.Default.WifiTethering, false)
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Topic Chips
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                val topics = listOf("BJP", "Digital India", "Viksit Bharat", "Parliament", "Foreign Policy")
-                items(topics) { topic ->
-                    val isBjp = topic == "BJP"
-                    Surface(
-                        color = if (isBjp) PrimaryRed else PrimaryRed.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(50),
-                        shadowElevation = if (isBjp) 4.dp else 0.dp
-                    ) {
-                        Text(
-                            topic,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                            color = if (isBjp) Color.White else PrimaryRed,
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-                }
-            }
-
-            // Trending News Section
-            SectionHeader("Top Narratives")
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item { 
-                    TrendingCard(
-                        "BJP outlines vision for Viksit Bharat by 2047",
-                        "POLICY",
-                        "https://lh3.googleusercontent.com/aida-public/AB6AXuACoN2DQoiSOe691QocUxZH-3L_9fZYlxuyMgSzGjDK2IpGvbB_-azsNPYHY4uxdn4UY0asiiiKrX5nUtoBykk3U9xtzsGZHuX_evX_7MrbWm1trxzICNcIfPKMGTejyLgozoYi0kBcCT_9Of7LoXhmA67nlvO9ZMnPeY_ZKrBdTYC6tugUWh25hs3AnBBznJefESaEDqY9k9uGax1eERKSfzHbO7F-0wkMY89VzJcSUw25br-siVe7G4Z3jQ4YZovGxVjAyYjPXQ3K"
-                    )
-                }
-                item {
-                    TrendingCard(
-                        "Digital India Revolution: Bridging the Rural-Urban Divide",
-                        "NATIONAL",
-                        "https://lh3.googleusercontent.com/aida-public/AB6AXuBNPp7D5HnjPznxYo5iXMHnH_X2PMhRGCHcfVJzAYwdcypyYKWiBziknmQ34zlmVGnZXeB_qIxg7MIO6nap_4GfsawTJB9nh1bH-Qvt_svGEZsYR1NHsiNM84_45jqH0jg19wyMZMhVatm3enN7R6SGyUN0ffgOJFbC4jemWHdEsOSlW95PQWEz4XlKMjyfMRKXqfW4CJRRrnf-EUNfinh9ezmiZ_jdBdCbXZIMI11-okK_RN22HxxnabXAaUcyJB7XRqyNdUbArGfG"
-                    )
-                }
-            }
-
-            // Viral Videos Section
-            SectionHeader("Expert Briefings", showAll = false)
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                val videos = listOf(
-                    "https://lh3.googleusercontent.com/aida-public/AB6AXuBvaZgy_DmHr7hZz9h7Zs6HwJ-1vZ2sWN2p62RAQ46Sw_CZ6JTg_vKQR-_ncyXgRY8gBE0soKUJy6nqe_6lS4G47xBznqhBG9mK-IQqd2wYbFeeRBpE_xdRMbcEdTTCFjls4c_3TdCIAhoGv6L6mEeV6mpXciqQfyPNp5Y0S3JWBxtrg0u7_LWQI8C4-tOQYUrqwEK-QbfsQc7sETXnl-DgRVktVSxcmLnl5EHxUwPvb1ysegIT24bcqehmF09k4ypUVAHyVw5Vzffe" to "1.2M",
-                    "https://lh3.googleusercontent.com/aida-public/AB6AXuDlHq1L9kII1dYdkFlamkDmCfbxs6Hq8tL49jnqGHcVd-bQnIGJqqw97OAgiyjQ_Y4kaud4pC6XBA1ocxHDFFWnBtF2RaM9486tXAwO4hObiuljisXcwJKEhG_ytlrXyRUrf0Mry0L1_M3QmtravL5c_SUOiFSPNszGEroTjR_Xsue9lcUVo4Lbu_7_SpR_OjKTbArPoMYH1XiFfu935cnNLXG0Xeng9OHW0hyD024CTAGKeWaa5H0W5a-Il1iEzlSVNs1FsDNdTuqr" to "850K",
-                    "https://lh3.googleusercontent.com/aida-public/AB6AXuA-Y8lWOnMuXjfVAbxG1R0wudhFxEJnqu0g9CCfkvqCgqDV1BPHJ8WL1VFbd-yYJZhJkyGS2unCs3rOwaeBXXGx1x5DwJnA5UOCqPWMpfuAoT0BVgf4QVQyEJQUvcQXGtWvWzh1viThoFaZqPq0sX9lVhdIFYDzgw3ML26cnkqCVgOTI4nOdU6AF3erYbkK2pKulZv7yRqM3VgVJUQN3g-RIFtz1I18tKuxDmdpI73Rxv1SezkiHTUqPJbeC3Uevw1UO1HKbUqdZ-ne" to "2.4M"
-                )
-                items(videos) { (img, views) ->
-                    Box(modifier = Modifier.width(120.dp).aspectRatio(9/16f).clip(RoundedCornerShape(12.dp))) {
-                        AsyncImage(model = img, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                        Row(modifier = Modifier.align(Alignment.BottomStart).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                            Text(views, color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
->>>>>>> 4473c6944d3e177f6118396c8a9049ea75a78d9e
                         }
                         if (pair.size == 1) Spacer(modifier = Modifier.weight(1f))
                     }
@@ -258,7 +183,7 @@ fun ExploreScreen(navController: NavController) {
                 }
             } else {
                 items(filteredItems) { item ->
-                    TrendingCard(item) {
+                    SampleTrendingCard(item) {
                         navController.navigate("article_detail/${item.id}")
                     }
                     Spacer(modifier = Modifier.height(16.dp))
@@ -272,30 +197,22 @@ fun ExploreScreen(navController: NavController) {
                     }
                 }
             }
-<<<<<<< HEAD
-=======
-
-            // Popular Blogs
-            SectionHeader("Policy Analysis", showAll = false)
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    BlogGridItem(
-                        "Atmanirbhar Bharat: A Blueprint for Global manufacturing Hub",
-                        "10 min read",
-                        "https://lh3.googleusercontent.com/aida-public/AB6AXuDkc1IIZ5iqASKkcQrJVHaCUR4f0tU7Uhg5uXeqkWAheofObj62ZwOBRHvcS5Bw2Kg3UEtxQzBtHgpxSiiglVBgq20YAvsdX5CBTKGIaZVXfx3qRohj249nEW5_WVv4ltH6JzOdWjuEUZUIISRpe-Nqc_o0ywilUo0JMvGev-gizdOtQlmVT8n0xPKL52oGzNtMBizD4ZeycLwwsc4eJbpb3MqTPVfn_ddaZjkFZeK827FFjvtPzqTzZVCLb5iYCNXQcyVWRK-xCErO",
-                        Modifier.weight(1f)
-                    )
-                    BlogGridItem(
-                        "Strengthening Grassroots Governance: Gram Swaraj Updates",
-                        "8 min read",
-                        "https://lh3.googleusercontent.com/aida-public/AB6AXuByGcQD2EPIk2dyqKhMeAWjdGBbKjjtTpJd6J8MfjjI-NjGuNxxWE8GV05T62hO16HTZ8Y2PpWcWXnf5nF79I4CahOwvBobsYKXz3c0Plu4zVOUTFc5bv7Ch9wnHk0Dt1WL6DmRUXUR7b30Ci0KlS4s555a5rBEwrfXe9whdbdZDlPfrsBNQT6tzJsbzhYifdgqQ6oVSfH_pMCfD2MfR8HGZOICdBMBlDEYmehFEOsX9UeVYXDNpR7OIGNKyoev4qdjNo38rZzDFcyL",
-                        Modifier.weight(1f)
-                    )
-                }
-            }
->>>>>>> 4473c6944d3e177f6118396c8a9049ea75a78d9e
             
             item { Spacer(modifier = Modifier.height(80.dp)) }
+        }
+    }
+}
+
+@Composable
+fun SectionHeader(title: String, showAll: Boolean = true) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        if (showAll) {
+            Text("View all", color = PrimaryRed, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -329,7 +246,25 @@ fun CategoryIconButton(label: String, icon: androidx.compose.ui.graphics.vector.
 }
 
 @Composable
-fun TrendingCard(item: FeedItem, onClick: () -> Unit) {
+fun TrendingCard(title: String, category: String, image: String, onClick: () -> Unit) {
+    Column(modifier = Modifier.width(280.dp).clickable { onClick() }) {
+        AsyncImage(
+            model = image,
+            contentDescription = null,
+            modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(12.dp)),
+            contentScale = ContentScale.Crop
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Surface(color = PrimaryRed.copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
+            Text(category, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = PrimaryRed)
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2)
+    }
+}
+
+@Composable
+fun SampleTrendingCard(item: FeedItem, onClick: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
         AsyncImage(
             model = item.thumbnail,
