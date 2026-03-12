@@ -34,7 +34,7 @@ fun ProfileSetupScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBg)
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -44,7 +44,7 @@ fun ProfileSetupScreen(navController: NavController) {
             "Create Your Political Profile",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onBackground
         )
         Text(
             "Let others know your political vision",
@@ -58,7 +58,7 @@ fun ProfileSetupScreen(navController: NavController) {
         Box(modifier = Modifier.size(120.dp), contentAlignment = Alignment.Center) {
             Surface(
                 modifier = Modifier.fillMaxSize().clip(CircleShape).border(2.dp, PrimaryRed, CircleShape),
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Icon(
                     Icons.Default.Person,
@@ -71,7 +71,7 @@ fun ProfileSetupScreen(navController: NavController) {
                 modifier = Modifier.align(Alignment.BottomEnd).size(36.dp),
                 shape = CircleShape,
                 color = PrimaryRed,
-                border = androidx.compose.foundation.BorderStroke(2.dp, Color.White)
+                border = androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.surface)
             ) {
                 Icon(Icons.Default.AddAPhoto, null, tint = Color.White, modifier = Modifier.padding(8.dp).size(18.dp))
             }
@@ -92,8 +92,8 @@ fun ProfileSetupScreen(navController: NavController) {
                 focusedBorderColor = PrimaryRed,
                 unfocusedLabelColor = slate500,
                 focusedLabelColor = PrimaryRed,
-                unfocusedContainerColor = Color.White,
-                focusedContainerColor = Color.White
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedContainerColor = MaterialTheme.colorScheme.surface
             )
         )
 
@@ -111,8 +111,8 @@ fun ProfileSetupScreen(navController: NavController) {
                 focusedBorderColor = PrimaryRed,
                 unfocusedLabelColor = slate500,
                 focusedLabelColor = PrimaryRed,
-                unfocusedContainerColor = Color.White,
-                focusedContainerColor = Color.White
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedContainerColor = MaterialTheme.colorScheme.surface
             )
         )
 

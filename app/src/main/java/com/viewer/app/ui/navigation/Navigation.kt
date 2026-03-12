@@ -5,9 +5,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.viewer.app.ui.screens.*
+import com.viewer.app.ui.theme.ThemeViewModel
 
 @Composable
-fun NavigationGraph() {
+fun NavigationGraph(themeViewModel: ThemeViewModel) {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = "splash") {
@@ -35,5 +36,7 @@ fun NavigationGraph() {
             CreatorProfileScreen(navController, authorName)
         }
         composable("notifications") { NotificationScreen(navController) }
+        composable("settings") { SettingsScreen(navController, themeViewModel) }
     }
 }
+

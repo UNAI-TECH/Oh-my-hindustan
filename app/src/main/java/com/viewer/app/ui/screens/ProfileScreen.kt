@@ -49,9 +49,14 @@ fun ProfileScreen(navController: NavController) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = {}) { Icon(Icons.Default.Settings, null) }
+                    IconButton(onClick = { navController.navigate("settings") }) { Icon(Icons.Default.Settings, null) }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         },
         bottomBar = { AppBottomNavBar(navController, "profile") }
@@ -60,40 +65,57 @@ fun ProfileScreen(navController: NavController) {
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(CreamBg)
+                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Banner & Avatar
-            Box(modifier = Modifier.fillMaxWidth()) {
+            // Banner & Avatar Container
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 80.dp) // Space for the avatar that hangs over
+            ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(160.dp)
                         .background(Brush.linearGradient(listOf(DeepCrimson, WarmOrange)))
                 )
-                Column(
-                    modifier = Modifier.align(Alignment.BottomCenter).offset(y = 64.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(modifier = Modifier.size(128.dp)) {
-                        AsyncImage(
-                            model = "https://lh3.googleusercontent.com/aida-public/AB6AXuAnyFLls1xsT1YNnA0R9LluoGoW1kDJWwj4tatOeYM9ipuMeZYFOzKKyjkMCzfIHkyhRWpKxSk4IpMbTG-Zi3Lfjxj_5EYhe-LbqL8P9NaB5M1lzKSjMYPiFKZA1V-LZHcwn8LRT4MZada8kfUCY5ecxCTotfwjr8WnfqJAgpxYpp8-KQEZcAmHNQYYodLFxxLviUDJVTi3pJmAVNM2A2i5IhFKirhMmRKyeHLV3Fm0Kqe1t6L1RhoiavyIAwY-zo5AU0KpndbZdJNY",
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize().clip(CircleShape).border(4.dp, Color.White, CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                        Surface(
-                            modifier = Modifier.align(Alignment.BottomEnd).size(32.dp),
-                            shape = CircleShape,
-                            color = PrimaryRed,
-                            border = androidx.compose.foundation.BorderStroke(2.dp, Color.White)
-                        ) {
-                            Icon(Icons.Default.Edit, null, tint = Color.White, modifier = Modifier.padding(6.dp))
-                        }
-                    }
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Kamal Singh", style = MaterialTheme.typography.headlineSmall)
-            Text("12,450 Influence Points", style = MaterialTheme.typography.bodySmall, color = Slate500)
+                AsyncImage(
+                    model = "https://lh3.googleusercontent.com/aida-public/AB6AXuAnyFLls1xsT1YNnA0R9LluoGoW1kDJWwj4tatOeYM9ipuMeZYFOzKKyjkMCzfIHkyhRWpKxSk4IpMbTG-Zi3Lfjxj_5EYhe-LbqL8P9NaB5M1lzKSjMYPiFKZA1V-LZHcwn8LRT4MZada8kfUCY5ecxCTotfwjr8WnfqJAgpxYpp8-KQEZcAmHNQYYodLFxxLviUDJVTi3pJmAVNM2A2i5IhFKirhMmRKyeHLV3Fm0Kqe1t6L1RhoiavyIAwY-zo5AU0KpndbZdJNY",
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(128.dp)
+                        .align(Alignment.BottomCenter)
+                        .offset(y = 64.dp)
+                        .clip(CircleShape)
+                        .border(4.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            // Profile Info
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Kamal Singh", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("12,450 Influence Points", style = MaterialTheme.typography.bodySmall, color = Slate500)
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Stats row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ProfileStatCard("142", "Briefings", Modifier.weight(1f))
+                ProfileStatCard("892", "Saved", Modifier.weight(1f))
+                ProfileStatCard("560", "Following", Modifier.weight(1f))
+                ProfileStatCard("2.1k", "Followers", Modifier.weight(1f))
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -131,28 +153,13 @@ fun ProfileScreen(navController: NavController) {
                     Icon(Icons.Default.ChevronRight, null, tint = PrimaryRed)
                 }
             }
-        }
-    }
-
-    Spacer(modifier = Modifier.height(24.dp))
-
-    // Stats
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ProfileStatCard("142", "Briefings", Modifier.weight(1f))
-                ProfileStatCard("892", "Saved", Modifier.weight(1f))
-                ProfileStatCard("560", "Following", Modifier.weight(1f))
-                ProfileStatCard("2.1k", "Followers", Modifier.weight(1f))
-            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // Sticky Tabs (not really sticky here for simplicity, part of scroll)
             ScrollableTabRow(
                 selectedTabIndex = tabs.indexOf(selectedTab),
-                containerColor = CreamBg.copy(alpha = 0.9f),
+                containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.9f),
                 contentColor = PrimaryRed,
                 edgePadding = 16.dp,
                 divider = {},
@@ -206,9 +213,9 @@ fun ProfileScreen(navController: NavController) {
 fun ProfileStatCard(value: String, label: String, modifier: Modifier) {
     Surface(
         modifier = modifier,
-        color = Color.White.copy(alpha = 0.5f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
         shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -223,9 +230,9 @@ fun ProfileStatCard(value: String, label: String, modifier: Modifier) {
 @Composable
 fun ProfilePostCard(title: String, likes: String, comments: String, date: String, img: String) {
     Surface(
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         shadowElevation = 1.dp
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {

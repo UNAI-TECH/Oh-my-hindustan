@@ -54,7 +54,7 @@ fun SearchScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
-            Column(modifier = Modifier.background(Color.White)) {
+            Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -82,8 +82,8 @@ fun SearchScreen(navController: NavController) {
                             }
                         },
                         colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedContainerColor = Color(0xFFF1F5F9),
-                            focusedContainerColor = Color(0xFFF1F5F9),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                             unfocusedBorderColor = Color.Transparent,
                             focusedBorderColor = PrimaryRed
                         ),
@@ -106,9 +106,9 @@ fun SearchScreen(navController: NavController) {
                             shape = CircleShape,
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = PrimaryRed,
-                                selectedLabelColor = Color.White,
-                                containerColor = Color(0xFFF1F5F9),
-                                labelColor = Slate500
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                             ),
                             border = null
                         )
@@ -122,7 +122,7 @@ fun SearchScreen(navController: NavController) {
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(Color(0xFFF8FAFC)),
+                .background(MaterialTheme.colorScheme.background),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {

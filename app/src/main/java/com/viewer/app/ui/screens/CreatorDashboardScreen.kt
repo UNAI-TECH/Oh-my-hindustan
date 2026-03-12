@@ -1,6 +1,7 @@
 package com.viewer.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -12,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
@@ -19,8 +21,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.layout.ContentScale
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.viewer.app.ui.components.AppBottomNavBar
+import com.viewer.app.ui.components.StudioBottomNavBar
 import com.viewer.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,48 +35,55 @@ fun CreatorDashboardScreen(navController: NavController) {
         topBar = {
             TopAppBar(
                 title = { Text("Analyst Studio", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.Menu, null)
-                    }
-                },
                 actions = {
-                    Surface(
-                        color = WarmOrange,
-                        shape = CircleShape,
-                        modifier = Modifier.size(32.dp).padding(end = 8.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text("JD", color = Color.White, style = MaterialTheme.typography.labelSmall)
-                        }
+                    IconButton(onClick = { /* Handle edit */ }) {
+                        Icon(Icons.Default.Edit, "Edit Data", tint = Slate500, modifier = Modifier.size(20.dp))
                     }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    AsyncImage(
+                        model = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=256&h=256&auto=format&fit=crop",
+                        contentDescription = "Profile",
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .border(1.dp, Color.LightGray, CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         },
-        bottomBar = { AppBottomNavBar(navController, "creator_dashboard") }
+        bottomBar = { StudioBottomNavBar(navController, "creator_dashboard") }
     ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(CreamBg)
+                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
             // Welcome Header
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text("Welcome back, Kamal", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text("Analyst performance for the last 28 days", style = MaterialTheme.typography.bodySmall, color = Slate500)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Welcome back, Kamal", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Text("Analyst performance for the last 28 days", style = MaterialTheme.typography.bodySmall, color = Slate500, textAlign = TextAlign.Center)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // Main Analytics Card
             Surface(
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(20.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9))
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Row(
@@ -130,9 +142,6 @@ fun CreatorDashboardScreen(navController: NavController) {
                 Box(modifier = Modifier.weight(1f)) {
                     CreatorSquareAction("Policy Analysis", Icons.Default.EditNote, PrimaryRed) { navController.navigate("content_editor") }
                 }
-                Box(modifier = Modifier.weight(1f)) {
-                    CreatorSquareAction("Political Live", Icons.Default.Podcasts, Color(0xFF9333EA)) {}
-                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -146,9 +155,9 @@ fun CreatorDashboardScreen(navController: NavController) {
 fun CreatorMiniStat(label: String, value: String, change: String, modifier: Modifier) {
     Surface(
         modifier = modifier,
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9))
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(label, style = MaterialTheme.typography.labelSmall, color = Slate500)
@@ -166,7 +175,7 @@ fun CreatorMiniStat(label: String, value: String, change: String, modifier: Modi
 fun CreatorSquareAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(16.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.2f))
     ) {
@@ -210,7 +219,7 @@ fun RecentVideoRow(title: String, views: String, comments: String, likes: String
 fun CreatorActionCard(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, onClick: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(16.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.3f)),
         onClick = onClick

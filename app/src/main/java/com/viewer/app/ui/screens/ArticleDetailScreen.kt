@@ -89,11 +89,15 @@ fun ArticleDetailScreen(navController: NavController, articleId: String?) {
                         Icon(if (isSaved) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder, null, tint = if (isSaved) PrimaryRed else Color.Black) 
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = CreamBg)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+                    actionIconContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize().background(CreamBg)) {
+        Box(modifier = Modifier.padding(padding).fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -120,7 +124,7 @@ fun ArticleDetailScreen(navController: NavController, articleId: String?) {
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.ExtraBold,
                         lineHeight = 44.sp,
-                        color = Color(0xFF1F1413)
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                     Spacer(modifier = Modifier.height(32.dp))
                     
@@ -145,8 +149,8 @@ fun ArticleDetailScreen(navController: NavController, articleId: String?) {
                         Button(
                             onClick = { GlobalState.toggleFollow(item.authorName ?: "Amit Sharma") },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isFollowed) Color.White else PrimaryRed,
-                                contentColor = if (isFollowed) PrimaryRed else Color.White
+                                containerColor = if (isFollowed) MaterialTheme.colorScheme.surface else PrimaryRed,
+                                contentColor = if (isFollowed) PrimaryRed else MaterialTheme.colorScheme.onPrimary
                             ),
                             border = BorderStroke(1.dp, PrimaryRed),
                             shape = RoundedCornerShape(20.dp),
@@ -236,10 +240,10 @@ fun ArticleDetailScreen(navController: NavController, articleId: String?) {
                     .fillMaxWidth(0.95f)
                     .height(64.dp),
                 shape = CircleShape,
-                color = Color.White.copy(alpha = 0.95f),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
                 shadowElevation = 16.dp,
                 tonalElevation = 6.dp,
-                border = BorderStroke(1.dp, Color(0xFFF1F5F9))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Row(
                     modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
@@ -252,11 +256,11 @@ fun ArticleDetailScreen(navController: NavController, articleId: String?) {
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                     ) {
                         IconButton(onClick = { if (!isUpvoted) { votes += 0.1; isUpvoted = true; isDownvoted = false } else { votes -= 0.1; isUpvoted = false } }) {
-                            Icon(Icons.Default.KeyboardArrowUp, null, tint = if (isUpvoted) PrimaryRed else Color.Black)
+                            Icon(Icons.Default.KeyboardArrowUp, null, tint = if (isUpvoted) PrimaryRed else MaterialTheme.colorScheme.onSurface)
                         }
                         Text("${String.format("%.1f", votes)}k", style = MaterialTheme.typography.titleSmall)
                         IconButton(onClick = { if (!isDownvoted) { votes -= 0.1; isDownvoted = true; isUpvoted = false } else { votes += 0.1; isDownvoted = false } }) {
-                            Icon(Icons.Default.KeyboardArrowDown, null, tint = if (isDownvoted) PrimaryRed else Color.Black)
+                            Icon(Icons.Default.KeyboardArrowDown, null, tint = if (isDownvoted) PrimaryRed else MaterialTheme.colorScheme.onSurface)
                         }
                     }
                     
@@ -279,7 +283,7 @@ fun ArticleDetailScreen(navController: NavController, articleId: String?) {
     }
 
     if (showComments) {
-        ModalBottomSheet(onDismissRequest = { showComments = false }, sheetState = sheetState, containerColor = Color.White) {
+        ModalBottomSheet(onDismissRequest = { showComments = false }, sheetState = sheetState, containerColor = MaterialTheme.colorScheme.surface) {
             CommentSheetContent(item)
         }
     }

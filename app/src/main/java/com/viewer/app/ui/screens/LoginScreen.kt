@@ -35,7 +35,7 @@ fun LoginScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBg)
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -61,7 +61,7 @@ fun LoginScreen(navController: NavController) {
             "Welcome to the Forum",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onBackground
         )
         Text(
             "Sign in to participate in Jan Samvad",
@@ -85,8 +85,8 @@ fun LoginScreen(navController: NavController) {
                 focusedBorderColor = PrimaryRed,
                 unfocusedLabelColor = slate500,
                 focusedLabelColor = PrimaryRed,
-                unfocusedContainerColor = Color.White,
-                focusedContainerColor = Color.White
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedContainerColor = MaterialTheme.colorScheme.surface
             )
         )
 
@@ -200,8 +200,8 @@ fun SocialLoginButton(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
         onClick = onClick,
         modifier = modifier.height(56.dp),
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFCBD5E1)),
-        color = Color.White,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 1.dp
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {

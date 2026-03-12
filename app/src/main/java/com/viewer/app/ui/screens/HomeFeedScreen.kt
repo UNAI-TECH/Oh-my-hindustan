@@ -90,14 +90,18 @@ fun HomeFeedScreen(navController: NavController) {
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         },
         bottomBar = { AppBottomNavBar(navController, "home") }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             LazyRow(
-                modifier = Modifier.fillMaxWidth().background(Color.White).padding(vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(vertical = 12.dp),
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -138,7 +142,10 @@ fun FeedCard(item: FeedItem, navController: NavController? = null, onShare: () -
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         when (item.type) {
@@ -206,7 +213,7 @@ fun VideoCardContent(item: FeedItem, onShare: () -> Unit = {}, navController: Na
     Column {
         Box(modifier = Modifier.fillMaxWidth().aspectRatio(16/9f)) {
             AsyncImage(model = item.thumbnail, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Box(modifier = Modifier.align(Alignment.Center).size(48.dp).background(Color.White.copy(alpha = 0.9f), CircleShape), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.align(Alignment.Center).size(48.dp).background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), CircleShape), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.PlayArrow, null, tint = PrimaryRed, modifier = Modifier.size(32.dp))
             }
         }
@@ -260,7 +267,15 @@ fun PromoCardContent(item: FeedItem) {
         Spacer(modifier = Modifier.height(12.dp))
         Text(item.title, style = MaterialTheme.typography.titleLarge, color = Color.White)
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = {}, shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = PrimaryRed), modifier = Modifier.height(48.dp)) {
+        Button(
+            onClick = {}, 
+            shape = RoundedCornerShape(8.dp), 
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.onPrimary, 
+                contentColor = PrimaryRed
+            ), 
+            modifier = Modifier.height(48.dp)
+        ) {
             Text("Join Newsletter", fontWeight = FontWeight.Bold)
         }
     }

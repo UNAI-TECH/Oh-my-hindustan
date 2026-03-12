@@ -92,7 +92,11 @@ fun CreatorProfileScreen(navController: NavController, authorName: String?) {
                         Icon(Icons.Default.MoreVert, "Options") 
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
     ) { padding ->
@@ -100,7 +104,7 @@ fun CreatorProfileScreen(navController: NavController, authorName: String?) {
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(CreamBg)
+                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState())
         ) {
             // Banner & Avatar
@@ -139,8 +143,8 @@ fun CreatorProfileScreen(navController: NavController, authorName: String?) {
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isFollowed) Color(0xFFF1F5F9) else Color(0xFFC62828),
-                        contentColor = if (isFollowed) Color.Black else Color.White
+                        containerColor = if (isFollowed) MaterialTheme.colorScheme.surfaceVariant else PrimaryRed,
+                        contentColor = if (isFollowed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
                     Text(if (isFollowed) "Following" else "Follow", fontWeight = FontWeight.Bold)
@@ -211,7 +215,7 @@ fun CreatorProfileScreen(navController: NavController, authorName: String?) {
         ModalBottomSheet(
             onDismissRequest = { showOptionsSheet = false },
             sheetState = sheetState,
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         ) {
             Column(modifier = Modifier.padding(16.dp).padding(bottom = 32.dp)) {
                 listOf("Restrict", "Block", "Report", "Share this profile", "Copy profile URL").forEach { option ->
@@ -219,7 +223,7 @@ fun CreatorProfileScreen(navController: NavController, authorName: String?) {
                         text = option,
                         modifier = Modifier.fillMaxWidth().clickable { showOptionsSheet = false }.padding(vertical = 16.dp),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = if (option == "Report") Color.Red else Color.Black
+                        color = if (option == "Report") Color.Red else MaterialTheme.colorScheme.onSurface
                     )
                 }
                 if (isFollowed) {
@@ -242,7 +246,7 @@ fun ProfilePostCard(item: FeedItem, navController: NavController) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF9F5F0).copy(alpha = 0.5f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {

@@ -56,7 +56,12 @@ fun NotificationScreen(navController: NavController) {
                 actions = {
                     IconButton(onClick = {}) { Icon(Icons.Default.MoreVert, null) }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
     ) { padding ->
@@ -64,7 +69,7 @@ fun NotificationScreen(navController: NavController) {
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(Color(0xFFF8FAFC)),
+                .background(MaterialTheme.colorScheme.background),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
@@ -72,7 +77,7 @@ fun NotificationScreen(navController: NavController) {
                 NotificationRow(notification) {
                     navController.navigate("article_detail/${notification.targetId}")
                 }
-                HorizontalDivider(color = Color(0xFFF1F5F9))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
         }
     }
@@ -84,7 +89,7 @@ fun NotificationRow(notification: NotificationItem, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .background(if (notification.isRead) Color.White else PrimaryRed.copy(alpha = 0.03f))
+            .background(if (notification.isRead) MaterialTheme.colorScheme.surface else PrimaryRed.copy(alpha = 0.03f))
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

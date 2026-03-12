@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.viewer.app.ui.components.AppBottomNavBar
+import com.viewer.app.ui.components.StudioBottomNavBar
 import com.viewer.app.ui.theme.CreamBg
 import com.viewer.app.ui.theme.PrimaryRed
 import com.viewer.app.ui.theme.Slate400
@@ -39,16 +40,20 @@ fun CreatorAnalyticsScreen(navController: NavController) {
                         Icon(Icons.Default.Analytics, null, tint = PrimaryRed)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         },
-        bottomBar = { AppBottomNavBar(navController, "creator_dashboard") }
+        bottomBar = { StudioBottomNavBar(navController, "creator_analytics") }
     ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(CreamBg)
+                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
@@ -141,10 +146,10 @@ fun DateChip(label: String, isSelected: Boolean, icon: androidx.compose.ui.graph
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(label, color = if (isSelected) Color.White else PrimaryRed, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text(label, color = if (isSelected) MaterialTheme.colorScheme.onPrimary else PrimaryRed, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             if (icon != null) {
                 Spacer(modifier = Modifier.width(4.dp))
-                Icon(icon, null, tint = if (isSelected) Color.White else PrimaryRed, modifier = Modifier.size(14.dp))
+                Icon(icon, null, tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else PrimaryRed, modifier = Modifier.size(14.dp))
             }
         }
     }
@@ -154,9 +159,9 @@ fun DateChip(label: String, isSelected: Boolean, icon: androidx.compose.ui.graph
 fun SmallStatCard(label: String, value: String, change: String, modifier: Modifier, isNegative: Boolean = false) {
     Surface(
         modifier = modifier,
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9))
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = Slate500, letterSpacing = 0.5.sp)

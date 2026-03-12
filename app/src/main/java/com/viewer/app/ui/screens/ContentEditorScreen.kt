@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.viewer.app.ui.components.AppBottomNavBar
+import com.viewer.app.ui.components.StudioBottomNavBar
 import com.viewer.app.ui.theme.CreamBg
 import com.viewer.app.ui.theme.PrimaryRed
 import com.viewer.app.ui.theme.WarmOrange
@@ -54,23 +55,27 @@ fun ContentEditorScreen(navController: NavController) {
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         },
-        bottomBar = { AppBottomNavBar(navController, "content_editor") }
+        bottomBar = { StudioBottomNavBar(navController, "content_editor") }
     ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(CreamBg)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             // Tabs
             TabRow(
                 selectedTabIndex = tabs.indexOf(selectedTab),
-                containerColor = Color.White,
+                containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = PrimaryRed,
-                divider = { HorizontalDivider(color = Color(0xFFF1F5F9)) },
+                divider = { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant) },
                 indicator = { tabPositions ->
                     TabRowDefaults.Indicator(
                         modifier = Modifier.tabIndicatorOffset(tabPositions[tabs.indexOf(selectedTab)]),
@@ -170,8 +175,8 @@ fun VideoUploadSection() {
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = slate300,
                 focusedBorderColor = PrimaryRed,
-                unfocusedContainerColor = Color.White,
-                focusedContainerColor = Color.White
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedContainerColor = MaterialTheme.colorScheme.surface
             )
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -184,8 +189,8 @@ fun VideoUploadSection() {
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = slate300,
                 focusedBorderColor = PrimaryRed,
-                unfocusedContainerColor = Color.White,
-                focusedContainerColor = Color.White
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedContainerColor = MaterialTheme.colorScheme.surface
             )
         )
     }

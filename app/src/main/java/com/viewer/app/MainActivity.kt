@@ -10,18 +10,27 @@ import androidx.compose.ui.Modifier
 import com.viewer.app.ui.navigation.NavigationGraph
 import com.viewer.app.ui.theme.ViewerTheme
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.viewer.app.ui.theme.ThemeViewModel
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            ViewerTheme {
+            val themeViewModel: ThemeViewModel = viewModel()
+            val isDarkMode by themeViewModel.isDarkMode.collectAsState()
+
+            ViewerTheme(darkTheme = isDarkMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    NavigationGraph()
+                    NavigationGraph(themeViewModel)
                 }
             }
         }
     }
 }
+

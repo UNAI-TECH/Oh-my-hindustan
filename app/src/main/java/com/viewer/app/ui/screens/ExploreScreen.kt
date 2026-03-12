@@ -65,7 +65,7 @@ fun ExploreScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
-            Column(modifier = Modifier.background(CreamBg).padding(horizontal = 16.dp)) {
+            Column(modifier = Modifier.background(MaterialTheme.colorScheme.background).padding(horizontal = 16.dp)) {
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = searchQuery,
@@ -106,9 +106,9 @@ fun ExploreScreen(navController: NavController) {
                             label = { Text(category) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = PrimaryRed,
-                                selectedLabelColor = Color.White,
-                                containerColor = Slate400.copy(alpha = 0.1f),
-                                labelColor = Slate500
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                             ),
                             border = null,
                             shape = CircleShape
@@ -124,7 +124,7 @@ fun ExploreScreen(navController: NavController) {
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(CreamBg),
+                .background(MaterialTheme.colorScheme.background),
             contentPadding = PaddingValues(16.dp)
         ) {
             item { 
@@ -232,7 +232,7 @@ fun CategoryIconButton(label: String, icon: androidx.compose.ui.graphics.vector.
             Icon(
                 icon, null, 
                 modifier = Modifier.padding(14.dp),
-                tint = if (isActive) Color.White else PrimaryRed
+                tint = if (isActive) MaterialTheme.colorScheme.onPrimary else PrimaryRed
             )
         }
         Spacer(modifier = Modifier.height(8.dp))

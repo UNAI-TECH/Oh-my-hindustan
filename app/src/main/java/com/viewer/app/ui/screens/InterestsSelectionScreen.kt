@@ -40,7 +40,7 @@ fun InterestsSelectionScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBg)
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -50,7 +50,7 @@ fun InterestsSelectionScreen(navController: NavController) {
             "What matters to you?",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onBackground
         )
         Text(
             "Select at least 3 political themes to personalize your forum",
@@ -76,10 +76,10 @@ fun InterestsSelectionScreen(navController: NavController) {
                     },
                     modifier = Modifier.fillMaxWidth().height(90.dp),
                     shape = RoundedCornerShape(20.dp),
-                    color = if (isSelected) PrimaryRed.copy(alpha = 0.05f) else Color.White,
+                    color = if (isSelected) PrimaryRed.copy(alpha = 0.05f) else MaterialTheme.colorScheme.surface,
                     border = androidx.compose.foundation.BorderStroke(
                         width = if (isSelected) 2.dp else 1.dp,
-                        color = if (isSelected) PrimaryRed else slate300
+                        color = if (isSelected) PrimaryRed else MaterialTheme.colorScheme.outlineVariant
                     ),
                     shadowElevation = if (isSelected) 0.dp else 1.dp
                 ) {

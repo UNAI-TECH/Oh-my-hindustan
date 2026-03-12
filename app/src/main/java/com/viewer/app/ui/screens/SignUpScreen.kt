@@ -38,7 +38,7 @@ fun SignUpScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CreamBg)
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -67,7 +67,7 @@ fun SignUpScreen(navController: NavController) {
             "Join the National Dialogue",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onBackground
         )
         Text(
             "Become a verified participant in Jan Samvad.",
@@ -88,8 +88,8 @@ fun SignUpScreen(navController: NavController) {
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = slate300,
                 focusedBorderColor = PrimaryRed,
-                unfocusedContainerColor = Color.White,
-                focusedContainerColor = Color.White
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedContainerColor = MaterialTheme.colorScheme.surface
             )
         )
 
@@ -107,8 +107,8 @@ fun SignUpScreen(navController: NavController) {
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = slate300,
                 focusedBorderColor = PrimaryRed,
-                unfocusedContainerColor = Color.White,
-                focusedContainerColor = Color.White
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedContainerColor = MaterialTheme.colorScheme.surface
             )
         )
 
