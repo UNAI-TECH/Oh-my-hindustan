@@ -68,6 +68,38 @@ object SampleData {
             votes = "3.1k",
             comments = 156,
             thumbnail = "https://lh3.googleusercontent.com/aida-public/AB6AXuCZAoyLSLU_gBYxJ3MlUXM6QwsmEhYIUfR3xOQ6Hbl-r-zsglhDTqLznDgJnEsKTSYF_AIjnAln1PPfBGlMeGEoYKSyaesCIuAhZF9v-Q_q6xmA0kqHT8UHA-FS5IiYfsKooyx4v3wJcecgJS5TTRqHPC9X0krkvVNcPbat8QsdlMMHcSMQw0G4_46xvbcIPpWuM7YG_nrgddbcMIMZqHu0RmZGt1UQeUg-uWv9gCVYr5iiWchyNvalQgBc1yLpFLLogPfis0Hrw2J5"
+        ),
+        FeedItem(
+            id = "6",
+            type = FeedItemType.BLOG,
+            title = "The Art of Slow Living in a Fast-Paced World",
+            authorName = "Elena Rostova",
+            subtitle = "in Lifestyle",
+            authorImage = "https://lh3.googleusercontent.com/aida-public/AB6AXuBpygkaztYdAvrMVY7-WMcElyKx3mFHF7Fwe4KxQ-8wvNhJP70J52TyQuYr3bRV8rY5jaEUmBwXe0l87K4RJ8Z1GRnaHFOB-W15CTReHYfq8WFnUzzz5KzlBU7grUoLkzLlYx0XucoeUKY0n1t_4Yfz-PWardBhYVJL34Ncjp9OM7LN59ep6RASY3DAe3kVDr2nV-mDwUHPTXOnbaXyzJ4VqrW-1IKiLsnFlrlI5hYoOUGzAqKBYmQ3Xgn99MBu99paMRWxpdX3-L3A",
+            thumbnail = "https://lh3.googleusercontent.com/aida-public/AB6AXuCgs_8J7qeK9Z-s244WGdmKhYXyncN1Ma1_kQR9Y5UbY9pO0pqL2M7Nwy_WVp-O0bn_cuyevgguqFOYOnzQhH_rQYXLG2qs0oDlne5RDw6gN3xVAIykt2Wm9XI0tXYd9fJxfClChVRp29d4rTXqCPVqz_Yri_Uv9u5rfFcYAAykDsYiXM-0lvYwj2fma9WePxayOUBJ7yCP6CvyNYqUjs--o1sYNZ4J-4mQXfZptw1mQ55s5cbATKEeERH2kdSCXeE3XXkN4ugg5Uzb",
+            votes = "2.5k",
+            comments = 89,
+            excerpt = "In an era where productivity is the ultimate metric, the art of slow living offers a radical alternative. It's not about doing things at a snail's pace, but about doing them with intention..."
+        ),
+        FeedItem(
+            id = "7",
+            type = FeedItemType.VIDEO,
+            title = "Mastering Compose Animations: A Complete Guide",
+            subtitle = "Code with Alex • 120k views • 3 days ago",
+            authorName = "Alex Rivera",
+            authorImage = "https://lh3.googleusercontent.com/aida-public/AB6AXuAnyFLls1xsT1YNnA0R9LluoGoW1kDJWwj4tatOeYM9ipuMeZYFOzKKyjkMCzfIHkyhRWpKxSk4IpMbTG-Zi3Lfjxj_5EYhe-LbqL8P9NaB5M1lzKSjMYPiFKZA1V-LZHcwn8LRT4MZada8kfUCY5ecxCTotfwjr8WnfqJAgpxYpp8-KQEZcAmHNQYYodLFxxLviUDJVTi3pJmAVNM2A2i5IhFKirhMmRKyeHLV3Fm0Kqe1t6L1RhoiavyIAwY-zo5AU0KpndbZdJNY",
+            thumbnail = "https://lh3.googleusercontent.com/aida-public/AB6AXuBNPp7D5HnjPznxYo5iXMHnH_X2PMhRGCHcfVJzAYwdcypyYKWiBziknmQ34zlmVGnZXeB_qIxg7MIO6nap_4GfsawTJB9nh1bH-Qvt_svGEZsYR1NHsiNM84_45jqH0jg19wyMZMhVatm3enN7R6SGyUN0ffgOJFbC4jemWHdEsOSlW95PQWEz4XlKMjyfMRKXqfW4CJRRrnf-EUNfinh9ezmiZ_jdBdCbXZIMI11-okK_RN22HxxnabXAaUcyJB7XRqyNdUbArGfG",
+            videoDuration = "25:10"
+        ),
+        FeedItem(
+            id = "8",
+            type = FeedItemType.NEWS,
+            title = "SpaceX Successfully Lands Starship Prototype",
+            category = "Technology",
+            timestamp = "6h ago",
+            votes = "45k",
+            comments = 1205,
+            thumbnail = "https://lh3.googleusercontent.com/aida-public/AB6AXuDlHq1L9kII1dYdkFlamkDmCfbxs6Hq8tL49jnqGHcVd-bQnIGJqqw97OAgiyjQ_Y4kaud4pC6XBA1ocxHDFFWnBtF2RaM9486tXAwO4hObiuljisXcwJKEhG_ytlrXyRUrf0Mry0L1_M3QmtravL5c_SUOiFSPNszGEroTjR_Xsue9lcUVo4Lbu_7_SpR_OjKTbArPoMYH1XiFfu935cnNLXG0Xeng9OHW0hyD024CTAGKeWaa5H0W5a-Il1iEzlSVNs1FsDNdTuqr"
         )
     )
 }

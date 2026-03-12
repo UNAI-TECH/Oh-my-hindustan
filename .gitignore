@@ -1,3 +1,4 @@
+# Android/Kotlin
 *.iml
 .gradle
 /local.properties
@@ -12,4 +13,30 @@
 /captures
 .externalNativeBuild
 .cxx
+*.bak
+*.class
+*.dex
+*.apk
+*.ap_
+*.aab
+bin/
+gen/
+out/
+captures/
+.navigation/
+.gradle/
+build/
+
+# Kotlin
+*.kotlin_module
+*.kt.bak
+*.kts.bak
+
+# IDE
+.idea/
+*.iml
+*.iws
+
+# User-specific files
 local.properties
+.DS_Store

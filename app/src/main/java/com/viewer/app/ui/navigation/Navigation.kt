@@ -25,5 +25,12 @@ fun NavigationGraph() {
         composable("creator_analytics") { CreatorAnalyticsScreen(navController) }
         composable("admin_overview") { AdminOverviewScreen(navController) }
         composable("admin_monetization") { AdminMonetizationScreen(navController) }
+        composable("search") { SearchScreen(navController) }
+        composable("library") { LibraryScreen(navController) }
+        composable("creator_profile/{authorName}") { backStackEntry ->
+            val authorName = backStackEntry.arguments?.getString("authorName")
+            CreatorProfileScreen(navController, authorName)
+        }
+        composable("notifications") { NotificationScreen(navController) }
     }
 }

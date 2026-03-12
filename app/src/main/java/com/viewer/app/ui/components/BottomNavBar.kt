@@ -22,7 +22,7 @@ fun AppBottomNavBar(navController: NavController, currentRoute: String?) {
             BottomNavItem("Home", "home", Icons.Default.Home),
             BottomNavItem("Explore", "explore", Icons.Default.Explore),
             BottomNavItem("Post", "content_editor", Icons.Default.AddBox),
-            BottomNavItem("Library", "profile", Icons.Default.Bookmarks), // Using profile as library placeholder
+            BottomNavItem("Library", "library", Icons.Default.Bookmarks),
             BottomNavItem("Profile", "profile", Icons.Default.Person)
         )
 
