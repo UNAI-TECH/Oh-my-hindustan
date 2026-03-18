@@ -1,0 +1,215 @@
+[32m[Nest] 1  - [39m03/16/2026, 8:44:15 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +82ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +3ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:44:16 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the JwtStrategy (ConfigService, ?). Please make sure that the argument "UserRepository" at index [1] is available in the AuthModule module.
+
+Potential solutions:
+- Is AuthModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current AuthModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within AuthModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 1)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 5)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'JwtStrategy'[39m,
+  context: {
+    index: [33m1[39m,
+    dependencies: [
+      [36m[class ConfigService][39m,
+      [32m'UserRepository'[39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'0504a645c75bed2869b16'[39m
+  },
+  moduleRef: {
+    id: [32m'1c7ff8fd2b171964f02ed'[39m
+  }
+}
+[32m[Nest] 1  - [39m03/16/2026, 8:44:17 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +54ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +1ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:44:18 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the JwtStrategy (ConfigService, ?). Please make sure that the argument "UserRepository" at index [1] is available in the AuthModule module.
+
+Potential solutions:
+- Is AuthModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current AuthModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within AuthModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 1)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 5)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'JwtStrategy'[39m,
+  context: {
+    index: [33m1[39m,
+    dependencies: [
+      [36m[class ConfigService][39m,
+      [32m'UserRepository'[39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'd3de38135bf5de80599b8'[39m
+  },
+  moduleRef: {
+    id: [32m'ff511f756740edd2095ea'[39m
+  }
+}
+[32m[Nest] 1  - [39m03/16/2026, 8:44:20 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +62ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:20 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +1ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:44:20 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the JwtStrategy (ConfigService, ?). Please make sure that the argument "UserRepository" at index [1] is available in the AuthModule module.
+
+Potential solutions:
+- Is AuthModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current AuthModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within AuthModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 1)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 5)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'JwtStrategy'[39m,
+  context: {
+    index: [33m1[39m,
+    dependencies: [
+      [36m[class ConfigService][39m,
+      [32m'UserRepository'[39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'5532424808fd9e6fde677'[39m
+  },
+  moduleRef: {
+    id: [32m'c98566e1407c3d61dc23d'[39m
+  }
+}
+[32m[Nest] 1  - [39m03/16/2026, 8:44:22 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:22 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +59ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:22 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:22 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:22 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:22 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +0ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:44:22 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the JwtStrategy (ConfigService, ?). Please make sure that the argument "UserRepository" at index [1] is available in the AuthModule module.
+
+Potential solutions:
+- Is AuthModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current AuthModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within AuthModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 1)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 5)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'JwtStrategy'[39m,
+  context: {
+    index: [33m1[39m,
+    dependencies: [
+      [36m[class ConfigService][39m,
+      [32m'UserRepository'[39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'23e7d0504109e38fcbbd7'[39m
+  },
+  moduleRef: {
+    id: [32m'72c66310edaeef917541d'[39m
+  }
+}
+[32m[Nest] 1  - [39m03/16/2026, 8:44:24 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:25 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +56ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:25 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:25 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:25 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:44:25 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +2ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:44:25 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the JwtStrategy (ConfigService, ?). Please make sure that the argument "UserRepository" at index [1] is available in the AuthModule module.
+
+Potential solutions:
+- Is AuthModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current AuthModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within AuthModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 1)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 5)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'JwtStrategy'[39m,
+  context: {
+    index: [33m1[39m,
+    dependencies: [
+      [36m[class ConfigService][39m,
+      [32m'UserRepository'[39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'96b4cf8b3b13b162f6439'[39m
+  },
+  moduleRef: {
+    id: [32m'b8627bb52aa318559d108'[39m
+  }
+}

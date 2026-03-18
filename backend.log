@@ -1,0 +1,504 @@
+[32m[Nest] 1  - [39m03/16/2026, 8:37:04 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:04 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +56ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:04 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:04 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:04 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:37:05 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the UsersService (?, DataSource). Please make sure that the argument "UserRepository" at index [0] is available in the UsersModule module.
+
+Potential solutions:
+- Is UsersModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current UsersModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within UsersModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 0)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'UsersService'[39m,
+  context: {
+    index: [33m0[39m,
+    dependencies: [
+      [32m'UserRepository'[39m,
+      [36m[class DataSource][39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'feb9a4a58ac8b7f4d2661'[39m
+  },
+  moduleRef: {
+    id: [32m'1e450a1b636e5b62a1f77'[39m
+  }
+}
+[32m[Nest] 1  - [39m03/16/2026, 8:37:08 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:08 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +61ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:08 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:08 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:08 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:37:08 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the UsersService (?, DataSource). Please make sure that the argument "UserRepository" at index [0] is available in the UsersModule module.
+
+Potential solutions:
+- Is UsersModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current UsersModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within UsersModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 0)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'UsersService'[39m,
+  context: {
+    index: [33m0[39m,
+    dependencies: [
+      [32m'UserRepository'[39m,
+      [36m[class DataSource][39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'e47a48c08d9ecf24f0337'[39m
+  },
+  moduleRef: {
+    id: [32m'7b54be534da5da44819d8'[39m
+  }
+}
+[32m[Nest] 1  - [39m03/16/2026, 8:37:11 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:12 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +91ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:12 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:12 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:12 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +3ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:37:12 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the UsersService (?, DataSource). Please make sure that the argument "UserRepository" at index [0] is available in the UsersModule module.
+
+Potential solutions:
+- Is UsersModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current UsersModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within UsersModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 0)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'UsersService'[39m,
+  context: {
+    index: [33m0[39m,
+    dependencies: [
+      [32m'UserRepository'[39m,
+      [36m[class DataSource][39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'b0db0e07ae87eaa5cc558'[39m
+  },
+  moduleRef: {
+    id: [32m'd1a4d141915993a95d2a1'[39m
+  }
+}
+[32m[Nest] 1  - [39m03/16/2026, 8:37:14 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:14 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +59ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:14 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:14 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:14 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:37:14 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the UsersService (?, DataSource). Please make sure that the argument "UserRepository" at index [0] is available in the UsersModule module.
+
+Potential solutions:
+- Is UsersModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current UsersModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within UsersModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 0)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'UsersService'[39m,
+  context: {
+    index: [33m0[39m,
+    dependencies: [
+      [32m'UserRepository'[39m,
+      [36m[class DataSource][39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'46ff7a27e5ea9c4e9672c'[39m
+  },
+  moduleRef: {
+    id: [32m'e9439b6662e0893864b3e'[39m
+  }
+}
+[32m[Nest] 1  - [39m03/16/2026, 8:37:18 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +99ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +4ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:37:18 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the UsersService (?, DataSource). Please make sure that the argument "UserRepository" at index [0] is available in the UsersModule module.
+
+Potential solutions:
+- Is UsersModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current UsersModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within UsersModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 0)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'UsersService'[39m,
+  context: {
+    index: [33m0[39m,
+    dependencies: [
+      [32m'UserRepository'[39m,
+      [36m[class DataSource][39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'abca9fbc10b041ef97e9b'[39m
+  },
+  moduleRef: {
+    id: [32m'b5778102ad29960bb46aa'[39m
+  }
+}
+[32m[Nest] 1  - [39m03/16/2026, 8:37:22 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:22 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +63ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:22 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:22 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:22 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:37:22 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the UsersService (?, DataSource). Please make sure that the argument "UserRepository" at index [0] is available in the UsersModule module.
+
+Potential solutions:
+- Is UsersModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current UsersModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within UsersModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 0)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'UsersService'[39m,
+  context: {
+    index: [33m0[39m,
+    dependencies: [
+      [32m'UserRepository'[39m,
+      [36m[class DataSource][39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'd9aa9763c306226ff9468'[39m
+  },
+  moduleRef: {
+    id: [32m'7324a3dba4fe676cb7670'[39m
+  }
+}
+[32m[Nest] 1  - [39m03/16/2026, 8:37:27 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:27 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +56ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:27 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:27 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:27 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:37:27 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the UsersService (?, DataSource). Please make sure that the argument "UserRepository" at index [0] is available in the UsersModule module.
+
+Potential solutions:
+- Is UsersModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current UsersModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within UsersModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 0)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'UsersService'[39m,
+  context: {
+    index: [33m0[39m,
+    dependencies: [
+      [32m'UserRepository'[39m,
+      [36m[class DataSource][39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'984f58126aefecc1a9a70'[39m
+  },
+  moduleRef: {
+    id: [32m'2bddcb007a01630b02fff'[39m
+  }
+}
+[32m[Nest] 1  - [39m03/16/2026, 8:37:37 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:37 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +74ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:37 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:37 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:37 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +1ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:37:37 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the UsersService (?, DataSource). Please make sure that the argument "UserRepository" at index [0] is available in the UsersModule module.
+
+Potential solutions:
+- Is UsersModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current UsersModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within UsersModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 0)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'UsersService'[39m,
+  context: {
+    index: [33m0[39m,
+    dependencies: [
+      [32m'UserRepository'[39m,
+      [36m[class DataSource][39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'4e8aeb99d223a2626fd8d'[39m
+  },
+  moduleRef: {
+    id: [32m'5cbfaeb1845e006175ac1'[39m
+  }
+}
+[32m[Nest] 1  - [39m03/16/2026, 8:37:51 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:51 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +58ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:51 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:51 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:37:51 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:37:51 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the UsersService (?, DataSource). Please make sure that the argument "UserRepository" at index [0] is available in the UsersModule module.
+
+Potential solutions:
+- Is UsersModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current UsersModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within UsersModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 0)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'UsersService'[39m,
+  context: {
+    index: [33m0[39m,
+    dependencies: [
+      [32m'UserRepository'[39m,
+      [36m[class DataSource][39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'fb83737a54d030fbf0f59'[39m
+  },
+  moduleRef: {
+    id: [32m'a44f80a966efceff1416e'[39m
+  }
+}
+[32m[Nest] 1  - [39m03/16/2026, 8:38:21 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:38:22 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +166ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:38:22 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:38:22 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:38:22 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +1ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:38:22 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the UsersService (?, DataSource). Please make sure that the argument "UserRepository" at index [0] is available in the UsersModule module.
+
+Potential solutions:
+- Is UsersModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current UsersModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within UsersModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 0)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'UsersService'[39m,
+  context: {
+    index: [33m0[39m,
+    dependencies: [
+      [32m'UserRepository'[39m,
+      [36m[class DataSource][39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'178978cac809303ce1d5a'[39m
+  },
+  moduleRef: {
+    id: [32m'f3f5a0077d140a10fb7f3'[39m
+  }
+}
+[32m[Nest] 1  - [39m03/16/2026, 8:39:15 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:39:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +83ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:39:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:39:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:39:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:39:15 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the UsersService (?, DataSource). Please make sure that the argument "UserRepository" at index [0] is available in the UsersModule module.
+
+Potential solutions:
+- Is UsersModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current UsersModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within UsersModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 0)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'UsersService'[39m,
+  context: {
+    index: [33m0[39m,
+    dependencies: [
+      [32m'UserRepository'[39m,
+      [36m[class DataSource][39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'5d2f0f31d08bb34713738'[39m
+  },
+  moduleRef: {
+    id: [32m'854cc4ea128ae2ffa2d5e'[39m
+  }
+}
+[32m[Nest] 1  - [39m03/16/2026, 8:40:17 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:40:17 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +59ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:40:17 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:40:17 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 1  - [39m03/16/2026, 8:40:17 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventsModule dependencies initialized[39m[38;5;3m +1ms[39m
+[31m[Nest] 1  - [39m03/16/2026, 8:40:17 PM [31m  ERROR[39m [38;5;3m[ExceptionHandler] [39mUnknownDependenciesException [Error]: Nest can't resolve dependencies of the UsersService (?, DataSource). Please make sure that the argument "UserRepository" at index [0] is available in the UsersModule module.
+
+Potential solutions:
+- Is UsersModule a valid NestJS module?
+- If "UserRepository" is a provider, is it part of the current UsersModule?
+- If "UserRepository" is exported from a separate @Module, is that module imported within UsersModule?
+  @Module({
+    imports: [ /* the Module containing "UserRepository" */ ]
+  })
+
+For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+    at Injector.lookupComponentInParentModules [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:290:19[90m)[39m
+    at async resolveParam [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:140:38[90m)[39m
+    at async Promise.all (index 0)
+    at async Injector.resolveConstructorParams [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:169:27[90m)[39m
+    at async Injector.loadInstance [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:75:13[90m)[39m
+    at async Injector.loadProvider [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/injector.js:103:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:56:13
+    at async Promise.all (index 3)
+    at async InstanceLoader.createInstancesOfProviders [90m(/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:55:9[90m)[39m
+    at async [90m/app/[39mnode_modules/[4m@nestjs/core[24m/injector/instance-loader.js:40:13 {
+  type: [32m'UsersService'[39m,
+  context: {
+    index: [33m0[39m,
+    dependencies: [
+      [32m'UserRepository'[39m,
+      [36m[class DataSource][39m
+    ],
+    name: [32m'UserRepository'[39m
+  },
+  metadata: {
+    id: [32m'10ca22d202920e0bd254a'[39m
+  },
+  moduleRef: {
+    id: [32m'b08c8a59b1a7ce9367886'[39m
+  }
+}

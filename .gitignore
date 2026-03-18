@@ -1,0 +1,53 @@
+# Android/Kotlin
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+*.bak
+*.class
+*.dex
+*.apk
+*.ap_
+*.aab
+bin/
+gen/
+out/
+captures/
+.navigation/
+.gradle/
+build/
+
+# Kotlin
+*.kotlin_module
+*.kt.bak
+*.kts.bak
+
+# IDE
+.idea/
+*.iml
+*.iws
+
+# User-specific files
+local.properties
+.DS_Store
+
+# Node.js / Backend
+node_modules/
+backend/dist/
+backend/.env
+backend/coverage/
+
+# Docker
+.env
+!.env.docker
+!.env.example
