@@ -194,7 +194,7 @@ fun NotificationScreen(navController: NavController) {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(globalNotifications) { notification ->
+                items(globalNotifications, key = { it.id }) { notification ->
                     NotificationRow(
                         notification = notification,
                         isSelectionMode = isSelectionMode,

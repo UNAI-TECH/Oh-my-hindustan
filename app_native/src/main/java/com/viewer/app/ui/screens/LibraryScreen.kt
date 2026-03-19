@@ -59,7 +59,7 @@ fun LibraryScreen(navController: NavController) {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(savedItems) { item ->
+                items(savedItems, key = { it.id }) { item ->
                     FeedCard(item, navController = navController, onClick = {
                         navController.navigate("article_detail/${item.id}")
                     })

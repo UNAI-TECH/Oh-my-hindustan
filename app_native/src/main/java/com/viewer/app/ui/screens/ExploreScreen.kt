@@ -36,30 +36,32 @@ val CreamBg = Color(0xFFFFF9F2)
 @Composable
 fun ExploreScreen(navController: NavController) {
     var searchQuery by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf("News") }
+    var selectedType by remember { mutableStateOf("Forum") }
     var selectedCategory by remember { mutableStateOf("Politics") }
 
     val categories = listOf("Politics", "Policy", "Economy", "Digital India", "Viksit Bharat")
-    val contentTypes = listOf("News", "Blogs", "Videos", "Trending")
+    
+    // Collect realtime flow as Compose State
+    val realtimeFeedItems by SampleData.realtimeFeedItems.collectAsState(initial = emptyList())
 
     // Dynamic filtering based on search, type, and category
-    val filteredItems = remember(searchQuery, selectedType, selectedCategory) {
-        SampleData.feedItems.filter { item ->
+    val filteredItems = remember(searchQuery, selectedType, selectedCategory, realtimeFeedItems) {
+        realtimeFeedItems.filter { item ->
             val matchesSearch = searchQuery.isEmpty() || 
                                item.title.contains(searchQuery, ignoreCase = true) || 
                                (item.authorName?.contains(searchQuery, ignoreCase = true) ?: false)
             
             val matchesType = when (selectedType) {
-                "News" -> item.type == FeedItemType.NEWS
-                "Blogs" -> item.type == FeedItemType.BLOG
-                "Videos" -> item.type == FeedItemType.VIDEO
-                "Trending" -> true
+                "Forum" -> item.type == FeedItemType.FORUM
+                "Policy" -> item.type == FeedItemType.POLICY_TYPE
+                "Debates" -> item.type == FeedItemType.DEBATE
+                "Updates" -> item.type == FeedItemType.UPDATE
                 else -> true
             }
             
             val matchesCategory = item.category?.contains(selectedCategory, ignoreCase = true) ?: false
             
-            matchesSearch && matchesType && (selectedType == "Trending" || matchesCategory)
+            matchesSearch && matchesType && matchesCategory
         }
     }
 
@@ -90,16 +92,16 @@ fun ExploreScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    CategoryIconButton("Forum", Icons.Default.Groups, selectedType == "News") { selectedType = "News" }
-                    CategoryIconButton("Policy", Icons.Default.Gavel, selectedType == "Blogs") { selectedType = "Blogs" }
-                    CategoryIconButton("Debates", Icons.Default.RecordVoiceOver, selectedType == "Videos") { selectedType = "Videos" }
-                    CategoryIconButton("Updates", Icons.Default.WifiTethering, selectedType == "Trending") { selectedType = "Trending" }
+                    CategoryIconButton("Forum", Icons.Default.Groups, selectedType == "Forum") { selectedType = "Forum" }
+                    CategoryIconButton("Policy", Icons.Default.Gavel, selectedType == "Policy") { selectedType = "Policy" }
+                    CategoryIconButton("Debates", Icons.Default.RecordVoiceOver, selectedType == "Debates") { selectedType = "Debates" }
+                    CategoryIconButton("Updates", Icons.Default.WifiTethering, selectedType == "Updates") { selectedType = "Updates" }
                 }
                 
                 Spacer(modifier = Modifier.height(20.dp))
                 
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(categories) { category ->
+                    items(categories, key = { it }) { category ->
                         FilterChip(
                             selected = selectedCategory == category,
                             onClick = { selectedCategory = category },
@@ -136,29 +138,23 @@ fun ExploreScreen(navController: NavController) {
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.padding(bottom = 24.dp)
                 ) {
-                    item { 
+                    items(SampleData.topNarratives, key = { it.id }) { narrative ->
                         TrendingCard(
-                            "BJP outlines vision for Viksit Bharat by 2047",
-                            "POLICY",
-                            "https://lh3.googleusercontent.com/aida-public/AB6AXuACoN2DQoiSOe691QocUxZH-3L_9fZYlxuyMgSzGjDK2IpGvbB_-azsNPYHY4uxdn4UY0asiiiKrX5nUtoBykk3U9xtzsGZHuX_evX_7MrbWm1trxzICNcIfPKMGTejyLgozoYi0kBcCT_9Of7LoXhmA67nlvO9ZMnPeY_ZKrBdTYC6tugUWh25hs3AnBBznJefESaEDqY9k9uGax1eERKSfzHbO7F-0wkMY89VzJcSUw25br-siVe7G4Z3jQ4YZovGxVjAyYjPXQ3K"
-                        ) {
-                             // Navigate to specific item if id exists in SampleData
-                        }
-                    }
-                    item {
-                        TrendingCard(
-                            "Digital India Revolution: Bridging the Rural-Urban Divide",
-                            "NATIONAL",
-                            "https://lh3.googleusercontent.com/aida-public/AB6AXuBNPp7D5HnjPznxYo5iXMHnH_X2PMhRGCHcfVJzAYwdcypyYKWiBziknmQ34zlmVGnZXeB_qIxg7MIO6nap_4GfsawTJB9nh1bH-Qvt_svGEZsYR1NHsiNM84_45jqH0jg19wyMZMhVatm3enN7R6SGyUN0ffgOJFbC4jemWHdEsOSlW95PQWEz4XlKMjyfMRKXqfW4CJRRrnf-EUNfinh9ezmiZ_jdBdCbXZIMI11-okK_RN22HxxnabXAaUcyJB7XRqyNdUbArGfG"
-                        ) { }
+                            title = narrative.title,
+                            category = narrative.category ?: "NATIONAL",
+                            image = narrative.thumbnail ?: "",
+                            onClick = {
+                                navController.navigate("article_detail/${narrative.id}")
+                            }
+                        )
                     }
                 }
             }
 
             item { SectionHeader("Selected Feed") }
 
-            if (selectedType == "Videos") {
-                items(filteredItems.chunked(2)) { pair ->
+            if (selectedType == "Debates") {
+                items(filteredItems.chunked(2), key = { it.first().id }) { pair ->
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         pair.forEach { item ->
                             VideoCard(item, modifier = Modifier.weight(1f)) {
@@ -169,8 +165,8 @@ fun ExploreScreen(navController: NavController) {
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-            } else if (selectedType == "Blogs") {
-                items(filteredItems.chunked(2)) { pair ->
+            } else if (selectedType == "Policy") {
+                items(filteredItems.chunked(2), key = { it.first().id }) { pair ->
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         pair.forEach { item ->
                             BlogGridItem(item, modifier = Modifier.weight(1f)) {
@@ -182,7 +178,7 @@ fun ExploreScreen(navController: NavController) {
                     Spacer(modifier = Modifier.height(12.dp))
                 }
             } else {
-                items(filteredItems) { item ->
+                items(filteredItems, key = { it.id }) { item ->
                     SampleTrendingCard(item) {
                         navController.navigate("article_detail/${item.id}")
                     }

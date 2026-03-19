@@ -291,7 +291,7 @@ fun CommentSheetContent(item: FeedItem) {
         Spacer(modifier = Modifier.height(16.dp))
         
         LazyColumn(modifier = Modifier.weight(1f)) {
-            items(5) { index ->
+            items(5, key = { it }) { index ->
                 Row(modifier = Modifier.padding(vertical = 12.dp)) {
                     Surface(modifier = Modifier.size(32.dp), shape = CircleShape, color = Color.LightGray) {}
                     Spacer(modifier = Modifier.width(12.dp))

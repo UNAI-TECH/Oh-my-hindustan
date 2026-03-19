@@ -98,7 +98,7 @@ fun SearchScreen(navController: NavController) {
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(filters) { filter ->
+                    items(filters, key = { it }) { filter ->
                         FilterChip(
                             selected = selectedFilter == filter,
                             onClick = { selectedFilter = filter },
@@ -137,7 +137,7 @@ fun SearchScreen(navController: NavController) {
                     }
                 }
             } else {
-                items(filteredItems) { item ->
+                items(filteredItems, key = { it.id }) { item ->
                     FeedCard(item, navController = navController, onClick = {
                         navController.navigate("article_detail/${item.id}")
                     })

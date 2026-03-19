@@ -55,10 +55,10 @@ fun HomeFeedScreen(navController: NavController) {
 
     val filteredItems = remember(selectedTab) {
         when (selectedTab) {
-            "Trending" -> SampleData.feedItems.filter { it.isTrending || it.type == FeedItemType.PROMO }
-            "News" -> SampleData.feedItems.filter { it.type == FeedItemType.NEWS || it.type == FeedItemType.PROMO }
-            "Blogs" -> SampleData.feedItems.filter { it.type == FeedItemType.BLOG || it.type == FeedItemType.PROMO }
-            "Videos" -> SampleData.feedItems.filter { it.type == FeedItemType.VIDEO || it.type == FeedItemType.PROMO }
+            "Trending" -> SampleData.feedItems.shuffled().take(5)
+            "News" -> SampleData.feedItems.filter { it.type in listOf(FeedItemType.NEWS, FeedItemType.UPDATE, FeedItemType.POLICY_TYPE, FeedItemType.PROMO) }
+            "Blogs" -> SampleData.feedItems.filter { it.type in listOf(FeedItemType.BLOG, FeedItemType.FORUM, FeedItemType.PROMO) }
+            "Videos" -> SampleData.feedItems.filter { it.type in listOf(FeedItemType.VIDEO, FeedItemType.DEBATE, FeedItemType.PROMO) }
             "For You" -> SampleData.feedItems
             else -> SampleData.feedItems
         }
@@ -116,7 +116,7 @@ fun HomeFeedScreen(navController: NavController) {
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(tabs) { tab ->
+                items(tabs, key = { it }) { tab ->
                     FilterChip(
                         selected = selectedTab == tab,
                         onClick = { selectedTab = tab },
@@ -138,7 +138,7 @@ fun HomeFeedScreen(navController: NavController) {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(filteredItems) { item ->
+                items(filteredItems, key = { it.id }) { item ->
                     FeedCard(item, navController = navController, onShare = { shareContent(item) }, onClick = {
                         if (item.type != FeedItemType.PROMO) navController.navigate("article_detail/${item.id}")
                     })
@@ -160,10 +160,11 @@ fun FeedCard(item: FeedItem, navController: NavController? = null, onShare: () -
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         when (item.type) {
-            FeedItemType.NEWS -> NewsCardContent(item, onShare, navController)
-            FeedItemType.VIDEO -> VideoCardContent(item, onShare, navController)
+            FeedItemType.NEWS, FeedItemType.FORUM, FeedItemType.POLICY_TYPE, FeedItemType.UPDATE -> NewsCardContent(item, onShare, navController)
+            FeedItemType.VIDEO, FeedItemType.DEBATE -> VideoCardContent(item, onShare, navController)
             FeedItemType.BLOG -> BlogCardContent(item, onShare, navController)
             FeedItemType.PROMO -> PromoCardContent(item)
+            else -> NewsCardContent(item, onShare, navController)
         }
     }
 }

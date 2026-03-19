@@ -1,5 +1,9 @@
 package com.viewer.app.data
 
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+
 data class FeedItem(
     val id: String,
     val type: FeedItemType,
@@ -12,133 +16,80 @@ data class FeedItem(
     val votes: String? = null,
     val comments: Int? = null,
     val category: String? = null,
-    val excerpt: String? = null,
+    val excerpt: String? = "A detailed look into the recent developments, exploring the potential impacts, challenges, and long-term implications for stakeholders.",
     val videoDuration: String? = null,
-    val content: String? = null,
-    val quote: String? = null,
+    val content: String? = "In a significant development that has sparked widespread discussions, stakeholders have recognized the necessity for comprehensive reforms. The changing dynamics of the global landscape demand a proactive and adaptive approach from all sectors involved.\n\nAnalysts point out that the implementation of these new frameworks will likely face initial hurdles, particularly concerning resource allocation and logistical alignment. However, the long-term projections suggest a robust strengthening of the core infrastructure, paving the way for unprecedented growth and stability.\n\nAs public discourse continues to evolve, it remains crucial for policymakers to maintain transparency and foster inclusive dialogues. Ensuring that diverse perspectives are considered will be key to navigating the complexities of this transition and achieving sustainable success.",
+    val quote: String? = "Adaptability and transparency are the twin pillars of enduring progress in any systemic transition.",
     val isTrending: Boolean = false
 )
 
 enum class FeedItemType {
-    NEWS, VIDEO, BLOG, PROMO
+    FORUM, POLICY_TYPE, DEBATE, UPDATE, NEWS, BLOG, VIDEO, PROMO
 }
 
 object SampleData {
-    val feedItems = listOf(
+    val topNarratives = listOf(
         FeedItem(
-            id = "1",
-            type = FeedItemType.NEWS,
-            isTrending = true,
-            title = "Supreme Court delivers landmark verdict on electoral bonds, mandates immediate disclosure",
-            category = "National Politics",
-            timestamp = "2h ago",
-            votes = "24.5k",
-            comments = 3204,
-            thumbnail = "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&q=80&w=800",
-            authorName = "The Hindu Analysis",
-            authorImage = "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?auto=format&fit=crop&q=80&w=100",
-            excerpt = "In a unanimous decision, the Constitution Bench of the Supreme Court has struck down the Electoral Bonds scheme as unconstitutional.",
-            content = "The Supreme Court of India today delivered a historic verdict striking down the Electoral Bonds scheme, declaring it unconstitutional and violative of the right to information under Article 19(1)(a) of the Constitution.\n\nA five-judge Constitution bench headed by the Chief Justice of India directed the State Bank of India (SBI) to stop the issuance of electoral bonds immediately and submit all details of bonds purchased since April 2019 to the Election Commission of India (ECI).\n\nThe court observed that anonymous corporate funding to political parties poses a severe threat to the democratic process, as it allows for quid pro quo arrangements that remain hidden from public scrutiny.",
-            quote = "Information about funding to political parties is essential for the effective exercise of the choice of voting."
+            id = "tn1",
+            type = FeedItemType.POLICY_TYPE,
+            title = "BJP outlines vision for Viksit Bharat by 2047",
+            category = "Policy",
+            thumbnail = "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&q=80&w=800"
         ),
         FeedItem(
-            id = "2",
-            type = FeedItemType.NEWS,
-            isTrending = true,
-            title = "CM MK Stalin announces Rs. 1000 crore relief package for flood-affected southern districts",
-            category = "Tamil Nadu",
-            timestamp = "4h ago",
-            votes = "18.2k",
-            comments = 1420,
-            thumbnail = "https://images.unsplash.com/photo-1622397430155-22b67f082e0e?auto=format&fit=crop&q=80&w=800",
-            authorName = "News Tamil Reports",
-            authorImage = "https://images.unsplash.com/photo-1533727101791-0309197c11f7?auto=format&fit=crop&q=80&w=100",
-            excerpt = "Following severe rainfall and subsequent flooding in Tirunelveli and Thoothukudi, the TN Chief Minister has announced immediate relief measures.",
-            content = "Chief Minister MK Stalin today announced a comprehensive relief package of Rs. 1,000 crore for the southern districts of Tamil Nadu that were severely battered by unprecedented rainfall and floods last week.\n\nSpeaking at the State Secretariat, the CM assured that affected families would receive Rs. 6,000 directly into their bank accounts. Furthermore, special camps will be set up to help residents acquire duplicate certificates and documents lost in the deluge.\n\nAgricultural compensation has also been announced for farmers who suffered heavy crop losses, with Rs. 17,000 per hectare for paddy and other irrigated crops.",
-            quote = "Our priority is to ensure every affected family receives immediate assistance. The state machinery is working round the clock to restore normalcy."
-        ),
-        FeedItem(
-            id = "3",
-            type = FeedItemType.VIDEO,
-            isTrending = true,
-            title = "Ground Report: Coimbatore Elections 2024 - Public Opinion & Real Issues",
-            subtitle = "Polimer News • 1.2M views • 1 day ago",
-            authorName = "Polimer News",
-            authorImage = "https://images.unsplash.com/photo-1586882829491-b8110222010b?auto=format&fit=crop&q=80&w=100",
-            thumbnail = "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&q=80&w=800",
-            videoDuration = "18:45",
-            comments = 5820,
-            votes = "89.4k",
-            excerpt = "Our team hit the streets of Coimbatore to understand the pulse of the voters ahead of the crucial 2024 General Elections.",
-            content = "In this exclusive ground report, we travel across the urban and rural landscapes of Coimbatore constituency to hear directly from the voters. With major political shifts happening in Tamil Nadu, Coimbatore has emerged as a key battleground.\n\nLocal businesses, textile workers, and students voice their expectations regarding infrastructure, GST reforms, and employment opportunities. We also speak with local leaders from major fronts to understand their campaign strategies and promises.",
-            quote = "The real issues of the people often get lost in political rhetoric. This report aims to bring the citizens' voices to the forefront."
-        ),
-        FeedItem(
-            id = "4",
-            type = FeedItemType.BLOG,
-            isTrending = true,
-            title = "How ONDC is breaking the e-commerce monopoly in India",
-            excerpt = "The Open Network for Digital Commerce (ONDC) is transforming how local merchants compete with giant e-commerce aggregators...",
-            authorName = "Tech Policy India",
-            subtitle = "in Economy & Tech",
-            authorImage = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100",
-            thumbnail = "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800",
-            votes = "12.8k",
-            comments = 450,
-            content = "The Open Network for Digital Commerce (ONDC) represents a paradigm shift in digital retail. Unlike proprietary platforms where a single entity controls the ecosystem, ONDC is an open protocol that standardizes operations like cataloging, inventory management, and order fulfillment.\n\nCreated as a government-backed initiative, ONDC aims to democratize e-commerce by enabling local mom-and-pop stores (kiranas) to access a vast pool of buyers without paying exorbitant commission fees to centralized platforms like Amazon or Flipkart.\n\nEarly adoption in cities like Bengaluru and Delhi has shown promising results in food delivery and grocery segments, where local apps are offering better pricing to consumers while ensuring higher margins for the restaurants and sellers.",
-            quote = "ONDC is not an application; it is a network designed to unbundle the building blocks of e-commerce and create a level playing field."
-        ),
-        FeedItem(
-            id = "5",
-            type = FeedItemType.NEWS,
-            isTrending = false,
-            title = "ISRO successfully launches weather satellite INSAT-3DS",
-            category = "Science & Space",
-            timestamp = "12h ago",
-            votes = "45k",
-            comments = 1205,
-            thumbnail = "https://images.unsplash.com/photo-1517976487492-5750f3195933?auto=format&fit=crop&q=80&w=800",
-            authorName = "Science Today",
-            excerpt = "The Indian Space Research Organisation (ISRO) successfully placed the INSAT-3DS meteorological satellite into orbit...",
-            content = "In yet another milestone for India's space program, ISRO successfully launched the GSLV-F14 rocket carrying the INSAT-3DS meteorological satellite from the Satish Dhawan Space Centre in Sriharikota.\n\nThe INSAT-3DS is designed for enhanced meteorological observations and monitoring of land and ocean surfaces for weather forecasting and disaster warning. It is fully funded by the Ministry of Earth Sciences.\n\nISRO Chairman S Somanath congratulated the team, noting that this specific GSLV mission, often called the 'naughty boy' of ISRO's fleet due to its complex history, performed flawlessly, cementing India's capabilities in advanced satellite deployment.",
-            quote = "This mission marks a significant step up in our atmospheric monitoring capabilities, directly contributing to better climate prediction mechanisms."
-        ),
-        FeedItem(
-            id = "6",
-            type = FeedItemType.PROMO,
-            title = "Join the Jan Samvad Debate",
-            subtitle = "Get verified to participate in real political discourse without the noise."
-        ),
-        FeedItem(
-            id = "7",
-            type = FeedItemType.VIDEO,
-            isTrending = false,
-            title = "Exclusive Interview with EAM S. Jaishankar on 'Bharat First' Foreign Policy",
-            subtitle = "Times Now • 2.5M views • 3 days ago",
-            authorName = "Times Now",
-            authorImage = "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=100",
-            thumbnail = "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&q=80&w=800",
-            videoDuration = "45:10",
-            comments = 12400,
-            votes = "150k",
-            excerpt = "External Affairs Minister Dr. S. Jaishankar discusses India's strategic autonomy, ties with global powers, and the neighborhood challenge.",
-            content = "In a comprehensive 45-minute interaction, External Affairs Minister Dr. S. Jaishankar eloquently broke down the nuances of India's evolving foreign policy posture on the global stage.\n\nHe addressed the complexities of maintaining strong bilateral ties with both the US and Russia amidst geopolitical turbulence. Dr. Jaishankar emphasized that India's approach is rooted in 'Strategic Autonomy' and prioritizing national interest above all—a strategy often dubbed as the 'Bharat First' approach.\n\nThe interview also touched upon border infrastructures and the ongoing diplomatic standoff with China, as well as India's rising leadership role in the Global South through platforms like the G20.",
-            quote = "Europe has to grow out of the mindset that Europe's problems are the world's problems, but the world's problems are not Europe's problems."
-        ),
-        FeedItem(
-            id = "8",
-            type = FeedItemType.BLOG,
-            isTrending = false,
-            title = "The Rise of Electric Vehicles in India's Logistics Sector",
-            authorName = "Green Mobility India",
-            subtitle = "in Sustainability",
-            authorImage = "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?auto=format&fit=crop&q=80&w=100",
-            thumbnail = "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&q=80&w=800",
-            votes = "8.2k",
-            comments = 320,
-            excerpt = "Last-mile delivery partners across major Indian cities are rapidly transitioning to electric two-wheelers and three-wheelers.",
-            content = "The logistics and last-mile delivery sector in India is undergoing a massive green transformation. Major e-commerce and food delivery companies have committed to electrifying significant portions of their delivery fleets by 2025.\n\nThis shift is primarily driven by the lower Total Cost of Ownership (TCO) of electric two-wheelers and three-wheelers compared to their ICE (Internal Combustion Engine) counterparts. Additionally, state-level EV policies and corporate ESG goals are accelerating adoption.\n\nWhile charging infrastructure remains a challenge for long-haul operations, battery swapping networks are emerging as a viable solution for urban delivery executives, minimizing downtime and range anxiety.",
-            quote = "The adoption of EVs in commercial fleets is not just an environmental imperative anymore; it is a fundamental economic advantage."
+            id = "tn2",
+            type = FeedItemType.UPDATE,
+            title = "Digital India Revolution: Bridging the Rural-Urban Divide",
+            category = "Digital India",
+            thumbnail = "https://images.unsplash.com/photo-1517976487492-5750f3195933?auto=format&fit=crop&q=80&w=800"
         )
     )
+
+    private val baseFeedItems = listOf(
+        // Politics
+        FeedItem(id = "p1", type = FeedItemType.FORUM, title = "Supreme Court delivers landmark verdict on electoral bonds, mandates immediate disclosure", category = "Politics", timestamp = "2h ago", votes = "24.5k", comments = 3204, thumbnail = "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&q=80&w=800", authorName = "The Hindu Analysis"),
+        FeedItem(id = "p2", type = FeedItemType.DEBATE, title = "Ground Report: Coimbatore Elections 2024 - Public Opinion & Real Issues", category = "Politics", timestamp = "1 day ago", votes = "89.4k", comments = 5820, thumbnail = "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&q=80&w=800", videoDuration = "18:45", authorName = "Polimer News"),
+        FeedItem(id = "p3", type = FeedItemType.UPDATE, title = "New alliances form ahead of state assembly elections", category = "Politics", timestamp = "30m ago", votes = "12k", comments = 400, thumbnail = "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&q=80&w=800", authorName = "Political Daily"),
+        
+        // Policy
+        FeedItem(id = "pol1", type = FeedItemType.POLICY_TYPE, title = "New Education Policy Implementation Guidelines Released", category = "Policy", timestamp = "5h ago", votes = "12k", comments = 890, thumbnail = "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=800", authorName = "Policy Watch"),
+        FeedItem(id = "pol2", type = FeedItemType.FORUM, title = "Discussing the implications of the new labour codes", category = "Policy", timestamp = "12h ago", votes = "5.6k", comments = 450, thumbnail = "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&q=80&w=800", authorName = "Labor Union"),
+        FeedItem(id = "pol3", type = FeedItemType.DEBATE, title = "Tax Reforms: Are they favoring the middle class?", category = "Policy", timestamp = "2 hrs ago", votes = "45k", comments = 1200, thumbnail = "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800", videoDuration = "22:10", authorName = "Economic Forum"),
+
+        // Economy
+        FeedItem(id = "e1", type = FeedItemType.POLICY_TYPE, title = "How ONDC is breaking the e-commerce monopoly in India", category = "Economy", timestamp = "3h ago", votes = "12.8k", comments = 450, thumbnail = "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800", authorName = "Tech Policy India"),
+        FeedItem(id = "e2", type = FeedItemType.UPDATE, title = "Sensex hits new all-time high amidst positive global cues", category = "Economy", timestamp = "30m ago", votes = "45k", comments = 1205, thumbnail = "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&q=80&w=800", authorName = "Market Today"),
+        FeedItem(id = "e3", type = FeedItemType.FORUM, title = "Inflation impacts: Real estate prices skyrocket in Metro cities", category = "Economy", timestamp = "4h ago", votes = "9.5k", comments = 1500, thumbnail = "https://images.unsplash.com/photo-1517976487492-5750f3195933?auto=format&fit=crop&q=80&w=800", authorName = "Housing Insight"),
+
+        // Digital India
+        FeedItem(id = "d1", type = FeedItemType.UPDATE, title = "UPI transactions cross 10 billion mark in a single month", category = "Digital India", timestamp = "1h ago", votes = "34k", comments = 2100, thumbnail = "https://images.unsplash.com/photo-1622397430155-22b67f082e0e?auto=format&fit=crop&q=80&w=800", authorName = "Tech News"),
+        FeedItem(id = "d2", type = FeedItemType.DEBATE, title = "Data Privacy vs Innovation in Digital India", category = "Digital India", timestamp = "2 days ago", votes = "15k", comments = 3400, thumbnail = "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?auto=format&fit=crop&q=80&w=800", videoDuration = "45:00", authorName = "Tech Debate"),
+        FeedItem(id = "d3", type = FeedItemType.POLICY_TYPE, title = "New cyber laws aimed at securing digital identities", category = "Digital India", timestamp = "10h ago", votes = "11k", comments = 600, thumbnail = "https://images.unsplash.com/photo-1517976487492-5750f3195933?auto=format&fit=crop&q=80&w=800", authorName = "InfoSec India"),
+
+        // Viksit Bharat
+        FeedItem(id = "v1", type = FeedItemType.FORUM, title = "Infrastructure push: 100 new airports planned under UDAN scheme", category = "Viksit Bharat", timestamp = "4h ago", votes = "22k", comments = 1500, thumbnail = "https://images.unsplash.com/photo-1517976487492-5750f3195933?auto=format&fit=crop&q=80&w=800", authorName = "Infra News"),
+        FeedItem(id = "v2", type = FeedItemType.POLICY_TYPE, title = "Green Energy transition roadmap for 2070 net-zero target", category = "Viksit Bharat", timestamp = "1 day ago", votes = "18k", comments = 900, thumbnail = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800", authorName = "Green Mobility India"),
+        FeedItem(id = "v3", type = FeedItemType.UPDATE, title = "Government launches skilled workforce initiative for manufacturing", category = "Viksit Bharat", timestamp = "5h ago", votes = "55k", comments = 2200, thumbnail = "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&q=80&w=800", authorName = "National Progress")
+    )
+
+    val feedItems = topNarratives + baseFeedItems
+
+
+    // A flow that emits the list and periodically simulates new elements or updates realistically
+    val realtimeFeedItems: Flow<List<FeedItem>> = flow {
+        var currentList = baseFeedItems
+        while (true) {
+            emit(currentList)
+            delay(5000) // update every 5 seconds
+            
+            // To simulate realtime "updates" efficiently, we just scramble the order slightly 
+            // and modify the votes to animate the feed continuously.
+            currentList = currentList.shuffled().map { 
+                it.copy(
+                    votes = "${(10..99).random()}.${(0..9).random()}k",
+                    timestamp = "Just now" // simulates realtime fresh content
+                ) 
+            }
+        }
+    }
 }

@@ -19,7 +19,7 @@ fun AppBottomNavBar(navController: NavController, currentRoute: String?) {
         tonalElevation = 8.dp
     ) {
         val items = listOf(
-            BottomNavItem("Briefings", "home", Icons.Default.Home),
+            BottomNavItem("Home", "home", Icons.Default.Home),
             BottomNavItem("Explore", "explore", Icons.Default.Explore),
             BottomNavItem("Analyst", "content_editor", Icons.Default.Campaign), 
             BottomNavItem("Archive", "library", Icons.Default.History), 
