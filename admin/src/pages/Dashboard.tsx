@@ -34,7 +34,7 @@ const Dashboard: React.FC<Props> = ({ onLogout }) => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('adminToken');
-        const response = await axios.get(`${API_BASE_URL}/admin/stats`, {
+        const response = await axios.get(`${API_BASE_URL}/admin/overview`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setStatsData(response.data.stats);
