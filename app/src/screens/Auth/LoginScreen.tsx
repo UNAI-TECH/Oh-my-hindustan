@@ -28,14 +28,14 @@ export default function LoginScreen() {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated && loginSuccess) {
+    if (isAuthenticated) {
       if (needsOnboarding) {
         navigation.reset({ index: 0, routes: [{ name: 'UsernameSetup' }] });
       } else {
         navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
       }
     }
-  }, [isAuthenticated, loginSuccess, needsOnboarding]);
+  }, [isAuthenticated, needsOnboarding]);
 
   const handleLogin = async () => {
     if (!email || !password) {

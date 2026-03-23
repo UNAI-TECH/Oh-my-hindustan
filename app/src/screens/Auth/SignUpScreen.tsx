@@ -18,7 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 
 export default function SignUpScreen() {
   const navigation = useNavigation<any>();
-  const { register, signInWithGoogle, isLoading, error, signupSuccess, isAuthenticated, clearState } = useAuth();
+  const { register, signInWithGoogle, isLoading, error, signupSuccess, isAuthenticated, needsOnboarding, clearState } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,10 +29,14 @@ export default function SignUpScreen() {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated && signupSuccess) {
-      navigation.reset({ index: 0, routes: [{ name: 'UsernameSetup' }] });
+    if (isAuthenticated) {
+      if (needsOnboarding) {
+        navigation.reset({ index: 0, routes: [{ name: 'UsernameSetup' }] });
+      } else {
+        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+      }
     }
-  }, [isAuthenticated, signupSuccess]);
+  }, [isAuthenticated, needsOnboarding]);
 
   const handleSignUp = async () => {
     if (!name || !email || !password) {

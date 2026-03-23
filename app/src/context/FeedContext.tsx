@@ -30,7 +30,7 @@ const formatTimeAgo = (isoString: string): string => {
 };
 
 const toFeedItem = (post: any): FeedItem => {
-  const voteCount = post.vote_count || 0;
+  const voteCount = post.voteCount || 0;
   const calculatedVotes = voteCount > 1000 
     ? (voteCount / 1000).toFixed(1) + 'k' 
     : voteCount.toString();
@@ -39,16 +39,16 @@ const toFeedItem = (post: any): FeedItem => {
     id: post.id,
     type: post.type === 'video' ? FeedItemType.VIDEO : FeedItemType.UPDATE,
     title: post.title,
-    subtitle: post.community?.name || "Oh My Hindustan",
+    subtitle: "Oh My Hindustan",
     authorName: post.author?.username || "Anonymous",
     authorImage: post.author?.avatarUrl || "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&q=80&w=800",
-    thumbnail: post.media_url || "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&q=80&w=800",
-    category: post.community?.name || "General",
-    timestamp: formatTimeAgo(post.created_at),
+    thumbnail: post.thumbnail || "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&q=80&w=800",
+    category: post.category || "General",
+    timestamp: formatTimeAgo(post.createdAt),
     votes: calculatedVotes,
-    comments: 0,
-    excerpt: post.body?.substring(0, 150) || null,
-    content: post.body
+    comments: post.commentCount || 0,
+    excerpt: post.content?.substring(0, 150) || null,
+    content: post.content
   };
 };
 

@@ -31,14 +31,16 @@ export default function LanguageSelectionScreen() {
   const navigation = useNavigation<any>();
   const { updateOnboardingProfile, isLoading } = useAuth();
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleContinue = async () => {
     if (!selectedLanguage) return;
+    setErrorMsg(null);
     try {
       await updateOnboardingProfile({ language: selectedLanguage });
       navigation.navigate('TopicSelection');
-    } catch (e) {
-      // Error handled in context
+    } catch (e: any) {
+      setErrorMsg(e.message || 'Failed to save language choice. Please try again.');
     }
   };
 

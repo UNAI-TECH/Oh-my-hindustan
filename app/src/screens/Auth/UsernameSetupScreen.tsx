@@ -83,11 +83,12 @@ export default function UsernameSetupScreen() {
 
   const handleContinue = async () => {
     if (!isAvailable || username.length < 3) return;
+    setErrorMsg(null);
     try {
       await updateOnboardingProfile({ username });
       navigation.navigate('LanguageSelection');
-    } catch (e) {
-      // Error is handled in context
+    } catch (e: any) {
+      setErrorMsg(e.message || 'Failed to save username. Please try again.');
     }
   };
 

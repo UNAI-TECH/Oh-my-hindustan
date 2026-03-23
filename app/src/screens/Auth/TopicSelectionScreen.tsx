@@ -52,14 +52,16 @@ export default function TopicSelectionScreen() {
   };
 
   const isEnabled = selectedTopics.length === 3;
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleFinish = async () => {
     if (!isEnabled) return;
+    setErrorMsg(null);
     try {
       await updateOnboardingProfile({ topics: selectedTopics });
       navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
-    } catch (e) {
-      // Error handled in context
+    } catch (e: any) {
+      setErrorMsg(e.message || 'Failed to finish setup. Please try again.');
     }
   };
 

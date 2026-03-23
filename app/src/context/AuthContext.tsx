@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 
-// This is required for Expo AuthSession to intercept the redirect from the browser back to the app
+// Required for Expo AuthSession to intercept the redirect
 WebBrowser.maybeCompleteAuthSession();
 
 interface AuthContextProps {
@@ -38,41 +38,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [initializing, setInitializing] = useState(true);
 
+  // Guard: prevents onAuthStateChange from racing with manual Google OAuth flow
+  const isHandlingOAuthRef = useRef(false);
+
+  // ─── Fetch profile from User table ───
   const fetchProfile = async (userId: string) => {
     try {
-      // Give the trigger a small moment to create the profile (especially on first signup)
-      // Retry logic to handle potential race conditions with Supabase triggers
       let profileData = null;
-      for (let i = 0; i < 3; i++) { // Try up to 3 times
+      for (let attempt = 0; attempt < 5; attempt++) {
         const { data, error: profileError } = await supabase
-          .from('profiles')
+          .from('User')
           .select('*')
           .eq('id', userId)
-          .maybeSingle(); // maybeSingle doesn't throw if 0 rows found
+          .maybeSingle();
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.warn('[AUTH] Profile fetch error:', profileError.message);
+          throw profileError;
+        }
 
         if (data) {
           profileData = data;
-          break; // Profile found, exit loop
+          break;
         }
-        await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms before retrying
+        // Wait longer on each retry to give the DB trigger time
+        await new Promise(resolve => setTimeout(resolve, 800 * (attempt + 1)));
       }
 
       if (profileData) {
-        setUserProfile(profileData);
-        setNeedsOnboarding(!profileData.onboarding_complete);
+        console.warn('[AUTH] Profile loaded:', profileData.email, '| onboarding_complete:', profileData.onboarding_complete);
         return profileData;
       } else {
-        // If profile doesn't exist after retries, it definitely needs onboarding
-        setNeedsOnboarding(true);
-        setUserProfile(null);
+        console.warn('[AUTH] No profile found after retries for user:', userId);
         return null;
       }
     } catch (err: any) {
-      console.error('Error fetching profile:', err);
-      setUserProfile(null);
-      setNeedsOnboarding(true); // Assume onboarding needed if profile fetch fails
+      console.error('[AUTH] fetchProfile error:', err);
       return null;
     }
   };
@@ -82,25 +83,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return !profile.onboarding_complete;
   };
 
-  // Check for existing session on mount
+  // ─── Set all auth state at once (avoids race conditions) ───
+  const setAuthState = (profile: any, authenticated: boolean) => {
+    const onboarding = checkOnboardingStatus(profile);
+    console.warn('[AUTH] Setting state → authenticated:', authenticated, '| needsOnboarding:', onboarding);
+    setUserProfile(profile);
+    setNeedsOnboarding(onboarding);
+    setIsAuthenticated(authenticated);
+  };
+
+  // ─── Check for existing session on mount ───
   useEffect(() => {
     const checkSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
 
         if (session?.user) {
+          console.warn('[AUTH] Existing session found for:', session.user.email);
           const profile = await fetchProfile(session.user.id);
 
-          if (profile?.role === 'creator' || profile?.role === 'admin') {
+          if (profile?.role === 'CREATOR' || profile?.role === 'ADMIN') {
+            console.warn('[AUTH] Non-citizen role, signing out');
             await supabase.auth.signOut();
           } else {
-            setIsAuthenticated(true);
-            setUserProfile(profile);
-            setNeedsOnboarding(checkOnboardingStatus(profile));
+            setAuthState(profile, true);
           }
+        } else {
+          console.warn('[AUTH] No existing session');
         }
       } catch (e) {
-        console.error('Session check failed:', e);
+        console.error('[AUTH] Session check failed:', e);
       } finally {
         setInitializing(false);
       }
@@ -108,22 +120,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     checkSession();
 
+    // Listen for auth state changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.warn('[AUTH] onAuthStateChange:', event);
+
+      // Skip if we're currently handling Google OAuth manually
+      if (isHandlingOAuthRef.current) {
+        console.warn('[AUTH] Skipping onAuthStateChange — OAuth in progress');
+        return;
+      }
+
       if (event === 'SIGNED_OUT') {
-        setIsAuthenticated(false);
-        setUserProfile(null);
-        setNeedsOnboarding(false);
+        setAuthState(null, false);
       } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
         const profile = await fetchProfile(session.user.id);
-        setUserProfile(profile);
-        setIsAuthenticated(true);
-        setNeedsOnboarding(checkOnboardingStatus(profile));
+        setAuthState(profile, true);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  // ─── Email/Password Login ───
   const login = async (email: string, pass: string) => {
     setIsLoading(true);
     setError(null);
@@ -145,16 +163,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const profile = await fetchProfile(authData.user.id);
 
-      if (profile?.role === 'creator' || profile?.role === 'admin') {
-        setError('This app is for viewers. Please use the appropriate dashboard for your role.');
+      if (profile?.role === 'CREATOR' || profile?.role === 'ADMIN') {
+        setError('This app is for citizens. Please use the appropriate dashboard for your role.');
         await supabase.auth.signOut();
         return;
       }
 
-      setUserProfile(profile);
-      setNeedsOnboarding(checkOnboardingStatus(profile));
+      setAuthState(profile, true);
       setLoginSuccess(true);
-      setIsAuthenticated(true);
     } catch (e: any) {
       setError('Login failed. Please try again.');
     } finally {
@@ -162,6 +178,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // ─── Email/Password Registration ───
   const register = async (email: string, name: string, pass: string) => {
     setIsLoading(true);
     setError(null);
@@ -171,9 +188,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         password: pass,
         options: {
           data: {
-            username: '',
             full_name: name,
-            role: 'viewer',
+            role: 'CITIZEN',
           },
         },
       });
@@ -188,15 +204,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (authData.user) {
-        // Wait a moment for the trigger to create the profile
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
+        // Wait for trigger to create User row
+        await new Promise(resolve => setTimeout(resolve, 1500));
         const profile = await fetchProfile(authData.user.id);
-
-        setUserProfile(profile);
-        setNeedsOnboarding(true);
+        setAuthState(profile, true);
         setSignupSuccess(true);
-        setIsAuthenticated(true);
       }
     } catch (e: any) {
       setError('Registration failed. Please try again.');
@@ -205,199 +217,200 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // ─── Google OAuth Sign-In ───
   const signInWithGoogle = async () => {
     setIsLoading(true);
     setError(null);
+    isHandlingOAuthRef.current = true; // Prevent onAuthStateChange from interfering
+
     try {
-      const redirectUrl = AuthSession.makeRedirectUri({
+      const internalRedirectUrl = AuthSession.makeRedirectUri({
         scheme: 'app',
         path: 'auth/callback',
       });
 
-      console.warn('Redirecting to Google. Ensure this URI is in your Supabase Redirect URLs:', redirectUrl);
+      const redirectTo = 'https://redirecting-pink.vercel.app/';
+      console.warn('[GOOGLE AUTH] Internal redirect URL:', internalRedirectUrl);
+      console.warn('[GOOGLE AUTH] Vercel proxy:', redirectTo);
 
-      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+      const { data, error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: redirectUrl,
+          redirectTo,
           skipBrowserRedirect: true,
         },
       });
 
-      if (oauthError) {
-        setError(oauthError.message);
-        return;
-      }
+      if (authError) throw authError;
+      if (!data?.url) throw new Error('No OAuth URL received from Supabase');
 
-      if (data?.url) {
-        const result = await WebBrowser.openAuthSessionAsync(
-          data.url,
-          redirectUrl,
-        );
+      console.warn('[GOOGLE AUTH] Opening browser with OAuth URL');
 
-        if (result.type === 'success') {
-          const url = result.url;
-          // Extract tokens from URL
-          const params = new URL(url);
-          const hashParams = new URLSearchParams(params.hash.substring(1));
-          const accessToken = hashParams.get('access_token');
-          const refreshToken = hashParams.get('refresh_token');
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        internalRedirectUrl,
+        { showInRecents: true }
+      );
 
-          if (accessToken && refreshToken) {
-            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
+      console.warn('[GOOGLE AUTH] Browser result type:', result.type);
 
-            if (sessionError) {
-              setError(sessionError.message);
-              return;
-            }
+      if (result.type === 'success' && result.url) {
+        console.warn('[GOOGLE AUTH] Success URL received:', result.url.substring(0, 80) + '...');
 
-            if (sessionData.user) {
-              // Wait for trigger to create profile  
-              await new Promise(resolve => setTimeout(resolve, 1500));
-              
-              const profile = await fetchProfile(sessionData.user.id);
-              setUserProfile(profile);
-              setNeedsOnboarding(checkOnboardingStatus(profile));
-              setIsAuthenticated(true);
-              setLoginSuccess(true);
-            }
+        // Parse tokens from the deep link URL
+        const { accessToken, refreshToken } = getTokensFromUrl(result.url);
+
+        if (accessToken && refreshToken) {
+          console.warn('[GOOGLE AUTH] Tokens extracted, setting session...');
+
+          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+
+          if (sessionError) throw sessionError;
+
+          if (sessionData.user) {
+            console.warn('[GOOGLE AUTH] Session set for:', sessionData.user.email);
+            // Wait for the database trigger to create the User row
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const profile = await fetchProfile(sessionData.user.id);
+            setAuthState(profile, true);
+            setLoginSuccess(true);
+            console.warn('[GOOGLE AUTH] ✅ Auth complete! needsOnboarding:', checkOnboardingStatus(profile));
           }
+
+          WebBrowser.dismissBrowser();
         } else {
-          setError('Google sign-in was cancelled.');
+          console.warn('[GOOGLE AUTH] ❌ No tokens found in URL');
+          setError('Authentication failed — no tokens received. Please try again.');
         }
+      } else if (result.type === 'cancel' || result.type === 'dismiss') {
+        console.warn('[GOOGLE AUTH] User cancelled/dismissed');
+        setError('Google sign-in was cancelled');
       }
     } catch (e: any) {
-      console.error('Google sign-in error:', e);
-      setError('Google sign-in failed. Please try again.');
+      console.error('[GOOGLE AUTH] Error:', e);
+      setError(e.message || 'Google Sign-In failed. Please try again.');
     } finally {
       setIsLoading(false);
+      // Re-enable onAuthStateChange listener after a short delay
+      setTimeout(() => {
+        isHandlingOAuthRef.current = false;
+      }, 2000);
     }
   };
 
+  const getTokensFromUrl = (url: string) => {
+    try {
+      // Tokens can be in either hash fragment (#) or query string (?)
+      const hashPart = url.includes('#') ? url.split('#')[1] : '';
+      const queryPart = url.includes('?') ? url.split('?')[1] : '';
+      const dataString = hashPart || queryPart || '';
+
+      if (!dataString) return { accessToken: null, refreshToken: null };
+
+      const params = new URLSearchParams(dataString);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+
+      console.warn('[GOOGLE AUTH] Token extraction → access:', !!accessToken, '| refresh:', !!refreshToken);
+      return { accessToken, refreshToken };
+    } catch (e) {
+      console.error('[GOOGLE AUTH] Token parsing error:', e);
+      return { accessToken: null, refreshToken: null };
+    }
+  };
+
+  // ─── Username Availability Check ───
   const checkUsernameAvailability = async (username: string): Promise<{ available: boolean; suggestions: string[] }> => {
     try {
       const cleanUsername = username.toLowerCase().replace(/[^a-z0-9_]/g, '');
-      
-      if (cleanUsername.length < 3) {
-        return { available: false, suggestions: [] };
-      }
+      if (cleanUsername.length < 3) return { available: false, suggestions: [] };
 
       const { data, error } = await supabase
-        .from('profiles')
+        .from('User')
         .select('username')
         .eq('username', cleanUsername);
 
-      if (error) {
-        console.error('Username check error:', error);
-        return { available: false, suggestions: [] };
-      }
-
+      if (error) throw error;
       const isAvailable = !data || data.length === 0;
 
-      if (isAvailable) {
-        return { available: true, suggestions: [] };
-      }
+      if (isAvailable) return { available: true, suggestions: [] };
 
-      // Generate suggestions
-      const suggestions: string[] = [];
-      const baseName = cleanUsername.replace(/[0-9]+$/, '');
-      
-      const candidateUsernames = [
-        `${baseName}_${Math.floor(Math.random() * 999)}`,
-        `${baseName}${Math.floor(Math.random() * 9999)}`,
-        `${baseName}_official`,
-        `the_${baseName}`,
-        `${baseName}_${new Date().getFullYear()}`,
+      const base = cleanUsername.replace(/[0-9]+$/, '');
+      const suggestions = [
+        `${base}${Math.floor(Math.random() * 999)}`,
+        `${base}_official`,
+        `the_${base}`
       ];
-
-      // Check which suggestions are available
-      const { data: existingUsernames } = await supabase
-        .from('profiles')
-        .select('username')
-        .in('username', candidateUsernames);
-
-      const takenSet = new Set((existingUsernames || []).map((u: any) => u.username));
-
-      for (const candidate of candidateUsernames) {
-        if (!takenSet.has(candidate) && suggestions.length < 3) {
-          suggestions.push(candidate);
-        }
-      }
-
       return { available: false, suggestions };
     } catch (e) {
-      console.error('Username check failed:', e);
       return { available: false, suggestions: [] };
     }
   };
 
+  // ─── Update Profile During Onboarding ───
   const updateOnboardingProfile = async (data: { username?: string; language?: string; topics?: string[] }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || userProfile?.id;
 
-      const updateData: any = {};
-      if (data.username) updateData.username = data.username.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      if (!userId) throw new Error('Not authenticated. Please try logging in again.');
+
+      const updateData: any = { updatedAt: new Date().toISOString() };
+      if (data.username) updateData.username = data.username.toLowerCase();
       if (data.language) updateData.preferred_language = data.language;
       if (data.topics) {
         updateData.selected_topics = data.topics;
         updateData.onboarding_complete = true;
       }
 
-      const { data: updatedProfile, error: updateError } = await supabase
-        .from('profiles')
+      const { data: updated, error: uErr } = await supabase
+        .from('User')
         .update(updateData)
-        .eq('id', user.id)
+        .eq('id', userId)
         .select()
         .single();
 
-      if (updateError) {
-        if (updateError.message.includes('unique') || updateError.message.includes('duplicate')) {
-          setError('This username is already taken. Please choose another.');
-        } else {
-          setError(updateError.message);
-        }
-        throw updateError;
-      }
+      if (uErr) throw uErr;
 
-      setUserProfile(updatedProfile);
-      if (updatedProfile.onboarding_complete) {
-        setNeedsOnboarding(false);
-      }
+      setUserProfile(updated);
+      if (updated.onboarding_complete) setNeedsOnboarding(false);
       setUpdateProfileSuccess(true);
     } catch (e: any) {
-      if (!error) setError('Failed to update profile.');
+      setError(e.message || 'Update failed');
       throw e;
     } finally {
       setIsLoading(false);
     }
   };
 
+  // ─── Update Profile (General) ───
   const updateProfile = async (username: string, bio: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || userProfile?.id;
 
-      const { data, error: updateError } = await supabase
-        .from('profiles')
-        .update({ username, bio })
-        .eq('id', user.id)
+      if (!userId) throw new Error('Not authenticated.');
+
+      const { data, error: uErr } = await supabase
+        .from('User')
+        .update({ username, bio, updatedAt: new Date().toISOString() })
+        .eq('id', userId)
         .select()
         .single();
 
-      if (updateError) throw updateError;
-
+      if (uErr) throw uErr;
       setUserProfile(data);
       setUpdateProfileSuccess(true);
     } catch (e: any) {
-      setError('Failed to update profile.');
+      setError('Update failed');
+      throw e;
     } finally {
       setIsLoading(false);
     }
@@ -412,23 +425,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     await supabase.auth.signOut();
-    setIsAuthenticated(false);
-    setUserProfile(null);
-    setNeedsOnboarding(false);
+    setAuthState(null, false);
   };
-
-  if (initializing) {
-    return null;
-  }
 
   return (
     <AuthContext.Provider value={{
-      isLoading, error, loginSuccess, signupSuccess, updateProfileSuccess, 
+      isLoading, error, loginSuccess, signupSuccess, updateProfileSuccess,
       isAuthenticated, needsOnboarding, userProfile,
       login, register, signInWithGoogle, checkUsernameAvailability,
       updateOnboardingProfile, updateProfile, clearState, logout
     }}>
-      {children}
+      {!initializing && children}
     </AuthContext.Provider>
   );
 };
