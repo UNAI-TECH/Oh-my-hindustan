@@ -16,6 +16,8 @@ interface CreatorRequest {
   createdAt: string;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+
 export default function CreatorRequests() {
   const [requests, setRequests] = useState<CreatorRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +30,10 @@ export default function CreatorRequests() {
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:3001/api/creator/requests');
+      const token = localStorage.getItem('adminToken');
+      const response = await axios.get(`${API_BASE_URL}/creator/requests`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setRequests(response.data);
     } catch (err: any) {
       setError('Failed to fetch requests');
@@ -44,9 +49,12 @@ export default function CreatorRequests() {
   const handleAction = async (id: string, status: 'APPROVED' | 'REJECTED') => {
     setActionLoading(true);
     try {
-      await axios.patch(`http://localhost:3001/api/creator/requests/${id}`, {
+      const token = localStorage.getItem('adminToken');
+      await axios.patch(`${API_BASE_URL}/creator/requests/${id}`, {
         status,
         adminMessage
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       setAdminMessage('');
       setSelectedRequest(null);

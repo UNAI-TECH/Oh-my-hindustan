@@ -4,19 +4,51 @@ import { AuthenticatedRequest } from '../middleware/auth.middleware';
 
 export const getOverviewStats = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // In a real app, these would be dynamic counts/aggregates
-    const verifiedCitizens = await prisma.user.count({ where: { role: 'CITIZEN' } });
-    const activeDebates = await prisma.post.count({ where: { type: 'DEBATE' } });
+    const totalUsers = await prisma.user.count();
+    const activeAnalysts = await prisma.user.count({ where: { role: 'ANALYST' } });
     
-    // Mocking some financial data since we don't have a Transactions table yet
+    // Calculate daily posts (today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dailyPosts = await prisma.post.count({
+      where: {
+        createdAt: {
+          gte: today
+        }
+      }
+    });
+
+    // Fetch last 5 posts for recent activity
+    const recentPosts = await prisma.post.findMany({
+      take: 5,
+      orderBy: {
+        createdAt: 'desc'
+      },
+      select: {
+        title: true,
+        author: {
+          select: {
+            username: true
+          }
+        },
+        createdAt: true,
+        type: true
+      }
+    });
+
     res.json({
-      verifiedCitizens: (125432 + verifiedCitizens).toLocaleString(),
-      activeDebates: (12240 + activeDebates).toLocaleString(),
-      platformFund: "₹4.52Cr",
-      factCheckQueue: "12 New",
-      verifiedChange: "+12.5%",
-      debatesChange: "+5.2%",
-      fundChange: "+18.1%"
+      stats: {
+        totalUsers: totalUsers.toLocaleString(),
+        dailyPosts: dailyPosts.toLocaleString(),
+        engagementRate: "68.4%", // Dummy for now
+        activeAnalysts: activeAnalysts.toString()
+      },
+      recentActivity: recentPosts.map(post => ({
+        title: post.title,
+        author: post.author.username,
+        date: post.createdAt,
+        status: 'Approved' // Simplified for UI matching
+      }))
     });
   } catch (error: any) {
     res.status(500).json({ message: error.message });

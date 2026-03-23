@@ -1,22 +1,45 @@
 import React, { useState } from 'react';
-import { LogIn, ShieldAlert } from 'lucide-react';
+import { LogIn, ShieldAlert, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import axios from 'axios';
 
 interface Props {
   onLogin: (success: boolean) => void;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+
 const LoginPage: React.FC<Props> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === 'ohmyhindusthan@gmail.com' && password === 'Hindusthan@26') {
+    setLoading(true);
+    setError('');
+    
+    try {
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+        username: email, // Backend handles email or username as 'username'
+        password
+      });
+
+      const { access_token, user } = response.data;
+
+      if (user.role !== 'ADMIN') {
+        setError('Access denied. Admin portal only.');
+        return;
+      }
+
+      localStorage.setItem('adminToken', access_token);
+      localStorage.setItem('adminUser', JSON.stringify(user));
       onLogin(true);
-    } else {
-      setError('Invalid credentials. Please try again.');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Invalid credentials. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -45,6 +68,7 @@ const LoginPage: React.FC<Props> = ({ onLogin }) => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
 
@@ -57,18 +81,27 @@ const LoginPage: React.FC<Props> = ({ onLogin }) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
 
           {error && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm"
+            >
               {error}
-            </div>
+            </motion.div>
           )}
 
-          <button type="submit" className="btn-primary w-full text-lg">
-            <LogIn size={20} />
-            Sign In
+          <button 
+            type="submit" 
+            className="btn-primary w-full text-lg disabled:opacity-50"
+            disabled={loading}
+          >
+            {loading ? <Loader2 className="animate-spin mr-2" /> : <LogIn size={20} />}
+            {loading ? 'Authenticating...' : 'Sign In'}
           </button>
         </form>
 

@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { 
   Users, 
   FileText, 
@@ -21,21 +22,37 @@ interface Props {
   onLogout: () => void;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+
 const Dashboard: React.FC<Props> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = React.useState('Overview');
+  const [statsData, setStatsData] = useState<any>(null);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('adminToken');
+        const response = await axios.get(`${API_BASE_URL}/admin/stats`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setStatsData(response.data.stats);
+        setRecentActivity(response.data.recentActivity);
+      } catch (err) {
+        console.error('Failed to fetch dashboard data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (activeTab === 'Overview') fetchData();
+  }, [activeTab]);
 
   const stats = [
-    { label: 'Total Users', value: '25,432', change: '+12%', icon: <Users size={20} />, color: '#8ecdff' },
-    { label: 'Daily Posts', value: '1,204', change: '+8%', icon: <FileText size={20} />, color: '#E31E24' },
-    { label: 'Engagement Rate', value: '68.4%', change: '+5.2%', icon: <Activity size={20} />, color: '#10B981' },
-    { label: 'Active Analysts', value: '42', change: 'Steady', icon: <MessageSquare size={20} />, color: '#F59E0B' },
-  ];
-
-  const recentPosts = [
-    { title: 'New high-engagement post detected in #politics', author: 'Mod_Rahul', date: '2 mins ago', status: 'Approved' },
-    { title: 'User acquisition reached daily milestone (500+)', author: 'System', date: '14 mins ago', status: 'Pending' },
-    { title: 'System security scan completed. No threats found.', author: 'SecurityBot', date: '1 hr ago', status: 'Approved' },
-    { title: '3 flagged posts awaiting manual moderator review.', author: 'AutoMod', date: '3 hrs ago', status: 'Rejected' },
+    { label: 'Total Users', value: statsData?.totalUsers || '...', change: '+12%', icon: <Users size={20} />, color: '#8ecdff' },
+    { label: 'Daily Posts', value: statsData?.dailyPosts || '...', change: '+8%', icon: <FileText size={20} />, color: '#E31E24' },
+    { label: 'Engagement Rate', value: statsData?.engagementRate || '68.4%', change: '+5.2%', icon: <Activity size={20} />, color: '#10B981' },
+    { label: 'Active Analysts', value: statsData?.activeAnalysts || '...', change: 'Steady', icon: <MessageSquare size={20} />, color: '#F59E0B' },
   ];
 
   return (
@@ -172,7 +189,19 @@ const Dashboard: React.FC<Props> = ({ onLogout }) => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#ae88830d]">
-                                {recentPosts.map((post, i) => (
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan={4} className="py-10 text-center text-[#e7bdb8] opacity-50 italic">
+                                            Decrypting secure feed...
+                                        </td>
+                                    </tr>
+                                ) : recentActivity.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={4} className="py-10 text-center text-[#e7bdb8] opacity-50 italic">
+                                            No recent intelligence reported.
+                                        </td>
+                                    </tr>
+                                ) : recentActivity.map((post, i) => (
                                     <tr key={i} className="group hover:bg-white/[0.02] transition-colors">
                                         <td className="py-5 pr-4">
                                             <p className="text-sm font-semibold text-white/90 group-hover:text-white transition-colors line-clamp-1">{post.title}</p>
@@ -184,7 +213,7 @@ const Dashboard: React.FC<Props> = ({ onLogout }) => {
                                             </div>
                                         </td>
                                         <td className="py-5">
-                                            <span className="text-xs text-[#e7bdb8]/40">{post.date}</span>
+                                            <span className="text-xs text-[#e7bdb8]/40">{new Date(post.date).toLocaleDateString()}</span>
                                         </td>
                                         <td className="py-5 text-right">
                                             <span className={`status-badge ${
@@ -224,7 +253,7 @@ const Dashboard: React.FC<Props> = ({ onLogout }) => {
                     <div className="bg-gradient-to-br from-[#E31E24] to-[#93000d] rounded-2xl p-8 shadow-2xl shadow-red-900/20">
                         <ShieldAlert className="text-white/40 mb-4" size={32} />
                         <h4 className="text-white font-bold mb-2">Secure Link Active</h4>
-                        <p className="text-white/70 text-xs leading-relaxed mb-6">Your session is encrypted and connected to the Supabase Production Cluster.</p>
+                        <p className="text-white/70 text-xs leading-relaxed mb-6">Your session is encrypted and connected to the Production Cluster.</p>
                         <button className="w-full py-3 bg-white text-[#E31E24] rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-white/90 transition-all">
                             Security Logs
                         </button>
