@@ -21,12 +21,26 @@ import androidx.navigation.NavController
 import com.viewer.app.ui.theme.PrimaryRed
 import com.viewer.app.ui.theme.WarmOrange
 import com.viewer.app.ui.theme.CreamBg
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.viewer.app.ui.viewmodels.AuthViewModel
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileSetupScreen(navController: NavController) {
+    val authViewModel: AuthViewModel = viewModel()
+    val isLoading by authViewModel.isLoading.collectAsState()
+    val updateSuccess by authViewModel.updateProfileSuccess.collectAsState()
+
     var username by remember { mutableStateOf("") }
     var bio by remember { mutableStateOf("") }
+
+    LaunchedEffect(updateSuccess) {
+        if (updateSuccess) {
+            navController.navigate("interests_selection")
+        }
+    }
 
     val slate300 = Color(0xFFCBD5E1)
     val slate500 = Color(0xFF64748B)
@@ -121,9 +135,10 @@ fun ProfileSetupScreen(navController: NavController) {
         Button(
             onClick = {
                 if (username.isNotEmpty()) {
-                    navController.navigate("interests_selection")
+                    authViewModel.updateProfile(username, bio)
                 }
             },
+            enabled = !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -140,7 +155,11 @@ fun ProfileSetupScreen(navController: NavController) {
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Continue", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                if (isLoading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text("Continue", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                }
             }
         }
         

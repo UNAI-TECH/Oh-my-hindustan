@@ -9,15 +9,20 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.viewer.app.ui.navigation.NavigationGraph
 import com.viewer.app.ui.theme.ViewerTheme
-
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.viewer.app.ui.theme.ThemeViewModel
+import com.viewer.app.data.local.SessionManager
+import com.viewer.app.data.network.ApiClient
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        val sessionManager = SessionManager(applicationContext)
+        ApiClient.initialize(sessionManager)
+
         setContent {
             val themeViewModel: ThemeViewModel = viewModel()
             val isDarkMode by themeViewModel.isDarkMode.collectAsState()
@@ -33,4 +38,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-

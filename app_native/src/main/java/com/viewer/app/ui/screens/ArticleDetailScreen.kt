@@ -38,11 +38,26 @@ import com.viewer.app.ui.theme.CreamBg
 import com.viewer.app.ui.theme.PrimaryRed
 import com.viewer.app.ui.theme.Slate500
 
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.viewer.app.ui.viewmodels.FeedViewModel
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ArticleDetailScreen(navController: NavController, articleId: String?) {
-    val item = remember(articleId) {
-        SampleData.feedItems.find { it.id == articleId }
+fun ArticleDetailScreen(navController: NavController, articleId: String?, feedViewModel: FeedViewModel = viewModel()) {
+    val itemState by feedViewModel.selectedArticle.collectAsState()
+    val isLoading by feedViewModel.isLoading.collectAsState()
+
+    val item = itemState // snapshot to a local val for smart casting
+
+    LaunchedEffect(articleId) {
+        articleId?.let { feedViewModel.fetchArticle(it) }
+    }
+
+    if (isLoading && item == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = PrimaryRed)
+        }
+        return
     }
 
     if (item == null) {

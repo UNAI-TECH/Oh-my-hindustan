@@ -1,0 +1,124 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CITIZEN
+  ANALYST
+  ADMIN
+}
+
+enum PostType {
+  FORUM
+  POLICY_TYPE
+  DEBATE
+  UPDATE
+  NEWS
+  BLOG
+  VIDEO
+  PROMO
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  username      String         @unique
+  password      String
+  role          Role           @default(CITIZEN)
+  bio           String?
+  avatarUrl     String?
+  phone         String?
+  posts         Post[]
+  votes         Vote[]
+  comments      Comment[]
+  saves         Save[]
+  notifications Notification[]
+  followers     Follow[]       @relation("following")
+  following     Follow[]       @relation("follower")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Post {
+  id            String         @id @default(uuid())
+  title         String
+  subtitle      String?
+  content       String?
+  type          PostType       @default(NEWS)
+  category      String?
+  thumbnail     String?
+  videoDuration String?
+  authorId      String
+  author        User           @relation(fields: [authorId], references: [id])
+  votes         Vote[]
+  comments      Comment[]
+  saves         Save[]
+  isTrending    Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Vote {
+  id        String   @id @default(uuid())
+  type      Int      // 1 for upvote, -1 for downvote
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String
+  follower    User     @relation("follower", fields: [followerId], references: [id])
+  followingId String
+  following   User     @relation("following", fields: [followingId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+model Save {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  targetId  String?
+  createdAt DateTime @default(now())
+}

@@ -21,13 +21,30 @@ import androidx.navigation.NavController
 import com.viewer.app.ui.theme.PrimaryRed
 import com.viewer.app.ui.theme.WarmOrange
 import com.viewer.app.ui.theme.CreamBg
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.viewer.app.ui.viewmodels.AuthViewModel
+import androidx.compose.runtime.LaunchedEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(navController: NavController) {
+    val authViewModel: AuthViewModel = viewModel()
+    val isLoading by authViewModel.isLoading.collectAsState()
+    val authError by authViewModel.error.collectAsState()
+    val loginSuccess by authViewModel.loginSuccess.collectAsState()
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(loginSuccess) {
+        if (loginSuccess) {
+            authViewModel.clearState()
+            navController.navigate("home") {
+                popUpTo("splash") { inclusive = true }
+            }
+        }
+    }
 
     val slate300 = Color(0xFFCBD5E1)
     val slate500 = Color(0xFF64748B)
@@ -112,9 +129,9 @@ fun LoginScreen(navController: NavController) {
             )
         )
 
-        if (errorMessage != null) {
+        if (errorMessage != null || authError != null) {
             Text(
-                text = errorMessage!!,
+                text = errorMessage ?: authError ?: "",
                 color = Color.Red,
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.padding(top = 8.dp)
@@ -125,18 +142,13 @@ fun LoginScreen(navController: NavController) {
 
         Button(
             onClick = {
-                if (email == "admin@viewer.app" && password == "admin123") {
-                    navController.navigate("admin_overview") {
-                        popUpTo("splash") { inclusive = true }
-                    }
-                } else if (email.isNotEmpty() && password.isNotEmpty()) {
-                    navController.navigate("profile_setup") {
-                        popUpTo("splash") { inclusive = true }
-                    }
+                if (email.isNotEmpty() && password.isNotEmpty()) {
+                    authViewModel.login(email, password)
                 } else {
                     errorMessage = "Please enter valid credentials"
                 }
             },
+            enabled = !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -153,7 +165,11 @@ fun LoginScreen(navController: NavController) {
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Enter Forum", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                if (isLoading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text("Enter Forum", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                }
             }
         }
         

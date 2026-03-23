@@ -1,51 +1,25 @@
 services:
-  # ── PostgreSQL Database ──────────────────────────
-  db:
-    image: postgres:16-alpine
-    container_name: jan_samvad_db
-    env_file: .env.docker
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ohmyhindustan
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
-  # ── Redis Cache / Queue ──────────────────────────
-  redis:
-    image: redis:7-alpine
-    container_name: jan_samvad_redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  # ── NestJS Backend API ───────────────────────────
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: jan_samvad_backend
-    env_file: .env.docker
+    build: ./backend
     ports:
-      - "3000:3000"
+      - "3001:3000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/ohmyhindustan?schema=public
+      - JWT_SECRET=your_super_secret_jwt_key_change_this_for_production
+      - PORT=3000
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
+      - postgres
 
 volumes:
   postgres_data:
-  redis_data:

@@ -1,6 +1,8 @@
 package com.viewer.app.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.viewer.app.ui.viewmodels.NotificationViewModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -46,20 +48,25 @@ data class NotificationItem(
 
 // Global state for notifications
 val globalNotifications = mutableStateListOf(
-    NotificationItem("1", "News Tamil Reports posted a new update", "CM MK Stalin announces Rs. 1000 crore relief package...", "1h ago", "https://images.unsplash.com/photo-1533727101791-0309197c11f7?auto=format&fit=crop&q=80&w=100", "2"),
-    NotificationItem("2", "Times Now uploaded a new video", "Exclusive Interview with EAM S. Jaishankar", "3h ago", "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=100", "7"),
-    NotificationItem("3", "New Trending Topic: Supreme Court", "Landmark verdict on electoral bonds mandates immediate disclosure", "5h ago", "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&q=80&w=800", "1", isRead = true),
-    NotificationItem("4", "Tech Policy India published a blog", "How ONDC is breaking the e-commerce monopoly in India", "Yesterday", "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100", "4", isRead = true)
+    NotificationItem("1", "News Tamil Reports posted a new update", "CM MK Stalin announces Rs. 1000 crore relief package...", "1h ago", "https://images.unsplash.com/photo-1533727101791-0309197c11f7?auto=format&fit=crop&q=80&w=100", "p1"),
+    NotificationItem("2", "Times Now uploaded a new video", "Exclusive Interview with EAM S. Jaishankar", "3h ago", "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=100", "p2"),
+    NotificationItem("3", "New Trending Topic: Supreme Court", "Landmark verdict on electoral bonds mandates immediate disclosure", "5h ago", "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&q=80&w=800", "tn1", isRead = true),
+    NotificationItem("4", "Tech Policy India published a blog", "How ONDC is breaking the e-commerce monopoly in India", "Yesterday", "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100", "e1", isRead = true)
 )
 
 var isNotificationsEnabled by mutableStateOf(true)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationScreen(navController: NavController) {
+fun NotificationScreen(navController: NavController, notificationViewModel: NotificationViewModel = viewModel()) {
+    val apiNotifications by notificationViewModel.notifications.collectAsState()
+    val isLoading by notificationViewModel.isLoading.collectAsState()
+
     var expandedMenu by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
     val selectedIds = remember { mutableStateListOf<String>() }
+    
+    val displayNotifications = if (apiNotifications.isNotEmpty()) apiNotifications else globalNotifications
 
     Scaffold(
         topBar = {
@@ -76,14 +83,14 @@ fun NotificationScreen(navController: NavController) {
                     },
                     actions = {
                         TextButton(onClick = {
-                            if (selectedIds.size == globalNotifications.size) {
+                            if (selectedIds.size == displayNotifications.size && displayNotifications.isNotEmpty()) {
                                 selectedIds.clear()
                             } else {
                                 selectedIds.clear()
-                                selectedIds.addAll(globalNotifications.map { it.id })
+                                selectedIds.addAll(displayNotifications.map { it.id })
                             }
                         }) {
-                            Text(if (selectedIds.size == globalNotifications.size) "Deselect All" else "Select All", color = PrimaryRed)
+                            Text(if (selectedIds.size == displayNotifications.size && displayNotifications.isNotEmpty()) "Deselect All" else "Select All", color = PrimaryRed)
                         }
                         IconButton(onClick = {
                             globalNotifications.removeAll { it.id in selectedIds }
@@ -178,7 +185,7 @@ fun NotificationScreen(navController: NavController) {
             ) {
                 Text("Notifications are paused.", color = Slate500, style = MaterialTheme.typography.titleMedium)
             }
-        } else if (globalNotifications.isEmpty()) {
+        } else if (displayNotifications.isEmpty() && !isLoading) {
             Box(
                 modifier = Modifier.padding(padding).fillMaxSize().background(Color(0xFFF8FAFC)),
                 contentAlignment = Alignment.Center
@@ -194,7 +201,7 @@ fun NotificationScreen(navController: NavController) {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(globalNotifications, key = { it.id }) { notification ->
+                items(displayNotifications, key = { it.id }) { notification ->
                     NotificationRow(
                         notification = notification,
                         isSelectionMode = isSelectionMode,
@@ -207,9 +214,11 @@ fun NotificationScreen(navController: NavController) {
                                     selectedIds.add(notification.id)
                                 }
                             } else {
-                                val index = globalNotifications.indexOfFirst { it.id == notification.id }
-                                if (index != -1) {
-                                    globalNotifications[index] = globalNotifications[index].copy(isRead = true)
+                                if (apiNotifications.isEmpty()) {
+                                    val index = globalNotifications.indexOfFirst { it.id == notification.id }
+                                    if (index != -1) {
+                                        globalNotifications[index] = globalNotifications[index].copy(isRead = true)
+                                    }
                                 }
                                 navController.navigate("article_detail/${notification.targetId}")
                             }

@@ -32,10 +32,16 @@ import com.viewer.app.ui.theme.PrimaryRed
 import com.viewer.app.ui.theme.Slate400
 import com.viewer.app.ui.theme.Slate500
 import com.viewer.app.ui.theme.WarmOrange
+import androidx.compose.ui.platform.LocalContext
+import com.viewer.app.data.local.SessionManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(navController: NavController) {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+    val loggedInName by sessionManager.userName.collectAsState(initial = "Kamal Singh")
+
     var selectedTab by remember { mutableStateOf("My Briefings") }
     val tabs = listOf("My Briefings", "Upvoted", "History", "Following")
 
@@ -98,7 +104,7 @@ fun ProfileScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Kamal Singh", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(loggedInName ?: "Kamal Singh", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text("12,450 Influence Points", style = MaterialTheme.typography.bodySmall, color = Slate500)
             }
 

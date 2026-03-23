@@ -73,6 +73,17 @@ dependencies {
     // System UI controller
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.34.0")
 
+    // Networking
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+
+    // DataStore for session mgmt
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // ViewModel Compose
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

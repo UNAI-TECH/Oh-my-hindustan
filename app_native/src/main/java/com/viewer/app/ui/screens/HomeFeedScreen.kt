@@ -36,9 +36,15 @@ import com.viewer.app.ui.theme.PrimaryRed
 import com.viewer.app.ui.theme.Slate400
 import com.viewer.app.ui.theme.Slate500
 
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.viewer.app.ui.viewmodels.FeedViewModel
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeFeedScreen(navController: NavController) {
+fun HomeFeedScreen(navController: NavController, feedViewModel: FeedViewModel = viewModel()) {
+    val apiItems by feedViewModel.feedItems.collectAsState()
+    val isLoading by feedViewModel.isLoading.collectAsState()
+    
     val context = LocalContext.current
     val shareContent: (FeedItem) -> Unit = { item ->
         val sendIntent: Intent = Intent().apply {
@@ -53,14 +59,17 @@ fun HomeFeedScreen(navController: NavController) {
     var selectedTab by remember { mutableStateOf("Trending") }
     val tabs = listOf("Trending", "News", "Blogs", "Videos", "For You")
 
-    val filteredItems = remember(selectedTab) {
+    // Use API items if available, otherwise fallback to local mock SampleData temporarily
+    val allItems = if (apiItems.isNotEmpty()) apiItems else SampleData.feedItems
+
+    val filteredItems = remember(selectedTab, allItems) {
         when (selectedTab) {
-            "Trending" -> SampleData.feedItems.shuffled().take(5)
-            "News" -> SampleData.feedItems.filter { it.type in listOf(FeedItemType.NEWS, FeedItemType.UPDATE, FeedItemType.POLICY_TYPE, FeedItemType.PROMO) }
-            "Blogs" -> SampleData.feedItems.filter { it.type in listOf(FeedItemType.BLOG, FeedItemType.FORUM, FeedItemType.PROMO) }
-            "Videos" -> SampleData.feedItems.filter { it.type in listOf(FeedItemType.VIDEO, FeedItemType.DEBATE, FeedItemType.PROMO) }
-            "For You" -> SampleData.feedItems
-            else -> SampleData.feedItems
+            "Trending" -> allItems.shuffled().take(5)
+            "News" -> allItems.filter { it.type in listOf(FeedItemType.NEWS, FeedItemType.UPDATE, FeedItemType.POLICY_TYPE, FeedItemType.PROMO) }
+            "Blogs" -> allItems.filter { it.type in listOf(FeedItemType.BLOG, FeedItemType.FORUM, FeedItemType.PROMO) }
+            "Videos" -> allItems.filter { it.type in listOf(FeedItemType.VIDEO, FeedItemType.DEBATE, FeedItemType.PROMO) }
+            "For You" -> allItems
+            else -> allItems
         }
     }
 

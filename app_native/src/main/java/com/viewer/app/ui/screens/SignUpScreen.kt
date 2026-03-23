@@ -23,14 +23,32 @@ import androidx.navigation.NavController
 import com.viewer.app.ui.theme.PrimaryRed
 import com.viewer.app.ui.theme.WarmOrange
 import com.viewer.app.ui.theme.CreamBg
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.viewer.app.ui.viewmodels.AuthViewModel
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignUpScreen(navController: NavController) {
+    val authViewModel: AuthViewModel = viewModel()
+    val isLoading by authViewModel.isLoading.collectAsState()
+    val authError by authViewModel.error.collectAsState()
+    val signupSuccess by authViewModel.signupSuccess.collectAsState()
+
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(signupSuccess) {
+        if (signupSuccess) {
+            authViewModel.clearState()
+            navController.navigate("profile_setup") {
+                popUpTo("splash") { inclusive = true }
+            }
+        }
+    }
 
     val slate300 = Color(0xFFCBD5E1)
     val slate500 = Color(0xFF64748B)
@@ -131,9 +149,9 @@ fun SignUpScreen(navController: NavController) {
             )
         )
 
-        if (errorMessage != null) {
+        if (errorMessage != null || authError != null) {
             Text(
-                text = errorMessage!!,
+                text = errorMessage ?: authError ?: "",
                 color = Color.Red,
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.padding(top = 8.dp)
@@ -145,13 +163,12 @@ fun SignUpScreen(navController: NavController) {
         Button(
             onClick = {
                 if (name.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty()) {
-                    navController.navigate("profile_setup") {
-                        popUpTo("splash") { inclusive = true }
-                    }
+                    authViewModel.register(email, name, password)
                 } else {
                     errorMessage = "Please fill in all fields"
                 }
             },
+            enabled = !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -168,7 +185,11 @@ fun SignUpScreen(navController: NavController) {
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Join Forum", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                if (isLoading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text("Join Forum", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                }
             }
         }
         

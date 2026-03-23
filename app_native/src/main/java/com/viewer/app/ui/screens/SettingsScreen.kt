@@ -24,10 +24,12 @@ import kotlinx.coroutines.launch
 import com.viewer.app.ui.theme.CreamBg
 import com.viewer.app.ui.theme.PrimaryRed
 import com.viewer.app.ui.theme.Slate500
+import com.viewer.app.ui.viewmodels.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(navController: NavController, themeViewModel: ThemeViewModel = viewModel()) {
+    val authViewModel: AuthViewModel = viewModel()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     
@@ -233,6 +235,7 @@ fun SettingsScreen(navController: NavController, themeViewModel: ThemeViewModel 
 
             Button(
                 onClick = { 
+                    authViewModel.logout()
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }
                     }

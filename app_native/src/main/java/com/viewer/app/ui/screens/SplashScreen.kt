@@ -19,11 +19,30 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import com.viewer.app.data.local.SessionManager
 import com.viewer.app.ui.theme.PrimaryRed
 import com.viewer.app.ui.theme.WarmOrange
 
 @Composable
 fun SplashScreen(navController: NavController) {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+    val defaultToken by sessionManager.authToken.collectAsState(initial = null)
+    
+    // We launch a side effect when the screen composition completes and monitor token
+    LaunchedEffect(defaultToken) {
+        if (!defaultToken.isNullOrEmpty()) {
+            navController.navigate("home") {
+                popUpTo("splash") { inclusive = true }
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
