@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -14,26 +14,44 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/Theme';
+import { useAuth } from '../../context/AuthContext';
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>();
+  const { login, signInWithGoogle, isLoading, error, loginSuccess, isAuthenticated, needsOnboarding, clearState } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  const handleLogin = () => {
-    if (email && password) {
-      setIsLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        setIsLoading(false);
-        navigation.navigate('Home' as never);
-      }, 1500);
-    } else {
-      setErrorMessage('Please enter valid credentials');
+  useEffect(() => {
+    clearState();
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated && loginSuccess) {
+      if (needsOnboarding) {
+        navigation.reset({ index: 0, routes: [{ name: 'UsernameSetup' }] });
+      } else {
+        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+      }
     }
+  }, [isAuthenticated, loginSuccess, needsOnboarding]);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setLocalError('Please enter valid credentials');
+      return;
+    }
+    setLocalError(null);
+    await login(email.trim(), password);
   };
+
+  const handleGoogleSignIn = async () => {
+    setLocalError(null);
+    await signInWithGoogle();
+  };
+
+  const displayError = localError || error;
 
   return (
     <KeyboardAvoidingView 
@@ -54,7 +72,7 @@ export default function LoginScreen() {
             placeholder="Email Address"
             placeholderTextColor="#64748B"
             value={email}
-            onChangeText={(text) => { setEmail(text); setErrorMessage(null); }}
+            onChangeText={(text) => { setEmail(text); setLocalError(null); }}
             keyboardType="email-address"
             autoCapitalize="none"
           />
@@ -64,13 +82,13 @@ export default function LoginScreen() {
             placeholder="Password"
             placeholderTextColor="#64748B"
             value={password}
-            onChangeText={(text) => { setPassword(text); setErrorMessage(null); }}
+            onChangeText={(text) => { setPassword(text); setLocalError(null); }}
             secureTextEntry
           />
         </View>
 
-        {errorMessage && (
-          <Text style={styles.errorText}>{errorMessage}</Text>
+        {displayError && (
+          <Text style={styles.errorText}>{displayError}</Text>
         )}
 
         <TouchableOpacity 
@@ -79,7 +97,7 @@ export default function LoginScreen() {
           disabled={isLoading}
         >
           <LinearGradient
-            colors={['#E53935', '#FB8C00']} // PrimaryRed, WarmOrange
+            colors={['#E53935', '#FB8C00']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradientButton}
@@ -98,21 +116,18 @@ export default function LoginScreen() {
           <View style={styles.divider} />
         </View>
 
-        <View style={styles.socialButtonsContainer}>
-          {[
-            { icon: 'logo-google', color: '#DB4437' },
-            { icon: 'logo-apple', color: '#000000' },
-            { icon: 'mail', color: '#64748B' }
-          ].map((item, index) => (
-            <TouchableOpacity key={index} style={styles.socialButton} onPress={() => navigation.navigate('ProfileSetup' as never)}>
-              <Ionicons name={item.icon as any} size={24} color={item.color} />
-            </TouchableOpacity>
-          ))}
-        </View>
+        <TouchableOpacity 
+          style={styles.googleButton} 
+          onPress={handleGoogleSignIn}
+          disabled={isLoading}
+        >
+          <Ionicons name="logo-google" size={22} color="#DB4437" />
+          <Text style={styles.googleButtonText}>Continue with Google</Text>
+        </TouchableOpacity>
 
         <View style={styles.footerContainer}>
           <Text style={styles.footerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('SignUp' as never)}>
+          <TouchableOpacity onPress={() => { clearState(); navigation.navigate('SignUp' as never); }}>
             <Text style={styles.signUpText}>Sign Up</Text>
           </TouchableOpacity>
         </View>
@@ -141,9 +156,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
-  iconText: {
-    fontSize: 40,
-  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -171,10 +183,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   errorText: {
-    color: 'red',
-    fontSize: 12,
-    marginTop: 8,
+    color: '#DC2626',
+    fontSize: 13,
+    marginTop: 12,
     alignSelf: 'flex-start',
+    fontWeight: '500',
   },
   buttonContainer: {
     width: '100%',
@@ -198,7 +211,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     marginTop: 32,
-    marginBottom: 32,
+    marginBottom: 24,
     paddingHorizontal: 8,
   },
   divider: {
@@ -211,30 +224,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
-  socialButtonsContainer: {
+  googleButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    justifyContent: 'center',
     width: '100%',
-    gap: 16,
-    marginBottom: 40,
-  },
-  socialButton: {
-    flex: 1,
     height: 56,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
+    gap: 12,
+    marginBottom: 32,
     elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 1,
   },
-  socialIconText: {
-    fontSize: 24,
+  googleButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
   },
   footerContainer: {
     flexDirection: 'row',

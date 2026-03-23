@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '../../context/AuthContext';
 
 export default function SplashScreen() {
   const navigation = useNavigation<any>();
+  const { isAuthenticated, needsOnboarding } = useAuth();
   const fadeAnim = new Animated.Value(0);
 
   useEffect(() => {
@@ -15,14 +17,22 @@ export default function SplashScreen() {
       useNativeDriver: true,
     }).start(() => {
       setTimeout(() => {
-        navigation.replace('Login');
-      }, 1000);
+        if (isAuthenticated) {
+          if (needsOnboarding) {
+            navigation.reset({ index: 0, routes: [{ name: 'UsernameSetup' }] });
+          } else {
+            navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+          }
+        } else {
+          navigation.replace('Login');
+        }
+      }, 800);
     });
   }, []);
 
   return (
     <LinearGradient
-      colors={['#E53935', '#FB8C00']} // PrimaryRed to WarmOrange
+      colors={['#E53935', '#FB8C00']}
       style={styles.container}
     >
       <Animated.View style={{ opacity: fadeAnim, alignItems: 'center' }}>
@@ -55,9 +65,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-  },
-  iconText: {
-    fontSize: 50,
   },
   title: {
     fontSize: 32,

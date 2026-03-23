@@ -6,6 +6,9 @@ import SplashScreen from '../screens/Auth/SplashScreen';
 import LoginScreen from '../screens/Auth/LoginScreen';
 import SignUpScreen from '../screens/Auth/SignUpScreen';
 import ProfileSetupScreen from '../screens/Auth/ProfileSetupScreen';
+import UsernameSetupScreen from '../screens/Auth/UsernameSetupScreen';
+import LanguageSelectionScreen from '../screens/Auth/LanguageSelectionScreen';
+import TopicSelectionScreen from '../screens/Auth/TopicSelectionScreen';
 
 // Main / Detail Screens
 import HomeFeedScreen from '../screens/Main/HomeFeedScreen';
@@ -41,6 +44,9 @@ export default function RootNavigator() {
       <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="SignUp" component={SignUpScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="UsernameSetup" component={UsernameSetupScreen} options={{ animation: 'slide_from_right', gestureEnabled: false }} />
+      <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="TopicSelection" component={TopicSelectionScreen} options={{ animation: 'slide_from_right' }} />
 
       {/* Main Tabs Equivalent Screens */}
       <Stack.Screen name="Home" component={HomeFeedScreen} />

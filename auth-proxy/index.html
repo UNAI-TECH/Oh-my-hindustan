@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Redirect Proxy</title>
+</head>
+<body>
+    <p>Redirecting back to Oh My Hindustan...</p>
+    <script>
+        // Extract the full URL (including the hash with access token)
+        const url = window.location.href;
+        
+        // This script runs on your hosted static page.
+        // It catches the redirect from Supabase and forwards it to the app scheme.
+        
+        // 1. Try forwarding to the 'app' scheme
+        const appUrl = url.replace(window.location.origin, 'app:/');
+        
+        // 2. Try forwarding to the 'exp' scheme (for Expo Go)
+        // Adjust this IP to your machine's current IP if testing in Expo Go
+        const expUrl = url.replace(window.location.origin, 'exp://10.234.247.120:8081/--');
+
+        console.log('Redirecting to:', appUrl);
+        window.location.replace(appUrl);
+
+        // Fallback after 2 seconds if app didn't open
+        setTimeout(() => {
+            window.location.replace(expUrl);
+        }, 2000);
+    </script>
+</body>
+</html>

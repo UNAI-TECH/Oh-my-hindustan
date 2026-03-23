@@ -2,20 +2,20 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
+// This screen is now replaced by the 3-step onboarding flow
+// (UsernameSetup → LanguageSelection → TopicSelection)
+// Keeping it as a redirect for backwards compatibility
 export default function ProfileSetupScreen() {
   const navigation = useNavigation<any>();
 
+  React.useEffect(() => {
+    // Redirect to the new onboarding flow
+    navigation.replace('UsernameSetup');
+  }, []);
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Profile Setup</Text>
-      <Text style={styles.subtitle}>Let's get your profile ready</Text>
-      
-      <TouchableOpacity 
-        style={styles.button}
-        onPress={() => navigation.navigate('Home')}
-      >
-        <Text style={styles.buttonText}>Complete Setup</Text>
-      </TouchableOpacity>
+      <Text style={styles.title}>Setting up...</Text>
     </View>
   );
 }
@@ -28,22 +28,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  subtitle: {
+    fontSize: 18,
     color: '#64748B',
-    marginBottom: 32,
   },
-  button: {
-    backgroundColor: '#E53935',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 16,
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  }
 });

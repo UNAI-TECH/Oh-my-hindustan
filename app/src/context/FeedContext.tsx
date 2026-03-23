@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AppApi } from '../api/services';
-import { FeedItem, FeedItemType, PostResponse, SampleData } from '../types';
+import { FeedItem, FeedItemType, SampleData } from '../types';
+import { supabase } from '../lib/supabaseClient';
 
 interface FeedContextProps {
   feedItems: FeedItem[];
@@ -28,10 +29,11 @@ const formatTimeAgo = (isoString: string): string => {
   }
 };
 
-const toFeedItem = (post: PostResponse): FeedItem => {
-  const calculatedVotes = post.vote_count > 1000 
-    ? (post.vote_count / 1000).toFixed(1) + 'k' 
-    : post.vote_count.toString();
+const toFeedItem = (post: any): FeedItem => {
+  const voteCount = post.vote_count || 0;
+  const calculatedVotes = voteCount > 1000 
+    ? (voteCount / 1000).toFixed(1) + 'k' 
+    : voteCount.toString();
     
   return {
     id: post.id,
@@ -62,11 +64,17 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await AppApi.getHomeFeed(1, 20);
       const posts = response.data || [];
-      setFeedItems(posts.map(toFeedItem));
+      
+      if (posts.length > 0) {
+        setFeedItems(posts.map(toFeedItem));
+      } else {
+        // Fallback to sample data if no posts yet
+        setFeedItems([...SampleData.topNarratives, ...SampleData.baseFeedItems]);
+      }
     } catch (e) {
-      console.error(e);
-      // Fallback to sample data simulating continuous feed logic if strictly failing
-      // setFeedItems([...SampleData.topNarratives, ...SampleData.baseFeedItems]);
+      console.error('Feed fetch error:', e);
+      // Fallback to sample data on error
+      setFeedItems([...SampleData.topNarratives, ...SampleData.baseFeedItems]);
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +83,7 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   const fetchArticle = async (id: string) => {
     setIsLoading(true);
     try {
-      // Check local mock data first exactly like ViewModel
+      // Check local sample data first
       const mockItems = [...SampleData.topNarratives, ...SampleData.baseFeedItems];
       const localItem = mockItems.find(it => it.id === id);
       
@@ -90,14 +98,34 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     } catch (e) {
-      console.error(e);
+      console.error('Article fetch error:', e);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Fetch feed on mount
   useEffect(() => {
     fetchHomeFeed();
+  }, []);
+
+  // Real-time: listen for new published posts
+  useEffect(() => {
+    const subscription = AppApi.subscribeToFeedUpdates((payload: any) => {
+      if (payload.new) {
+        const newPost = toFeedItem({
+          ...payload.new,
+          vote_count: 0,
+          author: null,
+          community: { name: payload.new.category || 'General' },
+        });
+        setFeedItems(prev => [newPost, ...prev]);
+      }
+    });
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   return (

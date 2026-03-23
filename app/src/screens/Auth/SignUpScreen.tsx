@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -14,27 +14,45 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/Theme';
+import { useAuth } from '../../context/AuthContext';
 
 export default function SignUpScreen() {
   const navigation = useNavigation<any>();
+  const { register, signInWithGoogle, isLoading, error, signupSuccess, isAuthenticated, clearState } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  const handleSignUp = () => {
-    if (name && email && password) {
-      setIsLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        setIsLoading(false);
-        navigation.navigate('ProfileSetup' as never);
-      }, 1500);
-    } else {
-      setErrorMessage('Please fill in all fields');
+  useEffect(() => {
+    clearState();
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated && signupSuccess) {
+      navigation.reset({ index: 0, routes: [{ name: 'UsernameSetup' }] });
     }
+  }, [isAuthenticated, signupSuccess]);
+
+  const handleSignUp = async () => {
+    if (!name || !email || !password) {
+      setLocalError('Please fill in all fields');
+      return;
+    }
+    if (password.length < 6) {
+      setLocalError('Password must be at least 6 characters');
+      return;
+    }
+    setLocalError(null);
+    await register(email.trim(), name.trim(), password);
   };
+
+  const handleGoogleSignIn = async () => {
+    setLocalError(null);
+    await signInWithGoogle();
+  };
+
+  const displayError = localError || error;
 
   return (
     <KeyboardAvoidingView 
@@ -55,7 +73,7 @@ export default function SignUpScreen() {
             placeholder="Full Name"
             placeholderTextColor="#64748B"
             value={name}
-            onChangeText={(text) => { setName(text); setErrorMessage(null); }}
+            onChangeText={(text) => { setName(text); setLocalError(null); }}
           />
 
           <TextInput
@@ -63,7 +81,7 @@ export default function SignUpScreen() {
             placeholder="Email Address"
             placeholderTextColor="#64748B"
             value={email}
-            onChangeText={(text) => { setEmail(text); setErrorMessage(null); }}
+            onChangeText={(text) => { setEmail(text); setLocalError(null); }}
             keyboardType="email-address"
             autoCapitalize="none"
           />
@@ -73,13 +91,13 @@ export default function SignUpScreen() {
             placeholder="Password"
             placeholderTextColor="#64748B"
             value={password}
-            onChangeText={(text) => { setPassword(text); setErrorMessage(null); }}
+            onChangeText={(text) => { setPassword(text); setLocalError(null); }}
             secureTextEntry
           />
         </View>
 
-        {errorMessage && (
-          <Text style={styles.errorText}>{errorMessage}</Text>
+        {displayError && (
+          <Text style={styles.errorText}>{displayError}</Text>
         )}
 
         <TouchableOpacity 
@@ -88,7 +106,7 @@ export default function SignUpScreen() {
           disabled={isLoading}
         >
           <LinearGradient
-            colors={['#E53935', '#FB8C00']} // PrimaryRed, WarmOrange
+            colors={['#E53935', '#FB8C00']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradientButton}
@@ -101,9 +119,24 @@ export default function SignUpScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
+        <View style={styles.dividerContainer}>
+          <View style={styles.divider} />
+          <Text style={styles.dividerText}>  OR  </Text>
+          <View style={styles.divider} />
+        </View>
+
+        <TouchableOpacity 
+          style={styles.googleButton} 
+          onPress={handleGoogleSignIn}
+          disabled={isLoading}
+        >
+          <Ionicons name="logo-google" size={22} color="#DB4437" />
+          <Text style={styles.googleButtonText}>Continue with Google</Text>
+        </TouchableOpacity>
+
         <View style={styles.footerContainer}>
           <Text style={styles.footerText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity onPress={() => { clearState(); navigation.goBack(); }}>
             <Text style={styles.loginText}>Log In</Text>
           </TouchableOpacity>
         </View>
@@ -115,7 +148,7 @@ export default function SignUpScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF', // MaterialTheme.colorScheme.background
+    backgroundColor: '#FFFFFF',
   },
   scrollContainer: {
     flexGrow: 1,
@@ -127,13 +160,10 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 20,
-    backgroundColor: 'rgba(229, 57, 53, 0.1)', // PrimaryRed with 10% opacity
+    backgroundColor: 'rgba(229, 57, 53, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
-  },
-  iconText: {
-    fontSize: 40,
   },
   title: {
     fontSize: 24,
@@ -143,7 +173,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: '#64748B', // slate500
+    color: '#64748B',
     marginBottom: 40,
   },
   inputContainer: {
@@ -154,7 +184,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 56,
     borderWidth: 1,
-    borderColor: '#CBD5E1', // slate300
+    borderColor: '#CBD5E1',
     borderRadius: 16,
     paddingHorizontal: 16,
     fontSize: 16,
@@ -162,10 +192,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   errorText: {
-    color: 'red',
-    fontSize: 12,
-    marginTop: 8,
+    color: '#DC2626',
+    fontSize: 13,
+    marginTop: 12,
     alignSelf: 'flex-start',
+    fontWeight: '500',
   },
   buttonContainer: {
     width: '100%',
@@ -181,12 +212,52 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#FFFFFF',
-    fontWeight: '800', // ExtraBold
+    fontWeight: '800',
     fontSize: 16,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 28,
+    marginBottom: 20,
+    paddingHorizontal: 8,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#CBD5E1',
+  },
+  dividerText: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    height: 56,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    gap: 12,
+    marginBottom: 32,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
   },
   footerContainer: {
     flexDirection: 'row',
-    marginTop: 32,
     alignItems: 'center',
   },
   footerText: {
