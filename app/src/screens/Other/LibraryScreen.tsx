@@ -5,13 +5,15 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/Theme';
 import AppBottomNavBar from '../../components/BottomNavBar';
-import { SampleData, FeedItemType } from '../../types';
+import { FeedItemType } from '../../types';
+import { useFeed } from '../../context/FeedContext';
 
 export default function LibraryScreen() {
   const navigation = useNavigation<any>();
+  const { feedItems } = useFeed();
   // In a real app, we'd hook into a global state context or async storage.
   // Using Mock filter logic matching Kotlin code.
-  const savedItems = SampleData.baseFeedItems.slice(0, 3);
+  const savedItems = feedItems.slice(0, 3);
 
   return (
     <SafeAreaView style={styles.safeArea}>

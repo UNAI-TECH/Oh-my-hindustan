@@ -4,16 +4,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/Theme';
-import { SampleData, FeedItemType, FeedItem } from '../../types';
+import { FeedItemType, FeedItem } from '../../types';
+import { useFeed } from '../../context/FeedContext';
 
 export default function SearchScreen() {
   const navigation = useNavigation<any>();
+  const { feedItems } = useFeed();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('All');
   const filters = ['All', 'News', 'Blogs', 'Videos'];
 
   const filteredItems = useMemo(() => {
-    return SampleData.baseFeedItems.filter(item => {
+    return feedItems.filter(item => {
       const q = searchQuery.toLowerCase();
       const matchesQuery = item.title.toLowerCase().includes(q) || 
                            (item.excerpt?.toLowerCase().includes(q)) || 

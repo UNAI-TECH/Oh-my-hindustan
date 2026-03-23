@@ -55,7 +55,7 @@ export default function ContentEditorScreen() {
         category,
         thumbnail: thumbnail.trim() || undefined,
         subtitle: subtitle.trim() || undefined,
-        videoDuration: contentType === 'VIDEO' ? videoDuration.trim() || undefined : undefined,
+        video_duration: contentType === 'VIDEO' ? videoDuration.trim() || undefined : undefined,
       });
 
       Alert.alert(

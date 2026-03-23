@@ -102,7 +102,7 @@ export default function CreatorAnalyticsScreen() {
                   <View key={type} style={{ marginBottom: 16 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
                       <Text style={{ fontSize: 14, fontWeight: '600' }}>{type}</Text>
-                      <Text style={{ fontSize: 14, color: Colors.Slate500 }}>{count} ({percent}%)</Text>
+                      <Text style={{ fontSize: 14, color: Colors.Slate500 }}>{String(count)} ({percent}%)</Text>
                     </View>
                     <View style={{ width: '100%', height: 8, backgroundColor: Colors.PrimaryRedAlpha10, borderRadius: 4, overflow: 'hidden' }}>
                       <View style={{ width: `${percent}%`, height: '100%', backgroundColor: TYPE_COLORS[type] || Colors.PrimaryRed }} />
