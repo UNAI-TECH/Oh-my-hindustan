@@ -69,7 +69,7 @@ export default function ProfileScreen() {
 
         <TouchableOpacity 
           style={[styles.creatorAction, { backgroundColor: '#F0F9FF', borderColor: '#BAE6FD', marginTop: 0 }]} 
-          onPress={() => Linking.openURL('http://localhost:5173')}
+        onPress={() => Linking.openURL('https://creators-ohmy.vercel.app/')}
         >
           <View style={[styles.creatorIconBox, { backgroundColor: '#0284C7' }]}>
             <Ionicons name="rocket" size={20} color="white" />
