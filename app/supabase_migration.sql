@@ -39,6 +39,7 @@ DROP INDEX IF EXISTS "User_username_key";
 
 -- 5. Create proper UNIQUE partial index for username
 -- This allows empty usernames during OAuth signup but ensures uniqueness once set
+DROP INDEX IF EXISTS "User_username_unique_idx";
 CREATE UNIQUE INDEX "User_username_unique_idx" 
   ON public."User" (username) 
   WHERE (username IS NOT NULL AND username != '');

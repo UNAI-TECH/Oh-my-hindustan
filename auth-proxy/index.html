@@ -14,12 +14,9 @@
             color: white;
             text-align: center;
         }
-        .container {
-            padding: 40px;
-        }
+        .container { padding: 40px; }
         .spinner {
-            width: 40px;
-            height: 40px;
+            width: 40px; height: 40px;
             border: 4px solid rgba(255,255,255,0.3);
             border-top: 4px solid white;
             border-radius: 50%;
@@ -30,19 +27,11 @@
         h2 { margin: 0 0 8px; }
         p { opacity: 0.9; margin: 0; }
         .btn {
-            display: inline-block;
-            margin-top: 24px;
-            padding: 14px 32px;
-            background: white;
-            color: #E53935;
-            border-radius: 12px;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 16px;
-            cursor: pointer;
-            border: none;
+            display: inline-block; margin-top: 24px; padding: 14px 32px;
+            background: white; color: #E53935; border-radius: 12px;
+            text-decoration: none; font-weight: 700; font-size: 16px;
+            cursor: pointer; border: none;
         }
-        .btn:hover { opacity: 0.9; }
         #manual-section { display: none; margin-top: 20px; }
     </style>
 </head>
@@ -58,26 +47,35 @@
     </div>
 
     <script>
-        // Build the deep link URL that the app expects
-        // The app's WebBrowser.openAuthSessionAsync is listening for URLs
-        // that start with "app://auth/callback"
-        // Supabase sends tokens in the URL hash fragment: #access_token=...&refresh_token=...
+        // The app passes its own redirect URL as ?appRedirect=... in the Supabase redirectTo.
+        // Supabase appends the tokens in the hash fragment: #access_token=xxx&refresh_token=yyy
+        // We need to combine: appRedirect + hash fragment → deep link back to the app.
 
-        const hash = window.location.hash;   // e.g. #access_token=xxx&refresh_token=yyy
-        const search = window.location.search; // e.g. ?access_token=xxx (less common)
-        const params = hash || search || '';
+        var hash = window.location.hash || '';     // #access_token=xxx&refresh_token=yyy
+        var search = window.location.search || ''; // ?appRedirect=exp%3A%2F%2F...
 
-        // Construct the deep link: app://auth/callback#access_token=...
-        const deepLink = 'app://auth/callback' + params;
+        // Extract appRedirect from query string
+        var searchParams = new URLSearchParams(search);
+        var appRedirect = searchParams.get('appRedirect');
 
-        console.log('Hash:', hash);
-        console.log('Search:', search);
-        console.log('Deep link:', deepLink);
+        var deepLink = '';
 
-        // Try to open via the app scheme immediately
+        if (appRedirect) {
+            // Use the exact redirect URL the app provided + append the hash tokens
+            deepLink = decodeURIComponent(appRedirect) + hash;
+        } else {
+            // Fallback: try app:// scheme
+            deepLink = 'app://auth/callback' + hash;
+        }
+
+        console.log('App redirect param:', appRedirect);
+        console.log('Hash fragment:', hash);
+        console.log('Final deep link:', deepLink);
+
+        // Redirect immediately
         window.location.replace(deepLink);
 
-        // After 3 seconds, show manual button as fallback
+        // Show manual button after 3 seconds as fallback
         setTimeout(function() {
             document.getElementById('manual-section').style.display = 'block';
             document.getElementById('open-btn').onclick = function() {

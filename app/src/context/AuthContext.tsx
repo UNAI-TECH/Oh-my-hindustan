@@ -229,9 +229,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         path: 'auth/callback',
       });
 
-      const redirectTo = 'https://redirecting-pink.vercel.app/';
+      // Pass the app's redirect URL to the Vercel proxy so it knows where to redirect
+      // The proxy will read ?appRedirect= and use it to construct the deep link
+      const proxyBase = 'https://redirecting-pink.vercel.app/';
+      const redirectTo = proxyBase + '?appRedirect=' + encodeURIComponent(internalRedirectUrl);
+
       console.warn('[GOOGLE AUTH] Internal redirect URL:', internalRedirectUrl);
-      console.warn('[GOOGLE AUTH] Vercel proxy:', redirectTo);
+      console.warn('[GOOGLE AUTH] Vercel proxy with appRedirect:', redirectTo);
 
       const { data, error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
