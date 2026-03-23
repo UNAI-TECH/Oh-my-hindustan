@@ -131,6 +131,16 @@ export default function LoginScreen() {
             <Text style={styles.signUpText}>Sign Up</Text>
           </TouchableOpacity>
         </View>
+
+        {__DEV__ && (
+          <TouchableOpacity 
+            style={styles.devModeButton} 
+            onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Home' }] })}
+          >
+            <Ionicons name="code-slash-outline" size={16} color="#6B7280" />
+            <Text style={styles.devModeText}>Developer Mode — Skip Login</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -259,5 +269,23 @@ const styles = StyleSheet.create({
     color: '#E53935',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  devModeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+    gap: 8,
+  },
+  devModeText: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
   },
 });

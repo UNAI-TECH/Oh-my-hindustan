@@ -1,19 +1,64 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Dimensions, Linking } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Linking, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/Theme';
 import AppBottomNavBar from '../../components/BottomNavBar';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabaseClient';
+
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
-  const [selectedTab, setSelectedTab] = useState('My Briefings');
-  const tabs = ['My Briefings', 'Upvoted', 'History', 'Following'];
-  
-  // Real app we'd load session, for UI matching we mock.
-  const loggedInName = "Kamal Singh"; 
-  
+  const { userProfile, logout, isAuthenticated } = useAuth();
+  const [selectedTab, setSelectedTab] = useState('Posts');
+  const [stats, setStats] = useState({ posts: 0, saved: 0, following: 0, followers: 0 });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const tabs = ['Posts', 'Saved', 'Following'];
+
+  // Fetch real stats from the database
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!userProfile?.id) return;
+      try {
+        const [postsRes, savedRes, followingRes, followersRes] = await Promise.all([
+          supabase.from('Post').select('id', { count: 'exact', head: true }).eq('authorId', userProfile.id),
+          supabase.from('Save').select('id', { count: 'exact', head: true }).eq('userId', userProfile.id),
+          supabase.from('Follow').select('id', { count: 'exact', head: true }).eq('followerId', userProfile.id),
+          supabase.from('Follow').select('id', { count: 'exact', head: true }).eq('followingId', userProfile.id),
+        ]);
+        setStats({
+          posts: postsRes.count || 0,
+          saved: savedRes.count || 0,
+          following: followingRes.count || 0,
+          followers: followersRes.count || 0,
+        });
+      } catch (e) {
+        console.warn('Failed to fetch profile stats:', e);
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+    fetchStats();
+  }, [userProfile?.id]);
+
+  const handleLogout = async () => {
+    await logout();
+    navigation.reset({ index: 0, routes: [{ name: 'Splash' }] });
+  };
+
+  const displayName = userProfile?.username || userProfile?.email?.split('@')[0] || 'User';
+  const avatarUrl = userProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E53935&color=fff&size=200`;
+  const email = userProfile?.email || '';
+  const bio = userProfile?.bio || 'Citizen of Oh My Hindustan';
+  const role = userProfile?.role || 'CITIZEN';
+
+  const formatStat = (n: number) => {
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+    return n.toString();
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -27,6 +72,7 @@ export default function ProfileScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }} bounces={false}>
+        {/* Cover + Avatar */}
         <View style={{ width: '100%', paddingBottom: 80 }}>
           <LinearGradient
             colors={[Colors.DeepCrimson, Colors.WarmOrange]}
@@ -34,79 +80,49 @@ export default function ProfileScreen() {
             style={{ width: '100%', height: 160 }}
           />
           <View style={styles.avatarContainer}>
-            <Image 
-              source={{ uri: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop" }} 
-              style={styles.avatar} 
-            />
+            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
           </View>
         </View>
 
-        <View style={{ alignItems: 'center' }}>
-          <Text style={{ fontWeight: 'bold', fontSize: 24 }}>{loggedInName}</Text>
-          <Text style={{ color: Colors.Slate500, fontSize: 14, marginTop: 4 }}>12,450 Influence Points</Text>
+        {/* Name & Bio */}
+        <View style={{ alignItems: 'center', paddingHorizontal: 16 }}>
+          <Text style={{ fontWeight: 'bold', fontSize: 24 }}>@{displayName}</Text>
+          <Text style={{ color: Colors.Slate500, fontSize: 14, marginTop: 4 }}>{email}</Text>
+          <Text style={{ color: Colors.Slate500, fontSize: 13, marginTop: 6, textAlign: 'center' }}>{bio}</Text>
+          <View style={styles.roleBadge}>
+            <Ionicons name={role === 'CITIZEN' ? 'person' : 'megaphone'} size={12} color={Colors.PrimaryRed} />
+            <Text style={styles.roleText}>{role}</Text>
+          </View>
         </View>
 
+        {/* Stats */}
         <View style={styles.statsRow}>
-          <ProfileStatCard value="142" label="Briefings" />
-          <ProfileStatCard value="892" label="Saved" />
-          <ProfileStatCard value="560" label="Following" />
-          <ProfileStatCard value="2.1k" label="Followers" />
+          <ProfileStatCard value={isLoadingStats ? '...' : formatStat(stats.posts)} label="Posts" />
+          <ProfileStatCard value={isLoadingStats ? '...' : formatStat(stats.saved)} label="Saved" />
+          <ProfileStatCard value={isLoadingStats ? '...' : formatStat(stats.following)} label="Following" />
+          <ProfileStatCard value={isLoadingStats ? '...' : formatStat(stats.followers)} label="Followers" />
         </View>
 
+        {/* Creator Action */}
         <TouchableOpacity 
-          style={styles.creatorAction} 
-          onPress={() => navigation.navigate('CreatorDashboard')}
-        >
-          <View style={styles.creatorIconBox}>
-            <Ionicons name="megaphone" size={20} color="white" />
-          </View>
-          <View style={{ flex: 1, marginLeft: 16 }}>
-            <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Analyst Dashboard</Text>
-            <Text style={{ color: Colors.Slate500, fontSize: 12, marginTop: 2 }}>Manage your briefings and policy analysis</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={Colors.PrimaryRed} />
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.creatorAction, { backgroundColor: '#F0F9FF', borderColor: '#BAE6FD', marginTop: 0 }]} 
-        onPress={() => Linking.openURL('https://creators-ohmy.vercel.app/')}
+          style={[styles.creatorAction, { backgroundColor: '#F0F9FF', borderColor: '#BAE6FD' }]} 
+          onPress={() => Linking.openURL('https://creators-ohmy.vercel.app/')}
         >
           <View style={[styles.creatorIconBox, { backgroundColor: '#0284C7' }]}>
             <Ionicons name="rocket" size={20} color="white" />
           </View>
           <View style={{ flex: 1, marginLeft: 16 }}>
             <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#0369A1' }}>Join as Creator</Text>
-            <Text style={{ color: '#0EA5E9', fontSize: 12, marginTop: 2 }}>Become a voice for the nation. Start today!</Text>
+            <Text style={{ color: '#0EA5E9', fontSize: 12, marginTop: 2 }}>Become a voice for the nation!</Text>
           </View>
           <Ionicons name="open-outline" size={20} color="#0284C7" />
         </TouchableOpacity>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ borderBottomWidth: 1, borderColor: '#E2E8F0', paddingBottom: 12 }}>
-          {tabs.map(tab => (
-            <TouchableOpacity 
-              key={tab} 
-              onPress={() => setSelectedTab(tab)}
-              style={{ paddingHorizontal: 16, borderBottomWidth: selectedTab === tab ? 2 : 0, borderColor: Colors.PrimaryRed, paddingBottom: 8 }}
-            >
-              <Text style={{ color: selectedTab === tab ? Colors.PrimaryRed : Colors.Slate500, fontWeight: selectedTab === tab ? 'bold' : 'normal' }}>
-                {tab}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        <View style={{ padding: 16, gap: 12 }}>
-          <ProfilePostCard 
-            title="Public Policy: The way forward for Rural Health in India"
-            likes="1.2k" comments="45" date="2d ago"
-            img="https://images.unsplash.com/photo-1533727101791-0309197c11f7?q=80&w=200&auto=format&fit=crop"
-          />
-          <ProfilePostCard 
-            title="BJP Economic Council: Key Takeaways for 2024-25 Budget"
-            likes="856" comments="12" date="5d ago"
-            img="https://images.unsplash.com/photo-1589829085413-56de8ae18c73?q=80&w=200&auto=format&fit=crop"
-          />
-        </View>
+        {/* Logout Button */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+          <Text style={styles.logoutText}>Log Out</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
@@ -123,35 +139,27 @@ const ProfileStatCard = ({ value, label }: any) => (
   </View>
 );
 
-const ProfilePostCard = ({ title, likes, comments, date, img }: any) => (
-  <View style={styles.postCard}>
-    <Image source={{ uri: img }} style={{ width: 80, height: 80, borderRadius: 8 }} />
-    <View style={{ flex: 1, marginLeft: 12, justifyContent: 'space-between' }}>
-      <Text style={{ fontWeight: 'bold', fontSize: 14 }} numberOfLines={2}>{title}</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Ionicons name="heart" size={12} color={Colors.Slate400} />
-        <Text style={[styles.metaText, { marginLeft: 4 }]}>{likes}</Text>
-        
-        <Ionicons name="chatbubble-outline" size={12} color={Colors.Slate400} style={{ marginLeft: 12 }} />
-        <Text style={[styles.metaText, { marginLeft: 4 }]}>{comments}</Text>
-        
-        <View style={{ flex: 1 }} />
-        <Text style={styles.metaText}>{date}</Text>
-      </View>
-    </View>
-  </View>
-);
-
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: 'white', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   header: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', zIndex: 10 },
   headerTitle: { fontSize: 20, fontWeight: 'bold' },
   avatarContainer: { position: 'absolute', bottom: 16, width: '100%', alignItems: 'center' },
   avatar: { width: 128, height: 128, borderRadius: 64, borderWidth: 4, borderColor: 'white' },
+  roleBadge: { 
+    flexDirection: 'row', alignItems: 'center', marginTop: 10, 
+    backgroundColor: 'rgba(229, 57, 53, 0.08)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+    gap: 6,
+  },
+  roleText: { fontSize: 12, fontWeight: '700', color: Colors.PrimaryRed, textTransform: 'uppercase', letterSpacing: 1 },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, marginTop: 24 },
   statCard: { flex: 1, backgroundColor: '#F8FAFC', padding: 12, borderRadius: 12, alignItems: 'center', marginHorizontal: 4, borderWidth: 1, borderColor: '#E2E8F0' },
-  creatorAction: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.PrimaryRedAlpha5, marginHorizontal: 16, marginVertical: 24, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: Colors.PrimaryRedAlpha10 },
-  creatorIconBox: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.PrimaryRed, justifyContent: 'center', alignItems: 'center' },
-  postCard: { flexDirection: 'row', padding: 12, backgroundColor: 'white', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' },
-  metaText: { fontSize: 12, color: Colors.Slate400 }
+  creatorAction: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginVertical: 16, padding: 16, borderRadius: 16, borderWidth: 1 },
+  creatorIconBox: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  logoutButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    marginHorizontal: 16, marginTop: 8, marginBottom: 16, padding: 16,
+    borderRadius: 16, borderWidth: 1.5, borderColor: '#FCA5A5', backgroundColor: '#FEF2F2',
+    gap: 10,
+  },
+  logoutText: { fontSize: 16, fontWeight: '700', color: '#DC2626' },
 });

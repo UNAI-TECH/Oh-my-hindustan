@@ -25,6 +25,13 @@ import SearchScreen from '../screens/Other/SearchScreen';
 // Creator Studio Screens
 import CreatorDashboardScreen from '../screens/Creator/CreatorDashboardScreen';
 import CreatorAnalyticsScreen from '../screens/Creator/CreatorAnalyticsScreen';
+import ContentEditorScreen from '../screens/Creator/ContentEditorScreen';
+import CreatorContentScreen from '../screens/Creator/CreatorContentScreen';
+import CreatorCommentsScreen from '../screens/Creator/CreatorCommentsScreen';
+import CreatorSettingsScreen from '../screens/Creator/CreatorSettingsScreen';
+import CreatorEarnScreen from '../screens/Creator/CreatorEarnScreen';
+import CreatorSubtitlesScreen from '../screens/Creator/CreatorSubtitlesScreen';
+import CreatorFeedbackScreen from '../screens/Creator/CreatorFeedbackScreen';
 
 // Admin Dashboards
 import AdminOverviewScreen from '../screens/Admin/AdminOverviewScreen';
@@ -65,6 +72,13 @@ export default function RootNavigator() {
       {/* Creator Studio Screens */}
       <Stack.Screen name="CreatorDashboard" component={CreatorDashboardScreen} />
       <Stack.Screen name="CreatorAnalytics" component={CreatorAnalyticsScreen} />
+      <Stack.Screen name="ContentEditor" component={ContentEditorScreen} options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="CreatorContent" component={CreatorContentScreen} />
+      <Stack.Screen name="CreatorComments" component={CreatorCommentsScreen} />
+      <Stack.Screen name="CreatorSettings" component={CreatorSettingsScreen} />
+      <Stack.Screen name="CreatorEarn" component={CreatorEarnScreen} />
+      <Stack.Screen name="CreatorSubtitles" component={CreatorSubtitlesScreen} />
+      <Stack.Screen name="CreatorFeedback" component={CreatorFeedbackScreen} />
 
       {/* Admin Dashboard Screens */}
       <Stack.Screen name="AdminOverview" component={AdminOverviewScreen} />

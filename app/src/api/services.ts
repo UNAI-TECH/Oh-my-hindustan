@@ -12,7 +12,7 @@ export const AuthApi = {
     if (error) throw error;
     
     const { data: profile } = await supabase
-      .from('User')
+      .from('profiles')
       .select('*')
       .eq('id', data.user.id)
       .single();
@@ -61,7 +61,7 @@ export const AuthApi = {
     if (!user) throw new Error('Not authenticated');
 
     const { data: profile } = await supabase
-      .from('User')
+      .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single();
@@ -75,7 +75,7 @@ export const AuthApi = {
     if (!user) throw new Error('Not authenticated');
 
     const { data, error } = await supabase
-      .from('User')
+      .from('profiles')
       .update(details)
       .eq('id', user.id)
       .select()
@@ -95,9 +95,10 @@ export const AppApi = {
     const to = from + limit - 1;
 
     const { data, error, count } = await supabase
-      .from('Post')
-      .select('*, User!authorId(id, username, avatarUrl), Vote!postId(type), Comment!postId(id)', { count: 'exact' })
-      .order('createdAt', { ascending: false })
+      .from('posts')
+      .select('*, profiles!author_id(id, username, avatar_url, full_name), votes(vote_type), comments(id)', { count: 'exact' })
+      .eq('published', true)
+      .order('created_at', { ascending: false })
       .range(from, to);
 
     if (error) throw error;
@@ -107,18 +108,24 @@ export const AppApi = {
       title: post.title,
       body: post.content,
       type: post.type,
-      published: true,
-      mediaUrl: post.thumbnail || post.videoUrl,
-      authorId: post.authorId,
-      voteCount: post.Vote?.length || 0,
-      commentCount: post.Comment?.length || 0,
+      published: post.published,
+      mediaUrl: post.thumbnail || post.video_url,
+      thumbnail: post.thumbnail,
+      authorId: post.author_id,
+      voteCount: post.votes?.length || 0,
+      commentCount: post.comments?.length || 0,
       hotScore: 0,
-      createdAt: post.createdAt,
-      updatedAt: post.updatedAt,
-      author: post.User ? {
-        id: post.User.id,
-        username: post.User.username,
-        avatarUrl: post.User.avatarUrl,
+      category: post.category || 'General',
+      createdAt: post.created_at,
+      updatedAt: post.updated_at,
+      content: post.content,
+      subtitle: post.subtitle,
+      video_duration: post.video_duration,
+      is_trending: post.is_trending,
+      author: post.profiles ? {
+        id: post.profiles.id,
+        username: post.profiles.username || post.profiles.full_name || 'Creator',
+        avatarUrl: post.profiles.avatar_url,
       } : null,
       community: {
         id: post.category || 'general',
@@ -137,8 +144,8 @@ export const AppApi = {
 
   getPost: async (id: string) => {
     const { data: post, error } = await supabase
-      .from('Post')
-      .select('*, User!authorId(id, username, avatarUrl), Vote!postId(type), Comment!postId(id, content, userId, createdAt)')
+      .from('posts')
+      .select('*, profiles!author_id(id, username, avatar_url, full_name), votes(vote_type), comments(id, content, user_id, created_at)')
       .eq('id', id)
       .single();
 
@@ -148,18 +155,23 @@ export const AppApi = {
       id: post.id,
       title: post.title,
       body: post.content,
+      content: post.content,
       type: post.type,
-      mediaUrl: post.thumbnail || post.videoUrl,
-      authorId: post.authorId,
-      voteCount: post.Vote?.length || 0,
-      commentCount: post.Comment?.length || 0,
+      mediaUrl: post.thumbnail || post.video_url,
+      thumbnail: post.thumbnail,
+      authorId: post.author_id,
+      voteCount: post.votes?.length || 0,
+      commentCount: post.comments?.length || 0,
       hotScore: 0,
-      createdAt: post.createdAt,
-      updatedAt: post.updatedAt,
-      author: post.User ? {
-        id: post.User.id,
-        username: post.User.username,
-        avatarUrl: post.User.avatarUrl,
+      category: post.category || 'General',
+      subtitle: post.subtitle,
+      video_duration: post.video_duration,
+      createdAt: post.created_at,
+      updatedAt: post.updated_at,
+      author: post.profiles ? {
+        id: post.profiles.id,
+        username: post.profiles.username || post.profiles.full_name || 'Creator',
+        avatarUrl: post.profiles.avatar_url,
       } : null,
       community: {
         id: post.category || 'general',
@@ -178,10 +190,10 @@ export const AppApi = {
     const to = from + limit - 1;
 
     const { data, error, count } = await supabase
-      .from('Notification')
+      .from('notifications')
       .select('*', { count: 'exact' })
-      .eq('userId', user.id)
-      .order('createdAt', { ascending: false })
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
       .range(from, to);
 
     if (error) throw error;
@@ -190,8 +202,8 @@ export const AppApi = {
       data: (data || []).map((n: any) => ({
         id: n.id,
         type: n.type,
-        isRead: n.isRead,
-        createdAt: n.createdAt,
+        isRead: n.is_read,
+        createdAt: n.created_at,
         payload: { title: n.title, message: n.message },
       })),
       total: count || 0,
@@ -208,14 +220,13 @@ export const AppApi = {
     const user = session?.user;
     if (!user) throw new Error('Not authenticated');
 
-    // Upsert: if the user already voted, update; otherwise insert
     const { error } = await supabase
-      .from('Vote')
+      .from('votes')
       .upsert({ 
-        postId, 
-        userId: user.id, 
-        type: voteType 
-      }, { onConflict: 'userId,postId' });
+        post_id: postId, 
+        user_id: user.id, 
+        vote_type: voteType 
+      }, { onConflict: 'user_id,post_id' });
     
     if (error) throw error;
   },
@@ -229,12 +240,11 @@ export const AppApi = {
     if (!user) throw new Error('Not authenticated');
 
     const { data, error } = await supabase
-      .from('Comment')
+      .from('comments')
       .insert({ 
-        postId, 
-        userId: user.id, 
+        post_id: postId, 
+        user_id: user.id, 
         content,
-        updatedAt: new Date().toISOString()
       })
       .select()
       .single();
@@ -251,10 +261,10 @@ export const AppApi = {
     if (!user) throw new Error('Not authenticated');
 
     const { error } = await supabase
-      .from('Follow')
+      .from('follows')
       .insert({ 
-        followerId: user.id, 
-        followingId: creatorId 
+        follower_id: user.id, 
+        following_id: creatorId 
       });
     
     if (error && !error.message.includes('duplicate')) throw error;
@@ -269,10 +279,10 @@ export const AppApi = {
     if (!user) throw new Error('Not authenticated');
 
     const { error } = await supabase
-      .from('Follow')
+      .from('follows')
       .delete()
-      .eq('followerId', user.id)
-      .eq('followingId', creatorId);
+      .eq('follower_id', user.id)
+      .eq('following_id', creatorId);
     
     if (error) throw error;
   },
@@ -286,10 +296,10 @@ export const AppApi = {
     if (!user) throw new Error('Not authenticated');
 
     const { error } = await supabase
-      .from('Save')
+      .from('saves')
       .insert({ 
-        userId: user.id, 
-        postId 
+        user_id: user.id, 
+        post_id: postId 
       });
     
     if (error && !error.message.includes('duplicate')) throw error;
@@ -301,10 +311,10 @@ export const AppApi = {
     if (!user) throw new Error('Not authenticated');
 
     const { error } = await supabase
-      .from('Save')
+      .from('saves')
       .delete()
-      .eq('userId', user.id)
-      .eq('postId', postId);
+      .eq('user_id', user.id)
+      .eq('post_id', postId);
 
     if (error) throw error;
   },
@@ -318,7 +328,7 @@ export const AppApi = {
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
-        table: 'Post',
+        table: 'posts',
       }, callback)
       .subscribe();
   },
@@ -332,14 +342,200 @@ export const AppApi = {
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
-        table: 'Comment',
-        filter: `postId=eq.${postId}`,
+        table: 'comments',
+        filter: `post_id=eq.${postId}`,
       }, callback)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'Vote',
-        filter: `postId=eq.${postId}`,
+        table: 'votes',
+        filter: `post_id=eq.${postId}`,
+      }, callback)
+      .subscribe();
+  },
+};
+
+/**
+ * Creator Studio API — Supabase direct queries for creator dashboard
+ */
+export const CreatorApi = {
+  /**
+   * Create a new post (Blog, News, or Video)
+   */
+  createPost: async (postData: {
+    title: string;
+    content: string;
+    type: string;
+    category: string;
+    thumbnail?: string;
+    subtitle?: string;
+    video_duration?: string;
+  }) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('posts')
+      .insert({
+        title: postData.title,
+        content: postData.content,
+        type: postData.type,
+        category: postData.category,
+        thumbnail: postData.thumbnail || null,
+        subtitle: postData.subtitle || null,
+        video_duration: postData.video_duration || null,
+        author_id: user.id,
+        published: true,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Get all posts by the current creator
+   */
+  getMyPosts: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*, votes(vote_type), comments(id)')
+      .eq('author_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map((post: any) => ({
+      id: post.id,
+      title: post.title,
+      content: post.content,
+      type: post.type,
+      category: post.category,
+      thumbnail: post.thumbnail,
+      subtitle: post.subtitle,
+      video_duration: post.video_duration,
+      voteCount: post.votes?.length || 0,
+      commentCount: post.comments?.length || 0,
+      createdAt: post.created_at,
+      updatedAt: post.updated_at,
+    }));
+  },
+
+  /**
+   * Get real-time stats for the creator dashboard
+   */
+  getMyStats: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) throw new Error('Not authenticated');
+
+    // Get posts with their votes and comments in one query
+    const { data: posts, error } = await supabase
+      .from('posts')
+      .select('id, type, votes(id), comments(id)')
+      .eq('author_id', user.id);
+
+    if (error) throw error;
+
+    const allPosts = posts || [];
+    let totalVotes = 0;
+    let totalComments = 0;
+    allPosts.forEach((p: any) => {
+      totalVotes += p.votes?.length || 0;
+      totalComments += p.comments?.length || 0;
+    });
+
+    // Get follower count
+    const { count: followerCount } = await supabase
+      .from('follows')
+      .select('id', { count: 'exact', head: true })
+      .eq('following_id', user.id);
+
+    return {
+      totalPosts: allPosts.length,
+      totalComments,
+      totalVotes,
+      totalFollowers: followerCount || 0,
+    };
+  },
+
+  /**
+   * Delete a post
+   */
+  deletePost: async (postId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) throw new Error('Not authenticated');
+
+    // Delete related records first
+    await supabase.from('comments').delete().eq('post_id', postId);
+    await supabase.from('votes').delete().eq('post_id', postId);
+    await supabase.from('saves').delete().eq('post_id', postId);
+
+    const { error } = await supabase
+      .from('posts')
+      .delete()
+      .eq('id', postId)
+      .eq('author_id', user.id);
+
+    if (error) throw error;
+  },
+
+  /**
+   * Get all comments on the creator's posts
+   */
+  getMyComments: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) throw new Error('Not authenticated');
+
+    // First get all of the creator's post IDs
+    const { data: posts } = await supabase
+      .from('posts')
+      .select('id, title')
+      .eq('author_id', user.id);
+
+    if (!posts || posts.length === 0) return [];
+
+    const postIds = posts.map((p: any) => p.id);
+    const postMap = Object.fromEntries(posts.map((p: any) => [p.id, p.title]));
+
+    const { data: comments, error } = await supabase
+      .from('comments')
+      .select('*, profiles!user_id(id, username, avatar_url, full_name)')
+      .in('post_id', postIds)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (comments || []).map((c: any) => ({
+      id: c.id,
+      content: c.content,
+      postId: c.post_id,
+      postTitle: postMap[c.post_id] || 'Unknown Post',
+      username: c.profiles?.username || c.profiles?.full_name || 'Anonymous',
+      avatarUrl: c.profiles?.avatar_url,
+      createdAt: c.created_at,
+    }));
+  },
+
+  /**
+   * Subscribe to real-time updates on creator's posts
+   */
+  subscribeToMyPosts: (userId: string, callback: (payload: any) => void) => {
+    return supabase
+      .channel(`creator-${userId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'posts',
+        filter: `author_id=eq.${userId}`,
       }, callback)
       .subscribe();
   },

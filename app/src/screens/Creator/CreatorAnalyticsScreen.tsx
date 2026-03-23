@@ -1,14 +1,52 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/Theme';
-import StudioBottomNavBar from '../../components/StudioBottomNavBar';
+import { CreatorApi } from '../../api/services';
 
 export default function CreatorAnalyticsScreen() {
   const navigation = useNavigation<any>();
-  const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+  const [stats, setStats] = useState({ totalPosts: 0, totalComments: 0, totalVotes: 0, totalFollowers: 0 });
+  const [posts, setPosts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedPeriod, setSelectedPeriod] = useState('7d');
+
+  const fetchData = async () => {
+    try {
+      const [statsData, postsData] = await Promise.all([
+        CreatorApi.getMyStats(),
+        CreatorApi.getMyPosts(),
+      ]);
+      setStats(statsData);
+      setPosts(postsData);
+    } catch (e: any) {
+      console.warn('Analytics fetch error:', e.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useFocusEffect(useCallback(() => {
+    setIsLoading(true);
+    fetchData();
+  }, []));
+
+  const formatStat = (n: number) => {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return n.toString();
+  };
+
+  // Compute top performing content
+  const topPosts = [...posts].sort((a, b) => (b.voteCount + b.commentCount) - (a.voteCount + a.commentCount)).slice(0, 5);
+
+  // Compute type distribution
+  const typeDistribution = posts.reduce((acc: Record<string, number>, p) => {
+    acc[p.type] = (acc[p.type] || 0) + 1;
+    return acc;
+  }, {});
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -16,94 +54,123 @@ export default function CreatorAnalyticsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Briefing Insights</Text>
+        <Text style={styles.headerTitle}>Analytics</Text>
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
-          {['7d', '30d', '90d', 'Custom'].map((label, i) => (
-             <View key={label} style={[styles.dateChip, i === 0 && styles.dateChipActive]}>
-                <Text style={[styles.dateText, i === 0 && styles.dateTextActive]}>{label}</Text>
-             </View>
-          ))}
+      {isLoading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={Colors.PrimaryRed} />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
+          {/* Period Selector */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+            {['7d', '30d', '90d', 'All Time'].map((label, i) => (
+              <TouchableOpacity
+                key={label}
+                style={[styles.dateChip, selectedPeriod === label && styles.dateChipActive]}
+                onPress={() => setSelectedPeriod(label)}
+              >
+                <Text style={[styles.dateText, selectedPeriod === label && styles.dateTextActive]}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Summary Stats */}
+          <View style={{ gap: 12 }}>
+            <View style={styles.row}>
+              <SmallStatCard label="Total Content" value={formatStat(stats.totalPosts)} icon="document-text" color="#8B5CF6" />
+              <SmallStatCard label="Engagement" value={formatStat(stats.totalVotes)} icon="heart" color={Colors.PrimaryRed} />
+            </View>
+            <View style={styles.row}>
+              <SmallStatCard label="Comments" value={formatStat(stats.totalComments)} icon="chatbubble" color="#0EA5E9" />
+              <SmallStatCard label="Followers" value={formatStat(stats.totalFollowers)} icon="people" color="#10B981" />
+            </View>
+          </View>
+
+          {/* Content Distribution */}
+          <View style={styles.chartCard}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 24 }}>Content Distribution</Text>
+            {Object.entries(typeDistribution).length === 0 ? (
+              <Text style={{ color: '#94A3B8', textAlign: 'center', padding: 20 }}>No content published yet</Text>
+            ) : (
+              Object.entries(typeDistribution).map(([type, count]) => {
+                const total = posts.length || 1;
+                const percent = Math.round(((count as number) / total) * 100);
+                return (
+                  <View key={type} style={{ marginBottom: 16 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600' }}>{type}</Text>
+                      <Text style={{ fontSize: 14, color: Colors.Slate500 }}>{count} ({percent}%)</Text>
+                    </View>
+                    <View style={{ width: '100%', height: 8, backgroundColor: Colors.PrimaryRedAlpha10, borderRadius: 4, overflow: 'hidden' }}>
+                      <View style={{ width: `${percent}%`, height: '100%', backgroundColor: TYPE_COLORS[type] || Colors.PrimaryRed }} />
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+
+          {/* Top Performing */}
+          <View style={styles.chartCard}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 16 }}>Top Performing Content</Text>
+            {topPosts.length === 0 ? (
+              <Text style={{ color: '#94A3B8', textAlign: 'center', padding: 20 }}>No content to analyze yet</Text>
+            ) : (
+              topPosts.map((post, idx) => (
+                <View key={post.id} style={styles.topPostRow}>
+                  <Text style={styles.topPostRank}>#{idx + 1}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.topPostTitle} numberOfLines={1}>{post.title}</Text>
+                    <Text style={styles.topPostStats}>
+                      {post.voteCount} votes • {post.commentCount} comments
+                    </Text>
+                  </View>
+                  <View style={[styles.topPostTypeBadge, { backgroundColor: (TYPE_COLORS[post.type] || '#6366F1') + '15' }]}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: TYPE_COLORS[post.type] || '#6366F1' }}>{post.type}</Text>
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
         </ScrollView>
-
-        <View style={{ gap: 12 }}>
-          <View style={styles.row}>
-            <SmallStatCard label="Briefing Reach" value="1.2M" change="+12%" />
-            <SmallStatCard label="Engagement" value="45.2K" change="+8%" />
-          </View>
-          <View style={styles.row}>
-            <SmallStatCard label="New Followers" value="2,480" change="-2%" isNegative />
-            <SmallStatCard label="Influence" value="12.4K" change="+15%" />
-          </View>
-        </View>
-
-        <View style={styles.chartCard}>
-          <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Reach over time</Text>
-          <View style={styles.chartArea}>
-            {/* Using a simple placeholder for the Canvas line chart since RN requires SVGs or complicated Canvas setup not present here */}
-            <View style={{ flex: 1, borderBottomWidth: 2, borderBottomColor: Colors.PrimaryRed, opacity: 0.5, borderRadius: 50, transform: [{ scaleY: -1 }] }} />
-          </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
-             {days.map(d => <Text key={d} style={{ color: Colors.Slate400, fontSize: 10 }}>{d}</Text>)}
-          </View>
-        </View>
-
-        <View style={styles.chartCard}>
-          <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 24 }}>Traffic Sources</Text>
-          
-          <TrafficSourceBar label="Direct" percent="42%" progress={0.42} />
-          <TrafficSourceBar label="Organic Search" percent="28%" progress={0.28} />
-          <TrafficSourceBar label="Social Media" percent="20%" progress={0.20} />
-          <TrafficSourceBar label="Referral" percent="10%" progress={0.10} />
-        </View>
-      </ScrollView>
-
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
-        <StudioBottomNavBar 
-          currentRoute="Analytics" 
-          onNavigate={(route) => navigation.navigate(route)} 
-          onExit={() => navigation.navigate('Home')} 
-        />
-      </View>
+      )}
     </SafeAreaView>
   );
 }
 
-const SmallStatCard = ({ label, value, change, isNegative }: any) => (
+const TYPE_COLORS: Record<string, string> = {
+  BLOG: '#8B5CF6', NEWS: '#0EA5E9', VIDEO: '#EF4444',
+  FORUM: '#F59E0B', DEBATE: '#10B981', UPDATE: '#6366F1',
+};
+
+const SmallStatCard = ({ label, value, icon, color }: any) => (
   <View style={styles.statCard}>
-    <Text style={{ fontSize: 12, color: Colors.Slate500, letterSpacing: 0.5, marginBottom: 4 }}>{label.toUpperCase()}</Text>
-    <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
-      <Text style={{ fontSize: 24, fontWeight: 'bold' }}>{value}</Text>
-      <Text style={{ fontSize: 12, fontWeight: 'bold', color: isNegative ? 'red' : '#16A34A', marginLeft: 4, marginBottom: 4 }}>{change}</Text>
+    <View style={[styles.statIconBox, { backgroundColor: color + '15' }]}>
+      <Ionicons name={icon} size={18} color={color} />
     </View>
+    <Text style={{ fontSize: 12, color: Colors.Slate500, letterSpacing: 0.5, marginTop: 10 }}>{label.toUpperCase()}</Text>
+    <Text style={{ fontSize: 24, fontWeight: 'bold', marginTop: 4 }}>{value}</Text>
   </View>
 );
-
-const TrafficSourceBar = ({ label, percent, progress }: any) => (
-  <View style={{ marginBottom: 16 }}>
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-      <Text style={{ fontSize: 14 }}>{label}</Text>
-      <Text style={{ fontSize: 14, color: Colors.Slate500 }}>{percent}</Text>
-    </View>
-    <View style={{ width: '100%', height: 8, backgroundColor: Colors.PrimaryRedAlpha10, borderRadius: 4, overflow: 'hidden' }}>
-      <View style={{ width: `${progress * 100}%`, height: '100%', backgroundColor: Colors.PrimaryRed }} />
-    </View>
-  </View>
-)
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   header: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white' },
   headerTitle: { fontSize: 20, fontWeight: 'bold' },
-  dateChip: { backgroundColor: Colors.PrimaryRedAlpha10, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8, marginRight: 8 },
+  dateChip: { backgroundColor: '#F1F5F9', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8, marginRight: 8 },
   dateChipActive: { backgroundColor: Colors.PrimaryRed },
-  dateText: { color: Colors.PrimaryRed, fontWeight: 'bold', fontSize: 14 },
+  dateText: { color: Colors.Slate500, fontWeight: 'bold', fontSize: 14 },
   dateTextActive: { color: 'white' },
   row: { flexDirection: 'row', gap: 12 },
   statCard: { flex: 1, backgroundColor: 'white', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#E2E8F0' },
+  statIconBox: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   chartCard: { backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: '#F1F5F9', padding: 20, marginTop: 24 },
-  chartArea: { width: '100%', height: 160, marginTop: 24 }
+  topPostRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F8FAFC' },
+  topPostRank: { fontSize: 16, fontWeight: '800', color: Colors.PrimaryRed, width: 30 },
+  topPostTitle: { fontSize: 14, fontWeight: '600', color: '#1E293B' },
+  topPostStats: { fontSize: 12, color: '#64748B', marginTop: 2 },
+  topPostTypeBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
 });

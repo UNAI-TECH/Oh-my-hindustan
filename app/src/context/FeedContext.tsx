@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AppApi } from '../api/services';
-import { FeedItem, FeedItemType, SampleData } from '../types';
+import { FeedItem, FeedItemType } from '../types';
 import { supabase } from '../lib/supabaseClient';
 
 interface FeedContextProps {
@@ -29,6 +29,24 @@ const formatTimeAgo = (isoString: string): string => {
   }
 };
 
+const mapPostType = (type: string): FeedItemType => {
+  const typeMap: Record<string, FeedItemType> = {
+    'BLOG': FeedItemType.BLOG,
+    'blog': FeedItemType.BLOG,
+    'NEWS': FeedItemType.NEWS,
+    'news': FeedItemType.NEWS,
+    'VIDEO': FeedItemType.VIDEO,
+    'video': FeedItemType.VIDEO,
+    'FORUM': FeedItemType.FORUM,
+    'DEBATE': FeedItemType.DEBATE,
+    'POLICY_TYPE': FeedItemType.POLICY_TYPE,
+    'UPDATE': FeedItemType.UPDATE,
+    'update': FeedItemType.UPDATE,
+    'PROMO': FeedItemType.PROMO,
+  };
+  return typeMap[type] || FeedItemType.NEWS;
+};
+
 const toFeedItem = (post: any): FeedItem => {
   const voteCount = post.voteCount || 0;
   const calculatedVotes = voteCount > 1000 
@@ -37,18 +55,20 @@ const toFeedItem = (post: any): FeedItem => {
     
   return {
     id: post.id,
-    type: post.type === 'video' ? FeedItemType.VIDEO : FeedItemType.UPDATE,
+    type: mapPostType(post.type),
     title: post.title,
-    subtitle: "Oh My Hindustan",
-    authorName: post.author?.username || "Anonymous",
+    subtitle: post.subtitle || "Oh My Hindustan",
+    authorName: post.author?.username || "Creator",
     authorImage: post.author?.avatarUrl || "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&q=80&w=800",
-    thumbnail: post.thumbnail || "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&q=80&w=800",
+    thumbnail: post.thumbnail || post.mediaUrl || null,
     category: post.category || "General",
     timestamp: formatTimeAgo(post.createdAt),
     votes: calculatedVotes,
     comments: post.commentCount || 0,
     excerpt: post.content?.substring(0, 150) || null,
-    content: post.content
+    content: post.content,
+    videoDuration: post.video_duration || null,
+    isTrending: post.is_trending || false,
   };
 };
 
@@ -62,19 +82,12 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   const fetchHomeFeed = async () => {
     setIsLoading(true);
     try {
-      const response = await AppApi.getHomeFeed(1, 20);
+      const response = await AppApi.getHomeFeed(1, 50);
       const posts = response.data || [];
-      
-      if (posts.length > 0) {
-        setFeedItems(posts.map(toFeedItem));
-      } else {
-        // Fallback to sample data if no posts yet
-        setFeedItems([...SampleData.topNarratives, ...SampleData.baseFeedItems]);
-      }
+      setFeedItems(posts.map(toFeedItem));
     } catch (e) {
       console.error('Feed fetch error:', e);
-      // Fallback to sample data on error
-      setFeedItems([...SampleData.topNarratives, ...SampleData.baseFeedItems]);
+      setFeedItems([]);
     } finally {
       setIsLoading(false);
     }
@@ -83,10 +96,8 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   const fetchArticle = async (id: string) => {
     setIsLoading(true);
     try {
-      // Check local sample data first
-      const mockItems = [...SampleData.topNarratives, ...SampleData.baseFeedItems];
-      const localItem = mockItems.find(it => it.id === id);
-      
+      // Check if article is already in local feed items
+      const localItem = feedItems.find(it => it.id === id);
       if (localItem) {
         setSelectedArticle(localItem);
       } else {
@@ -99,6 +110,7 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (e) {
       console.error('Article fetch error:', e);
+      setSelectedArticle(null);
     } finally {
       setIsLoading(false);
     }
@@ -112,14 +124,9 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   // Real-time: listen for new published posts
   useEffect(() => {
     const subscription = AppApi.subscribeToFeedUpdates((payload: any) => {
-      if (payload.new) {
-        const newPost = toFeedItem({
-          ...payload.new,
-          vote_count: 0,
-          author: null,
-          community: { name: payload.new.category || 'General' },
-        });
-        setFeedItems(prev => [newPost, ...prev]);
+      if (payload.new && payload.new.published) {
+        // Refetch the entire feed to get proper joins (author info, etc.)
+        fetchHomeFeed();
       }
     });
 

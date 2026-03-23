@@ -5,19 +5,20 @@ import { useNavigation } from '@react-navigation/native';
 import { Colors } from '../../theme/Theme';
 import { Ionicons } from '@expo/vector-icons';
 import AppBottomNavBar from '../../components/BottomNavBar';
-import { SampleData, FeedItemType, FeedItem } from '../../types';
+import { useFeed } from '../../context/FeedContext';
+import { FeedItemType, FeedItem } from '../../types';
 
 export default function ExploreScreen() {
   const navigation = useNavigation<any>();
+  const { feedItems } = useFeed();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('Forum');
   const [selectedCategory, setSelectedCategory] = useState('Politics');
 
   const categories = ["Politics", "Policy", "Economy", "Digital India", "Viksit Bharat"];
-  const realtimeFeedItems = SampleData.baseFeedItems; // Simulated from mock initially
   
   const filteredItems = useMemo(() => {
-    return realtimeFeedItems.filter(item => {
+    return (feedItems || []).filter(item => {
       const q = searchQuery.toLowerCase();
       const matchesSearch = !q || item.title.toLowerCase().includes(q) || (item.authorName?.toLowerCase().includes(q));
       
@@ -31,7 +32,11 @@ export default function ExploreScreen() {
       
       return matchesSearch && matchesType && matchesCat;
     });
-  }, [searchQuery, selectedType, selectedCategory, realtimeFeedItems]);
+  }, [searchQuery, selectedType, selectedCategory, feedItems]);
+
+  const topNarratives = useMemo(() => {
+    return (feedItems || []).filter(item => item.isTrending).slice(0, 5);
+  }, [feedItems]);
 
   const numColumns = 2;
   const chunkedItems = [];
@@ -72,15 +77,21 @@ export default function ExploreScreen() {
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
         <SectionHeader title="Top Narratives" />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24, marginRight: -16 }}>
-          {SampleData.topNarratives.map(item => (
-            <TouchableOpacity key={item.id} style={styles.trendingCard} onPress={() => navigation.navigate('ArticleDetail', { id: item.id })}>
-              <Image source={{ uri: item.thumbnail }} style={styles.trendingImg} />
-              <View style={styles.trendingCat}><Text style={styles.categoryText}>{item.category || 'NATIONAL'}</Text></View>
-              <Text style={styles.trendingTitle} numberOfLines={2}>{item.title}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        {topNarratives.length === 0 ? (
+          <View style={{ marginBottom: 24, paddingVertical: 20, alignItems: 'center' }}>
+            <Text style={{ color: Colors.Slate400 }}>No trending narratives found.</Text>
+          </View>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24, marginRight: -16 }}>
+            {topNarratives.map(item => (
+              <TouchableOpacity key={item.id} style={styles.trendingCard} onPress={() => navigation.navigate('ArticleDetail', { id: item.id })}>
+                <Image source={{ uri: item.thumbnail || 'https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&q=80&w=800' }} style={styles.trendingImg} />
+                <View style={styles.trendingCat}><Text style={styles.categoryText}>{item.category || 'NATIONAL'}</Text></View>
+                <Text style={styles.trendingTitle} numberOfLines={2}>{item.title}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
 
         <SectionHeader title="Selected Feed" />
         

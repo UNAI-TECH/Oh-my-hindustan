@@ -5,14 +5,15 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/Theme';
-import { SampleData } from '../../types';
+import { useFeed } from '../../context/FeedContext';
 
 export default function CreatorProfileScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { authorName } = route.params || {};
+  const { feedItems } = useFeed();
 
-  const authorPosts = SampleData.baseFeedItems.filter(it => it.authorName === authorName);
+  const authorPosts = feedItems.filter(it => it.authorName === authorName);
   const firstItem = authorPosts[0];
 
   const [isFollowed, setIsFollowed] = useState(false);

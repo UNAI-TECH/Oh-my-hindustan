@@ -364,6 +364,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (!userId) throw new Error('Not authenticated. Please try logging in again.');
 
+      console.warn('[ONBOARDING] Updating profile for userId:', userId, '| data:', JSON.stringify(data));
+
       const updateData: any = { updatedAt: new Date().toISOString() };
       if (data.username) updateData.username = data.username.toLowerCase();
       if (data.language) updateData.preferred_language = data.language;
@@ -372,19 +374,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updateData.onboarding_complete = true;
       }
 
+      // Use maybeSingle() to avoid the "Cannot coerce" error
       const { data: updated, error: uErr } = await supabase
         .from('User')
         .update(updateData)
         .eq('id', userId)
         .select()
-        .single();
+        .maybeSingle();
 
-      if (uErr) throw uErr;
+      if (uErr) {
+        console.error('[ONBOARDING] Update error:', uErr);
+        throw uErr;
+      }
 
-      setUserProfile(updated);
-      if (updated.onboarding_complete) setNeedsOnboarding(false);
+      if (updated) {
+        console.warn('[ONBOARDING] ✅ Profile updated successfully');
+        setUserProfile(updated);
+        if (updated.onboarding_complete) setNeedsOnboarding(false);
+      } else {
+        // RLS might block returning updated data — re-fetch the profile
+        console.warn('[ONBOARDING] Update returned no data, re-fetching profile...');
+        const profile = await fetchProfile(userId);
+        if (profile) setUserProfile(profile);
+        if (data.topics) setNeedsOnboarding(false);
+      }
       setUpdateProfileSuccess(true);
     } catch (e: any) {
+      console.error('[ONBOARDING] Error:', e.message);
       setError(e.message || 'Update failed');
       throw e;
     } finally {
@@ -407,7 +423,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .update({ username, bio, updatedAt: new Date().toISOString() })
         .eq('id', userId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (uErr) throw uErr;
       setUserProfile(data);

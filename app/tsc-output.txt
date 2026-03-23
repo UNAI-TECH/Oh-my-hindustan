@@ -1,0 +1,9 @@
+src/screens/Creator/ContentEditorScreen.tsx(58,9): error TS2561: Object literal may only specify known properties, but 'videoDuration' does not exist in type '{ title: string; content: string; type: string; category: string; thumbnail?: string; subtitle?: string; video_duration?: string; }'. Did you mean to write 'video_duration'?
+src/screens/Creator/CreatorAnalyticsScreen.tsx(105,78): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: TextProps): Text', gave the following error.
+    Type 'unknown' is not assignable to type 'ReactNode'.
+  Overload 2 of 2, '(props: TextProps, context: any): Text', gave the following error.
+    Type 'unknown' is not assignable to type 'ReactNode'.
+src/screens/Other/LibraryScreen.tsx(8,10): error TS2305: Module '"../../types"' has no exported member 'SampleData'.
+src/screens/Other/SearchScreen.tsx(7,10): error TS2305: Module '"../../types"' has no exported member 'SampleData'.
+src/screens/Profile/CreatorProfileScreen.tsx(8,10): error TS2305: Module '"../../types"' has no exported member 'SampleData'.

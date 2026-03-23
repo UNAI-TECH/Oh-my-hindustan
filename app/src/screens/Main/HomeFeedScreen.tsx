@@ -6,7 +6,7 @@ import { Colors } from '../../theme/Theme';
 import { Ionicons } from '@expo/vector-icons';
 import AppBottomNavBar from '../../components/BottomNavBar';
 import { useFeed } from '../../context/FeedContext';
-import { FeedItemType, FeedItem, SampleData } from '../../types';
+import { FeedItemType, FeedItem } from '../../types';
 
 export default function HomeFeedScreen() {
   const navigation = useNavigation<any>();
@@ -16,10 +16,7 @@ export default function HomeFeedScreen() {
   const tabs = ['Trending', 'News', 'Blogs', 'Videos', 'For You'];
 
   const filteredItems = useMemo(() => {
-    const items = feedItems.length > 0 ? feedItems : [
-      ...SampleData.topNarratives,
-      ...SampleData.baseFeedItems
-    ];
+    const items = feedItems;
     switch (selectedTab) {
       case 'Trending': return [...items].sort(() => 0.5 - Math.random()).slice(0, 5);
       case 'News': return items.filter(it => [FeedItemType.NEWS, FeedItemType.UPDATE, FeedItemType.POLICY_TYPE, FeedItemType.PROMO].includes(it.type));
@@ -77,6 +74,10 @@ export default function HomeFeedScreen() {
       {isLoading && feedItems.length === 0 ? (
         <View style={styles.loader}>
           <ActivityIndicator size="large" color={Colors.PrimaryRed} />
+        </View>
+      ) : filteredItems.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <Text style={{ color: Colors.Slate500, textAlign: 'center' }}>No content found for "{selectedTab}" yet.</Text>
         </View>
       ) : (
         <FlatList
