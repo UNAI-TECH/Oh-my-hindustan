@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Dimensions, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -65,6 +65,20 @@ export default function ProfileScreen() {
             <Text style={{ color: Colors.Slate500, fontSize: 12, marginTop: 2 }}>Manage your briefings and policy analysis</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={Colors.PrimaryRed} />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.creatorAction, { backgroundColor: '#F0F9FF', borderColor: '#BAE6FD', marginTop: 0 }]} 
+          onPress={() => Linking.openURL('http://localhost:5173')}
+        >
+          <View style={[styles.creatorIconBox, { backgroundColor: '#0284C7' }]}>
+            <Ionicons name="rocket" size={20} color="white" />
+          </View>
+          <View style={{ flex: 1, marginLeft: 16 }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#0369A1' }}>Join as Creator</Text>
+            <Text style={{ color: '#0EA5E9', fontSize: 12, marginTop: 2 }}>Become a voice for the nation. Start today!</Text>
+          </View>
+          <Ionicons name="open-outline" size={20} color="#0284C7" />
         </TouchableOpacity>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ borderBottomWidth: 1, borderColor: '#E2E8F0', paddingBottom: 12 }}>

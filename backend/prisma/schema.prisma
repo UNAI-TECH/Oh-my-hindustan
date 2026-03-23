@@ -14,6 +14,7 @@ enum Role {
   CITIZEN
   ANALYST
   ADMIN
+  CREATOR
 }
 
 enum PostType {
@@ -122,3 +123,22 @@ model Notification {
   targetId  String?
   createdAt DateTime @default(now())
 }
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model CreatorRequest {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  bio          String
+  portfolioUrl String?
+  status       RequestStatus @default(PENDING)
+  adminMessage String?       // Optional message from admin when rejecting/approving
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+

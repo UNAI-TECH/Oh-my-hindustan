@@ -22,7 +22,6 @@ import SearchScreen from '../screens/Other/SearchScreen';
 // Creator Studio Screens
 import CreatorDashboardScreen from '../screens/Creator/CreatorDashboardScreen';
 import CreatorAnalyticsScreen from '../screens/Creator/CreatorAnalyticsScreen';
-import ContentEditorScreen from '../screens/Creator/ContentEditorScreen';
 
 // Admin Dashboards
 import AdminOverviewScreen from '../screens/Admin/AdminOverviewScreen';
@@ -60,7 +59,6 @@ export default function RootNavigator() {
       {/* Creator Studio Screens */}
       <Stack.Screen name="CreatorDashboard" component={CreatorDashboardScreen} />
       <Stack.Screen name="CreatorAnalytics" component={CreatorAnalyticsScreen} />
-      <Stack.Screen name="ContentEditor" component={ContentEditorScreen} />
 
       {/* Admin Dashboard Screens */}
       <Stack.Screen name="AdminOverview" component={AdminOverviewScreen} />

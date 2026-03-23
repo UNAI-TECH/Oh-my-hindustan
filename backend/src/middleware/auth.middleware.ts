@@ -43,3 +43,17 @@ export const analystMiddleware = (req: AuthenticatedRequest, res: Response, next
   }
   next();
 };
+
+export const creatorMiddleware = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  if (req.user?.role !== 'CREATOR' && req.user?.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Forbidden', message: 'Creator or Admin access required' });
+  }
+  next();
+};
+
+export const creatorOrAnalystMiddleware = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  if (req.user?.role !== 'CREATOR' && req.user?.role !== 'ANALYST' && req.user?.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Forbidden', message: 'Creator, Analyst or Admin access required' });
+  }
+  next();
+};

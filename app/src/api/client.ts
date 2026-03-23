@@ -2,7 +2,7 @@ import axios from 'axios';
 import { SessionManager } from '../utils/storage';
 
 // Same IP as ApiClient.kt 
-const BASE_URL = 'http://172.30.80.116:3001/api';
+const BASE_URL = 'http://192.168.29.161:3001/api';
 
 export const ApiClient = axios.create({
   baseURL: BASE_URL,

@@ -11,6 +11,7 @@ import postRoutes from './routes/post.routes';
 import interactionRoutes from './routes/interaction.routes';
 import notificationRoutes from './routes/notification.routes';
 import adminRoutes from './routes/admin.routes';
+import creatorRoutes from './routes/creator.routes';
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use('/api/posts', postRoutes);
 app.use('/api/interactions', interactionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/creator', creatorRoutes);
 
 // Rate limiting
 const limiter = rateLimit({

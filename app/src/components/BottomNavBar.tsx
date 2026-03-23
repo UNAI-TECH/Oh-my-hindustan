@@ -12,7 +12,6 @@ export default function AppBottomNavBar({ currentRoute, onNavigate }: Props) {
   const items = [
     { label: 'Home', route: 'Home', icon: 'home' },
     { label: 'Explore', route: 'Explore', icon: 'search' },
-    { label: 'Analyst', route: 'ContentEditor', icon: 'megaphone' },
     { label: 'Archive', route: 'Library', icon: 'library' },
     { label: 'Profile', route: 'Profile', icon: 'person' }
   ];
@@ -21,7 +20,6 @@ export default function AppBottomNavBar({ currentRoute, onNavigate }: Props) {
     <View style={styles.container}>
       {items.map((item) => {
         const isSelected = currentRoute === item.route;
-        const isAnalyst = item.label === 'Analyst';
 
         return (
           <TouchableOpacity
@@ -33,28 +31,20 @@ export default function AppBottomNavBar({ currentRoute, onNavigate }: Props) {
               }
             }}
           >
-            {isAnalyst ? (
-              <View style={[styles.analystIconContainer, { elevation: 4, shadowOpacity: 0.2 }]}>
-                <Ionicons name={item.icon as any} size={20} color="white" />
-              </View>
-            ) : (
-              <Ionicons 
-                name={item.icon as any} 
-                size={24} 
-                color={isSelected ? Colors.PrimaryRed : Colors.Slate500} 
-              />
-            )}
+            <Ionicons 
+              name={item.icon as any} 
+              size={24} 
+              color={isSelected ? Colors.PrimaryRed : Colors.Slate500} 
+            />
 
-            {!isAnalyst && (
-              <Text
-                style={[
-                  styles.label,
-                  { color: isSelected ? Colors.PrimaryRed : Colors.SlateText, opacity: isSelected ? 1 : 0.4 }
-                ]}
-              >
-                {item.label}
-              </Text>
-            )}
+            <Text
+              style={[
+                styles.label,
+                { color: isSelected ? Colors.PrimaryRed : Colors.SlateText, opacity: isSelected ? 1 : 0.4 }
+              ]}
+            >
+              {item.label}
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -80,16 +70,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  analystIconContainer: {
-    backgroundColor: Colors.PrimaryRed,
-    borderRadius: 12,
-    padding: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  analystIcon: {
-    fontSize: 20, // slightly smaller emoji
   },
   label: {
     fontSize: 10,
