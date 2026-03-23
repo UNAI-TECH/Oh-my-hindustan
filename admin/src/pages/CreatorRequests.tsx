@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   Users, CheckCircle, XCircle, Clock, ExternalLink, 
-  Search, Filter, Mail, User, Info, Loader2, RefreshCw 
+  Info, Loader2, RefreshCw 
 } from 'lucide-react';
 
 interface CreatorRequest {
@@ -19,7 +19,7 @@ interface CreatorRequest {
 export default function CreatorRequests() {
   const [requests, setRequests] = useState<CreatorRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [, setError] = useState('');
   const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
   const [selectedRequest, setSelectedRequest] = useState<CreatorRequest | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
