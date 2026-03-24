@@ -8,7 +8,8 @@ import {
   KeyboardAvoidingView, 
   Platform,
   ScrollView,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,7 +22,9 @@ export default function SignUpScreen() {
   const { register, signInWithGoogle, isLoading, error, signupSuccess, isAuthenticated, needsOnboarding, clearState } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,9 +41,23 @@ export default function SignUpScreen() {
     }
   }, [isAuthenticated, needsOnboarding]);
 
+  useEffect(() => {
+    if (error) {
+      let message = error;
+      if (error.includes('email') || error.includes('sending confirmation')) {
+        message += '\n\nWhy this happens: Your database (Supabase) has reached its 3 emails-per-hour limit on the default server. Wait 1 hour or configure a custom SMTP in Supabase to fix this.';
+      }
+      Alert.alert('Authentication Failed', message);
+    }
+  }, [error]);
+
   const handleSignUp = async () => {
-    if (!name || !email || !password) {
+    if (!name || !email || !mobile || !password || !confirmPassword) {
       setLocalError('Please fill in all fields');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setLocalError('Passwords do not match');
       return;
     }
     if (password.length < 6) {
@@ -48,7 +65,9 @@ export default function SignUpScreen() {
       return;
     }
     setLocalError(null);
-    await register(email.trim(), name.trim(), password);
+    
+    // We do not navigate manually; AuthContext will auto-login and handle onboarding routing
+    await register(email.trim(), name.trim(), password, mobile.trim());
   };
 
   const handleGoogleSignIn = async () => {
@@ -92,10 +111,28 @@ export default function SignUpScreen() {
 
           <TextInput
             style={styles.input}
+            placeholder="Mobile Number"
+            placeholderTextColor="#64748B"
+            value={mobile}
+            onChangeText={(text) => { setMobile(text); setLocalError(null); }}
+            keyboardType="phone-pad"
+          />
+
+          <TextInput
+            style={styles.input}
             placeholder="Password"
             placeholderTextColor="#64748B"
             value={password}
             onChangeText={(text) => { setPassword(text); setLocalError(null); }}
+            secureTextEntry
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Confirm Password"
+            placeholderTextColor="#64748B"
+            value={confirmPassword}
+            onChangeText={(text) => { setConfirmPassword(text); setLocalError(null); }}
             secureTextEntry
           />
         </View>

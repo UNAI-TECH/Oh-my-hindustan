@@ -19,7 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 export default function LoginScreen() {
   const navigation = useNavigation<any>();
   const { login, signInWithGoogle, isLoading, error, loginSuccess, isAuthenticated, needsOnboarding, clearState } = useAuth();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -38,12 +38,12 @@ export default function LoginScreen() {
   }, [isAuthenticated, needsOnboarding]);
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (!identifier || !password) {
       setLocalError('Please enter valid credentials');
       return;
     }
     setLocalError(null);
-    await login(email.trim(), password);
+    await login(identifier.trim(), password);
   };
 
   const handleGoogleSignIn = async () => {
@@ -69,11 +69,10 @@ export default function LoginScreen() {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Email Address"
+            placeholder="Email Address or Mobile Number"
             placeholderTextColor="#64748B"
-            value={email}
-            onChangeText={(text) => { setEmail(text); setLocalError(null); }}
-            keyboardType="email-address"
+            value={identifier}
+            onChangeText={(text) => { setIdentifier(text); setLocalError(null); }}
             autoCapitalize="none"
           />
 

@@ -51,8 +51,11 @@ export default function ProfileScreen() {
   const displayName = userProfile?.username || userProfile?.email?.split('@')[0] || 'User';
   const avatarUrl = userProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E53935&color=fff&size=200`;
   const email = userProfile?.email || '';
+  const phone = userProfile?.phone || '';
   const bio = userProfile?.bio || 'Citizen of Oh My Hindustan';
   const role = userProfile?.role || 'CITIZEN';
+  const language = userProfile?.preferred_language || 'English';
+  const topics = userProfile?.selected_topics || [];
 
   const formatStat = (n: number) => {
     if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
@@ -88,6 +91,7 @@ export default function ProfileScreen() {
         <View style={{ alignItems: 'center', paddingHorizontal: 16 }}>
           <Text style={{ fontWeight: 'bold', fontSize: 24 }}>@{displayName}</Text>
           <Text style={{ color: Colors.Slate500, fontSize: 14, marginTop: 4 }}>{email}</Text>
+          {phone ? <Text style={{ color: Colors.Slate500, fontSize: 14, marginTop: 2 }}>{phone}</Text> : null}
           <Text style={{ color: Colors.Slate500, fontSize: 13, marginTop: 6, textAlign: 'center' }}>{bio}</Text>
           <View style={styles.roleBadge}>
             <Ionicons name={role === 'CITIZEN' ? 'person' : 'megaphone'} size={12} color={Colors.PrimaryRed} />
@@ -101,6 +105,27 @@ export default function ProfileScreen() {
           <ProfileStatCard value={isLoadingStats ? '...' : formatStat(stats.saved)} label="Saved" />
           <ProfileStatCard value={isLoadingStats ? '...' : formatStat(stats.following)} label="Following" />
           <ProfileStatCard value={isLoadingStats ? '...' : formatStat(stats.followers)} label="Followers" />
+        </View>
+
+        {/* User Preferences */}
+        <View style={styles.preferencesContainer}>
+          <Text style={styles.sectionTitle}>My Preferences</Text>
+          <View style={styles.preferenceRow}>
+            <Ionicons name="language" size={20} color={Colors.Slate500} />
+            <Text style={styles.preferenceText}>Language: <Text style={{fontWeight: '600', color: Colors.PrimaryRed}}>{language}</Text></Text>
+          </View>
+          {topics.length > 0 && (
+            <View style={{marginTop: 12}}>
+              <Text style={styles.preferenceText}>Interested Topics:</Text>
+              <View style={styles.topicsWrapper}>
+                {topics.map((topic: string) => (
+                  <View key={topic} style={styles.topicBadge}>
+                    <Text style={styles.topicText}>{topic}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Creator Action */}
@@ -162,4 +187,41 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   logoutText: { fontSize: 16, fontWeight: '700', color: '#DC2626' },
+  preferencesContainer: {
+    paddingHorizontal: 16,
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 12,
+  },
+  preferenceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  preferenceText: {
+    fontSize: 15,
+    color: Colors.Slate600,
+  },
+  topicsWrapper: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  topicBadge: {
+    backgroundColor: 'rgba(229, 57, 53, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  topicText: {
+    color: Colors.PrimaryRed,
+    fontSize: 13,
+    fontWeight: '600',
+  },
 });

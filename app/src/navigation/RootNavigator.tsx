@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SplashScreen from '../screens/Auth/SplashScreen';
 import LoginScreen from '../screens/Auth/LoginScreen';
 import SignUpScreen from '../screens/Auth/SignUpScreen';
+import OTPScreen from '../screens/Auth/OTPScreen';
 import ProfileSetupScreen from '../screens/Auth/ProfileSetupScreen';
 import UsernameSetupScreen from '../screens/Auth/UsernameSetupScreen';
 import LanguageSelectionScreen from '../screens/Auth/LanguageSelectionScreen';
@@ -50,6 +51,7 @@ export default function RootNavigator() {
       <Stack.Screen name="Splash" component={SplashScreen} />
       <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="SignUp" component={SignUpScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="OTP" component={OTPScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="UsernameSetup" component={UsernameSetupScreen} options={{ animation: 'slide_from_right', gestureEnabled: false }} />
       <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} options={{ animation: 'slide_from_right' }} />

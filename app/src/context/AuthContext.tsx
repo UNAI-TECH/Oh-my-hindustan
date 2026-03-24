@@ -15,8 +15,9 @@ interface AuthContextProps {
   isAuthenticated: boolean;
   needsOnboarding: boolean;
   userProfile: any | null;
-  login: (email: string, pass: string) => Promise<void>;
-  register: (email: string, name: string, pass: string) => Promise<void>;
+  login: (identifier: string, pass: string) => Promise<void>;
+  register: (email: string, name: string, pass: string, mobile: string) => Promise<boolean | void>;
+  verifySignupOtp: (email: string, token: string) => Promise<boolean>;
   signInWithGoogle: () => Promise<void>;
   checkUsernameAvailability: (username: string) => Promise<{ available: boolean; suggestions: string[] }>;
   updateOnboardingProfile: (data: { username?: string; language?: string; topics?: string[] }) => Promise<void>;
@@ -141,13 +142,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ─── Email/Password Login ───
-  const login = async (email: string, pass: string) => {
+  // ─── Email/Mobile Password Login ───
+  const login = async (identifier: string, pass: string) => {
     setIsLoading(true);
     setError(null);
     try {
+      let loginEmail = identifier.trim().toLowerCase();
+      
+      // Look up email by phone if an @ is not present
+      if (!loginEmail.includes('@')) {
+        const { data, error: lookupErr } = await supabase
+          .from('User')
+          .select('email')
+          .eq('phone', identifier.trim())
+          .maybeSingle();
+          
+        if (data && data.email) {
+          loginEmail = data.email;
+          console.warn('[AUTH] Found email for phone:', loginEmail);
+        } else {
+          setError('No account found with this mobile number.');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
+        email: loginEmail,
         password: pass,
       });
 
@@ -178,8 +199,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ─── Email/Password Registration ───
-  const register = async (email: string, name: string, pass: string) => {
+  // ─── Direct Registration (No OTP) ───
+  const register = async (email: string, name: string, pass: string, mobile: string) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -200,18 +221,63 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           setError(authError.message);
         }
-        return;
+        return false;
       }
 
       if (authData.user) {
-        // Wait for trigger to create User row
+        console.warn('[AUTH] User signed up, updating phone number...');
+        // Save the mobile number to the User table
+        const { error: updateErr } = await supabase.from('User').update({ phone: mobile }).eq('id', authData.user.id);
+        if (updateErr) console.error('[AUTH] Failed to save mobile number:', updateErr);
+        
+        // Let the DB trigger finish
         await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Fetch profile to set up session immediately
         const profile = await fetchProfile(authData.user.id);
-        setAuthState(profile, true);
-        setSignupSuccess(true);
+        if (profile) {
+          setAuthState(profile, true);
+          setLoginSuccess(true);
+          setSignupSuccess(true);
+        }
       }
+
+      return true;
     } catch (e: any) {
       setError('Registration failed. Please try again.');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ─── Verify OTP ───
+  const verifySignupOtp = async (email: string, token: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'signup'
+      });
+      
+      if (verifyError) {
+        setError(verifyError.message);
+        return false;
+      }
+      
+      if (data.session || data.user) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const profile = await fetchProfile(data.user!.id);
+        setAuthState(profile, true);
+        setSignupSuccess(true);
+        return true;
+      }
+      return false;
+    } catch (e: any) {
+       setError('OTP Verification failed. Please try again.');
+       return false;
     } finally {
       setIsLoading(false);
     }
@@ -452,7 +518,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider value={{
       isLoading, error, loginSuccess, signupSuccess, updateProfileSuccess,
       isAuthenticated, needsOnboarding, userProfile,
-      login, register, signInWithGoogle, checkUsernameAvailability,
+      login, register, verifySignupOtp, signInWithGoogle, checkUsernameAvailability,
       updateOnboardingProfile, updateProfile, clearState, logout
     }}>
       {!initializing && children}

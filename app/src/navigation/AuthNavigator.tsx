@@ -9,12 +9,14 @@ import ProfileSetupScreen from '../screens/Auth/ProfileSetupScreen';
 import UsernameSetupScreen from '../screens/Auth/UsernameSetupScreen';
 import LanguageSelectionScreen from '../screens/Auth/LanguageSelectionScreen';
 import TopicSelectionScreen from '../screens/Auth/TopicSelectionScreen';
+import OTPScreen from '../screens/Auth/OTPScreen';
 import HomeScreen from '../screens/Home/HomeScreen';
 
 export type AuthStackParamList = {
   Splash: undefined;
   Login: undefined;
   SignUp: undefined;
+  OTP: { email: string };
   ProfileSetup: undefined;
   UsernameSetup: undefined;
   LanguageSelection: undefined;
@@ -46,7 +48,12 @@ export default function AuthNavigator() {
         options={{ animation: 'slide_from_right' }}
       />
       <Stack.Screen 
-        name="ProfileSetup" 
+        name="OTP" 
+        component={OTPScreen} 
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen 
+        name="ProfileSetup"  
         component={ProfileSetupScreen} 
         options={{ animation: 'slide_from_right' }}
       />
