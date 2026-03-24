@@ -21,6 +21,7 @@ import CreatorProfileScreen from '../screens/Profile/CreatorProfileScreen';
 import NotificationScreen from '../screens/Other/NotificationScreen';
 import InterestsSelectionScreen from '../screens/Other/InterestsSelectionScreen';
 import SettingsScreen from '../screens/Other/SettingsScreen';
+import PersonalDetailsScreen from '../screens/Other/PersonalDetailsScreen';
 import SearchScreen from '../screens/Other/SearchScreen';
 
 // Creator Studio Screens
@@ -69,6 +70,7 @@ export default function RootNavigator() {
       <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="InterestsSelection" component={InterestsSelectionScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="Search" component={SearchScreen} />
       
       {/* Creator Studio Screens */}

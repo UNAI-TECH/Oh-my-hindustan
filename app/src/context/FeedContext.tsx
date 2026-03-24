@@ -124,10 +124,8 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   // Real-time: listen for new published posts
   useEffect(() => {
     const subscription = AppApi.subscribeToFeedUpdates((payload: any) => {
-      if (payload.new && payload.new.published) {
-        // Refetch the entire feed to get proper joins (author info, etc.)
-        fetchHomeFeed();
-      }
+      // Refetch the entire feed to get proper joins (author info, etc.)
+      fetchHomeFeed();
     });
 
     return () => {

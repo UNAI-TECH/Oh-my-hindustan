@@ -12,8 +12,8 @@ export default function AppBottomNavBar({ currentRoute, onNavigate }: Props) {
   const items = [
     { label: 'Home', route: 'Home', icon: 'home' },
     { label: 'Explore', route: 'Explore', icon: 'search' },
-    { label: 'Archive', route: 'Library', icon: 'library' },
-    { label: 'Profile', route: 'Profile', icon: 'person' }
+    { label: 'Library', route: 'Library', icon: 'library' },
+    { label: 'Settings', route: 'Settings', icon: 'settings' }
   ];
 
   return (

@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Switch, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Switch, Modal, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/Theme';
 import { useAuth } from '../../context/AuthContext';
+import AppBottomNavBar from '../../components/BottomNavBar';
 
 export default function SettingsScreen() {
   const navigation = useNavigation<any>();
-  const { logout } = useAuth();
+  const { userProfile, logout } = useAuth();
   
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isDataSaver, setIsDataSaver] = useState(true);
@@ -17,20 +18,31 @@ export default function SettingsScreen() {
   const [showLanguageDialog, setShowLanguageDialog] = useState(false);
   const [showAboutDialog, setShowAboutDialog] = useState(false);
 
+  const displayName = userProfile?.username || userProfile?.email?.split('@')[0] || 'User';
+  const avatarUrl = userProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E53935&color=fff&size=200`;
+  const email = userProfile?.email || '';
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
         
+        {/* User Profile Header */}
+        <TouchableOpacity style={styles.userHeader} onPress={() => navigation.navigate('PersonalDetails')}>
+          <Image source={{ uri: avatarUrl }} style={styles.userAvatar} />
+          <View style={{ flex: 1, marginLeft: 16 }}>
+            <Text style={styles.userName}>{displayName}</Text>
+            <Text style={styles.userEmail}>{email}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={Colors.Slate400} />
+        </TouchableOpacity>
+
         <SettingsGroup title="Account">
-          <SettingsItem label="Edit Profile" icon="person-outline" onClick={() => navigation.navigate('ProfileSetup')} />
+          <SettingsItem label="Personal Details" icon="person-outline" onClick={() => navigation.navigate('PersonalDetails')} />
           <SettingsItem label="Notification Settings" icon="notifications-outline" onClick={() => navigation.navigate('Notifications')} />
           <SettingsItem label="Privacy & Security" icon="shield-checkmark-outline" onClick={() => {}} />
         </SettingsGroup>
@@ -62,14 +74,30 @@ export default function SettingsScreen() {
           <SettingsItem label="About Jan Samvad" icon="information-circle-outline" onClick={() => setShowAboutDialog(true)} />
         </SettingsGroup>
 
+        {/* Join as Creator CTA */}
+        <TouchableOpacity 
+          style={styles.creatorCTA} 
+          onPress={() => Linking.openURL('https://creators-ohmy.vercel.app/')}
+        >
+          <View style={styles.creatorIconBox}>
+            <Ionicons name="rocket" size={22} color="white" />
+          </View>
+          <View style={{ flex: 1, marginLeft: 14 }}>
+            <Text style={styles.creatorCTATitle}>Join as a Creator</Text>
+            <Text style={styles.creatorCTADesc}>Become a voice for the nation!</Text>
+          </View>
+          <Ionicons name="open-outline" size={20} color="#0284C7" />
+        </TouchableOpacity>
+
         <TouchableOpacity 
           style={styles.logoutBtn}
           onPress={async () => {
             await logout();
-            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+            navigation.reset({ index: 0, routes: [{ name: 'Splash' }] });
           }}
         >
-          <Text style={{ color: Colors.PrimaryRed, fontWeight: 'bold' }}>Log Out</Text>
+          <Ionicons name="log-out-outline" size={20} color={Colors.PrimaryRed} />
+          <Text style={{ color: Colors.PrimaryRed, fontWeight: 'bold', marginLeft: 8 }}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -79,7 +107,7 @@ export default function SettingsScreen() {
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowLanguageDialog(false)}>
             <View style={styles.dialog}>
               <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 16 }}>Select Language</Text>
-              {['English', 'Hindi', 'Marathi', 'Bengali'].map(lang => (
+              {['English', 'Hindi', 'Marathi', 'Bengali', 'Tamil', 'Telugu'].map(lang => (
                 <TouchableOpacity 
                   key={lang} 
                   style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12 }}
@@ -112,6 +140,9 @@ export default function SettingsScreen() {
         </Modal>
       )}
 
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
+        <AppBottomNavBar currentRoute="Settings" onNavigate={(route) => navigation.navigate(route)} />
+      </View>
     </SafeAreaView>
   );
 }
@@ -136,12 +167,30 @@ const SettingsItem = ({ label, icon, trailing, onClick }: any) => (
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   header: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold' },
+  headerTitle: { fontSize: 22, fontWeight: 'bold' },
+  userHeader: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: 'white',
+    padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 24,
+  },
+  userAvatar: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: Colors.PrimaryRed },
+  userName: { fontWeight: 'bold', fontSize: 18 },
+  userEmail: { color: Colors.Slate500, fontSize: 13, marginTop: 2 },
   groupTitle: { fontSize: 14, fontWeight: 'bold', color: Colors.Slate500, marginLeft: 4, marginBottom: 8 },
   groupContainer: { backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' },
   itemContainer: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
   itemLabel: { flex: 1, marginLeft: 16, fontSize: 16 },
-  logoutBtn: { width: '100%', padding: 16, backgroundColor: 'white', borderRadius: 12, borderWidth: 1, borderColor: Colors.PrimaryRedAlpha10, alignItems: 'center', marginTop: 8 },
+  creatorCTA: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F9FF',
+    padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#BAE6FD', marginBottom: 16,
+  },
+  creatorIconBox: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#0284C7', justifyContent: 'center', alignItems: 'center' },
+  creatorCTATitle: { fontWeight: 'bold', fontSize: 16, color: '#0369A1' },
+  creatorCTADesc: { color: '#0EA5E9', fontSize: 12, marginTop: 2 },
+  logoutBtn: {
+    flexDirection: 'row', width: '100%', padding: 16, backgroundColor: 'white',
+    borderRadius: 12, borderWidth: 1, borderColor: Colors.PrimaryRedAlpha10,
+    alignItems: 'center', justifyContent: 'center',
+  },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   dialog: { backgroundColor: 'white', width: '85%', borderRadius: 16, padding: 24, elevation: 4 },
   radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: Colors.Slate400, justifyContent: 'center', alignItems: 'center' },
