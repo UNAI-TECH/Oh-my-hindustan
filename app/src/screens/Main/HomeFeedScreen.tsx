@@ -6,11 +6,13 @@ import { Colors } from '../../theme/Theme';
 import { Ionicons } from '@expo/vector-icons';
 import AppBottomNavBar from '../../components/BottomNavBar';
 import { useFeed } from '../../context/FeedContext';
+import { useNotifications } from '../../context/NotificationContext';
 import { FeedItemType, FeedItem } from '../../types';
 
 export default function HomeFeedScreen() {
   const navigation = useNavigation<any>();
   const { feedItems, isLoading } = useFeed();
+  const { unreadCount } = useNotifications();
   
   const [selectedTab, setSelectedTab] = useState('Trending');
   const tabs = ['Trending', 'News', 'Blogs', 'Videos', 'For You'];
@@ -52,7 +54,11 @@ export default function HomeFeedScreen() {
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={styles.iconBtn}>
             <Ionicons name="notifications" size={24} color={Colors.Slate500} />
-            <View style={styles.badge} />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -82,7 +88,7 @@ export default function HomeFeedScreen() {
       ) : (
         <FlatList
           data={filteredItems}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
           contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
           ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
           renderItem={({ item }) => (
@@ -223,14 +229,22 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: 6,
-    right: 4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: 2,
+    right: 2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: Colors.PrimaryRed,
     borderWidth: 1.5,
-    borderColor: 'white'
+    borderColor: 'white',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 9,
+    fontWeight: 'bold' as const,
   },
   tabsContainer: {
     backgroundColor: Colors.SurfaceWhite,

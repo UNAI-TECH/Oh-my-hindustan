@@ -161,8 +161,8 @@ export default function CreatorDashboardScreen() {
                 <Text style={styles.emptySubtext}>Tap CREATE to publish your first piece!</Text>
               </View>
             ) : (
-              recentPosts.map(post => (
-                <View key={post.id} style={styles.recentCard}>
+              recentPosts.map((post, idx) => (
+                <View key={`recent-${post.id}-${idx}`} style={styles.recentCard}>
                   <View style={[styles.recentTypeBadge, { backgroundColor: (TYPE_COLORS[post.type] || '#6366F1') + '15' }]}>
                     <Text style={{ fontSize: 10, fontWeight: '700', color: TYPE_COLORS[post.type] || '#6366F1' }}>{post.type}</Text>
                   </View>

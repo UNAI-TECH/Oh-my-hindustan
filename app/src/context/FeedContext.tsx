@@ -1,14 +1,19 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { AppApi } from '../api/services';
 import { FeedItem, FeedItemType } from '../types';
 import { supabase } from '../lib/supabaseClient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const FEED_CACHE_KEY = 'home_feed_cache';
 
 interface FeedContextProps {
   feedItems: FeedItem[];
   selectedArticle: FeedItem | null;
   isLoading: boolean;
+  isRefreshing: boolean;
   fetchArticle: (id: string) => Promise<void>;
-  fetchHomeFeed: () => Promise<void>;
+  fetchHomeFeed: (showLoading?: boolean) => Promise<void>;
+  refreshFeed: () => void;
 }
 
 const formatTimeAgo = (isoString: string): string => {
@@ -68,6 +73,7 @@ const toFeedItem = (post: any): FeedItem => {
     excerpt: post.content?.substring(0, 150) || null,
     content: post.content,
     videoDuration: post.video_duration || null,
+    videoUrl: post.videoUrl || post.video_url || null,
     isTrending: post.is_trending || false,
   };
 };
@@ -78,19 +84,57 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<FeedItem | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchHomeFeed = async () => {
-    setIsLoading(true);
+  const saveToCache = async (data: FeedItem[]) => {
     try {
+      await AsyncStorage.setItem(FEED_CACHE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.error('Failed to save feed cache', e);
+    }
+  };
+
+  const loadFromCache = async () => {
+    try {
+      const cached = await AsyncStorage.getItem(FEED_CACHE_KEY);
+      if (cached) {
+        setFeedItems(JSON.parse(cached));
+      }
+    } catch (e) {
+      console.error('Failed to load feed cache', e);
+    }
+  };
+
+  const fetchHomeFeed = async (showLoading = true) => {
+    if (showLoading && feedItems.length === 0) setIsLoading(true);
+    try {
+      // Load from cache first for instant UI
+      if (showLoading && feedItems.length === 0) await loadFromCache();
+      
       const response = await AppApi.getHomeFeed(1, 50);
       const posts = response.data || [];
-      setFeedItems(posts.map(toFeedItem));
+      const mapped = posts.map(toFeedItem);
+      // Deduplicate by id to prevent "two children with the same key" errors
+      const seen = new Set<string>();
+      const unique = mapped.filter(item => {
+        if (seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      });
+      setFeedItems(unique);
+      await saveToCache(unique);
     } catch (e) {
       console.error('Feed fetch error:', e);
-      setFeedItems([]);
+      if (feedItems.length === 0) setFeedItems([]);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  const refreshFeed = () => {
+    setIsRefreshing(true);
+    fetchHomeFeed(false);
   };
 
   const fetchArticle = async (id: string) => {
@@ -121,20 +165,39 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
     fetchHomeFeed();
   }, []);
 
-  // Real-time: listen for new published posts
+  // Real-time: listen for new published posts with debounce + incremental updates
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    
     const subscription = AppApi.subscribeToFeedUpdates((payload: any) => {
-      // Refetch the entire feed to get proper joins (author info, etc.)
-      fetchHomeFeed();
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        // For INSERT events, try incremental update first for speed
+        if (payload.eventType === 'INSERT' && payload.new) {
+          // Still do a full refetch to get proper author info joins
+          fetchHomeFeed();
+        } else {
+          fetchHomeFeed();
+        }
+      }, 300);
     });
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(subscription);
     };
   }, []);
 
   return (
-    <FeedContext.Provider value={{ feedItems, selectedArticle, isLoading, fetchArticle, fetchHomeFeed }}>
+    <FeedContext.Provider value={{ 
+      feedItems, 
+      selectedArticle, 
+      isLoading, 
+      isRefreshing, 
+      fetchArticle, 
+      fetchHomeFeed,
+      refreshFeed
+    }}>
       {children}
     </FeedContext.Provider>
   );

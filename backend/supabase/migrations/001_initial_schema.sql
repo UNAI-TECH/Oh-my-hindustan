@@ -223,96 +223,107 @@ $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 
 -- ── PROFILES ──
--- Everyone can read profiles
+DROP POLICY IF EXISTS "profiles_select_all" ON profiles;
 CREATE POLICY "profiles_select_all" ON profiles FOR SELECT USING (true);
--- Users can update their own profile
+
+DROP POLICY IF EXISTS "profiles_update_own" ON profiles;
 CREATE POLICY "profiles_update_own" ON profiles FOR UPDATE USING (auth.uid() = id);
--- Admins can update any profile
+
+DROP POLICY IF EXISTS "profiles_update_admin" ON profiles;
 CREATE POLICY "profiles_update_admin" ON profiles FOR UPDATE USING (public.get_user_role() = 'admin');
--- Service role can insert (trigger handles this)
+
+DROP POLICY IF EXISTS "profiles_insert_service" ON profiles;
 CREATE POLICY "profiles_insert_service" ON profiles FOR INSERT WITH CHECK (true);
 
 
 -- ── POSTS ──
--- Everyone can read published posts
+DROP POLICY IF EXISTS "posts_select_published" ON posts;
 CREATE POLICY "posts_select_published" ON posts FOR SELECT USING (published = true);
--- Creators/Admins can read their own unpublished posts  
+
+DROP POLICY IF EXISTS "posts_select_own" ON posts;
 CREATE POLICY "posts_select_own" ON posts FOR SELECT USING (author_id = auth.uid());
--- Admins see all posts
+
+DROP POLICY IF EXISTS "posts_select_admin" ON posts;
 CREATE POLICY "posts_select_admin" ON posts FOR SELECT USING (public.get_user_role() = 'admin');
--- Creators can create posts
+
+DROP POLICY IF EXISTS "posts_insert_creator" ON posts;
 CREATE POLICY "posts_insert_creator" ON posts FOR INSERT 
   WITH CHECK (auth.uid() = author_id AND public.get_user_role() IN ('creator', 'admin'));
--- Creators can update own posts
+
+DROP POLICY IF EXISTS "posts_update_own" ON posts;
 CREATE POLICY "posts_update_own" ON posts FOR UPDATE 
   USING (auth.uid() = author_id AND public.get_user_role() IN ('creator', 'admin'));
--- Admins can update any post
+
+DROP POLICY IF EXISTS "posts_update_admin" ON posts;
 CREATE POLICY "posts_update_admin" ON posts FOR UPDATE USING (public.get_user_role() = 'admin');
--- Creators can delete own posts
+
+DROP POLICY IF EXISTS "posts_delete_own" ON posts;
 CREATE POLICY "posts_delete_own" ON posts FOR DELETE 
   USING (auth.uid() = author_id AND public.get_user_role() IN ('creator', 'admin'));
--- Admins can delete any post
+
+DROP POLICY IF EXISTS "posts_delete_admin" ON posts;
 CREATE POLICY "posts_delete_admin" ON posts FOR DELETE USING (public.get_user_role() = 'admin');
 
 
 -- ── VOTES ──
--- Anyone authenticated can read votes
+DROP POLICY IF EXISTS "votes_select_all" ON votes;
 CREATE POLICY "votes_select_all" ON votes FOR SELECT USING (true);
--- Authenticated users can insert their own votes
+DROP POLICY IF EXISTS "votes_insert_own" ON votes;
 CREATE POLICY "votes_insert_own" ON votes FOR INSERT WITH CHECK (auth.uid() = user_id);
--- Users can delete their own votes (to toggle)
+DROP POLICY IF EXISTS "votes_delete_own" ON votes;
 CREATE POLICY "votes_delete_own" ON votes FOR DELETE USING (auth.uid() = user_id);
 
-
 -- ── COMMENTS ──
--- Anyone can read comments
+DROP POLICY IF EXISTS "comments_select_all" ON comments;
 CREATE POLICY "comments_select_all" ON comments FOR SELECT USING (true);
--- Authenticated users can insert comments
+DROP POLICY IF EXISTS "comments_insert_own" ON comments;
 CREATE POLICY "comments_insert_own" ON comments FOR INSERT WITH CHECK (auth.uid() = user_id);
--- Users can update own comments
+DROP POLICY IF EXISTS "comments_update_own" ON comments;
 CREATE POLICY "comments_update_own" ON comments FOR UPDATE USING (auth.uid() = user_id);
--- Users can delete own comments, admins can delete any
+DROP POLICY IF EXISTS "comments_delete_own" ON comments;
 CREATE POLICY "comments_delete_own" ON comments FOR DELETE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "comments_delete_admin" ON comments;
 CREATE POLICY "comments_delete_admin" ON comments FOR DELETE USING (public.get_user_role() = 'admin');
 
 
 -- ── FOLLOWS ──
--- Anyone can see follow relationships
+DROP POLICY IF EXISTS "follows_select_all" ON follows;
 CREATE POLICY "follows_select_all" ON follows FOR SELECT USING (true);
--- Users can follow (insert)
+DROP POLICY IF EXISTS "follows_insert_own" ON follows;
 CREATE POLICY "follows_insert_own" ON follows FOR INSERT WITH CHECK (auth.uid() = follower_id);
--- Users can unfollow (delete)
+DROP POLICY IF EXISTS "follows_delete_own" ON follows;
 CREATE POLICY "follows_delete_own" ON follows FOR DELETE USING (auth.uid() = follower_id);
 
-
 -- ── SAVES ──
--- Users can see their own saves
+DROP POLICY IF EXISTS "saves_select_own" ON saves;
 CREATE POLICY "saves_select_own" ON saves FOR SELECT USING (auth.uid() = user_id);
--- Users can save
+DROP POLICY IF EXISTS "saves_insert_own" ON saves;
 CREATE POLICY "saves_insert_own" ON saves FOR INSERT WITH CHECK (auth.uid() = user_id);
--- Users can unsave
+DROP POLICY IF EXISTS "saves_delete_own" ON saves;
 CREATE POLICY "saves_delete_own" ON saves FOR DELETE USING (auth.uid() = user_id);
 
-
 -- ── NOTIFICATIONS ──
--- Users can read their own notifications
+DROP POLICY IF EXISTS "notifications_select_own" ON notifications;
 CREATE POLICY "notifications_select_own" ON notifications FOR SELECT USING (auth.uid() = user_id);
--- System/admins can insert (service role or admin)
+DROP POLICY IF EXISTS "notifications_insert" ON notifications;
 CREATE POLICY "notifications_insert" ON notifications FOR INSERT WITH CHECK (true);
--- Users can update (mark as read) their own notifications
+DROP POLICY IF EXISTS "notifications_update_own" ON notifications;
 CREATE POLICY "notifications_update_own" ON notifications FOR UPDATE USING (auth.uid() = user_id);
 
 
 -- ── CREATOR REQUESTS ──
--- Admins can see all requests
+DROP POLICY IF EXISTS "creator_requests_select_admin" ON creator_requests;
 CREATE POLICY "creator_requests_select_admin" ON creator_requests FOR SELECT 
   USING (public.get_user_role() = 'admin');
--- Applicants can check their own request status by email (unauthenticated)
+
+DROP POLICY IF EXISTS "creator_requests_select_own" ON creator_requests;
 CREATE POLICY "creator_requests_select_own" ON creator_requests FOR SELECT 
   USING (true);
--- Anyone can submit a request (unauthenticated allowed via anon key)
+
+DROP POLICY IF EXISTS "creator_requests_insert" ON creator_requests;
 CREATE POLICY "creator_requests_insert" ON creator_requests FOR INSERT WITH CHECK (true);
--- Admins can update (approve/reject)
+
+DROP POLICY IF EXISTS "creator_requests_update_admin" ON creator_requests;
 CREATE POLICY "creator_requests_update_admin" ON creator_requests FOR UPDATE 
   USING (public.get_user_role() = 'admin');
 
@@ -321,30 +332,50 @@ CREATE POLICY "creator_requests_update_admin" ON creator_requests FOR UPDATE
 -- 12. ENABLE REALTIME (toggle in Supabase Dashboard > Database > Replication)
 -- These ALTER statements enable the tables for Supabase Realtime
 -- ============================================================================
-ALTER PUBLICATION supabase_realtime ADD TABLE posts;
-ALTER PUBLICATION supabase_realtime ADD TABLE comments;
-ALTER PUBLICATION supabase_realtime ADD TABLE votes;
-ALTER PUBLICATION supabase_realtime ADD TABLE follows;
-ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
-ALTER PUBLICATION supabase_realtime ADD TABLE creator_requests;
+-- 12. ENABLE REALTIME
+-- ============================================================================
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'posts') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE posts;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'comments') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE comments;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'votes') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE votes;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'follows') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE follows;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'notifications') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'creator_requests') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE creator_requests;
+  END IF;
+END $$;
 
 
 -- ============================================================================
--- 13. STORAGE BUCKET FOR MEDIA
+-- 14. STORAGE BUCKET FOR MEDIA
 -- ============================================================================
 INSERT INTO storage.buckets (id, name, public) 
-VALUES ('media', 'media', true)
+VALUES ('media', 'media', true), ('videos', 'videos', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Allow authenticated users to upload
+DROP POLICY IF EXISTS "media_upload" ON storage.objects;
 CREATE POLICY "media_upload" ON storage.objects FOR INSERT 
-  WITH CHECK (bucket_id = 'media' AND auth.role() = 'authenticated');
+  WITH CHECK (bucket_id IN ('media', 'videos') AND auth.role() = 'authenticated');
 -- Allow public read
+DROP POLICY IF EXISTS "media_read" ON storage.objects;
 CREATE POLICY "media_read" ON storage.objects FOR SELECT 
-  USING (bucket_id = 'media');
+  USING (bucket_id IN ('media', 'videos'));
 -- Allow users to delete their own uploads
+DROP POLICY IF EXISTS "media_delete" ON storage.objects;
 CREATE POLICY "media_delete" ON storage.objects FOR DELETE 
-  USING (bucket_id = 'media' AND auth.uid()::text = (storage.foldername(name))[1]);
+  USING (bucket_id IN ('media', 'videos') AND auth.uid()::text = (storage.foldername(name))[1]);
 
 
 -- ============================================================================

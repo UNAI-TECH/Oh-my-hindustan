@@ -23,6 +23,7 @@ export interface FeedItem {
   category?: string | null;
   excerpt?: string | null;
   videoDuration?: string | null;
+  videoUrl?: string | null;
   content?: string | null;
   quote?: string | null;
   isTrending?: boolean;

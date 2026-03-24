@@ -98,7 +98,7 @@ export const AppApi = {
 
     const { data, error, count } = await supabase
       .from('Post')
-      .select('*, author:User!authorId(id, username, avatarUrl), Vote(type), Comment(id)', { count: 'exact' })
+      .select('id, title, content, type, thumbnail, category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, author:User!authorId(id, username, avatarUrl), Vote:Vote(type), Comment:Comment(id)', { count: 'exact' })
       .order('createdAt', { ascending: false })
       .range(from, to);
 
@@ -120,12 +120,13 @@ export const AppApi = {
       updatedAt: post.updatedAt,
       content: post.content,
       subtitle: post.subtitle,
-      video_duration: post.videoDuration,
-      is_trending: post.isTrending,
+      videoDuration: post.videoDuration,
+      videoUrl: post.videoUrl || null,
+      isTrending: post.isTrending,
       author: post.author ? {
-        id: post.author.id,
-        username: post.author.username || 'Creator',
-        avatarUrl: post.author.avatarUrl,
+        id: (Array.isArray(post.author) ? post.author[0]?.id : (post.author as any).id),
+        username: (Array.isArray(post.author) ? post.author[0]?.username : (post.author as any).username) || 'Creator',
+        avatarUrl: (Array.isArray(post.author) ? post.author[0]?.avatarUrl : (post.author as any).avatarUrl),
       } : null,
       community: {
         id: post.category || 'general',
@@ -145,7 +146,7 @@ export const AppApi = {
   getPost: async (id: string) => {
     const { data: post, error } = await supabase
       .from('Post')
-      .select('*, author:User!authorId(id, username, avatarUrl), Vote(type), Comment(id, content, userId, createdAt)')
+      .select('id, title, content, type, thumbnail, category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, author:User!authorId(id, username, avatarUrl), Vote:Vote(type), Comment:Comment(id, content, userId, createdAt)')
       .eq('id', id)
       .single();
 
@@ -165,13 +166,14 @@ export const AppApi = {
       hotScore: 0,
       category: post.category || 'General',
       subtitle: post.subtitle,
-      video_duration: post.videoDuration,
+      videoDuration: post.videoDuration,
+      videoUrl: post.videoUrl || null,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
       author: post.author ? {
-        id: post.author.id,
-        username: post.author.username || 'Creator',
-        avatarUrl: post.author.avatarUrl,
+        id: (Array.isArray(post.author) ? post.author[0]?.id : (post.author as any).id),
+        username: (Array.isArray(post.author) ? post.author[0]?.username : (post.author as any).username) || 'Creator',
+        avatarUrl: (Array.isArray(post.author) ? post.author[0]?.avatarUrl : (post.author as any).avatarUrl),
       } : null,
       community: {
         id: post.category || 'general',
@@ -204,7 +206,8 @@ export const AppApi = {
         type: n.type,
         isRead: n.isRead,
         createdAt: n.createdAt,
-        payload: { title: n.title, message: n.message },
+        targetId: n.targetId || '',
+        payload: { title: n.title, message: n.message, body: n.message, referenceId: n.targetId },
       })),
       total: count || 0,
       page,
@@ -348,16 +351,88 @@ export const AppApi = {
   },
 
   /**
+   * Mark a single notification as read
+   */
+  markNotificationRead: async (notificationId: string) => {
+    const { error } = await supabase
+      .from('Notification')
+      .update({ isRead: true })
+      .eq('id', notificationId);
+    if (error) throw error;
+  },
+
+  /**
+   * Mark all notifications as read for the current user
+   */
+  markAllNotificationsRead: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) throw new Error('Not authenticated');
+
+    const { error } = await supabase
+      .from('Notification')
+      .update({ isRead: true })
+      .eq('userId', user.id)
+      .eq('isRead', false);
+    if (error) throw error;
+  },
+
+  /**
+   * Delete notifications by IDs
+   */
+  deleteNotifications: async (ids: string[]) => {
+    const { error } = await supabase
+      .from('Notification')
+      .delete()
+      .in('id', ids);
+    if (error) throw error;
+  },
+
+  /**
+   * Subscribe to real-time notification updates for a user
+   */
+  subscribeToNotifications: (userId: string, callback: (payload: any) => void) => {
+    return supabase
+      .channel(`notifications-${userId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'Notification',
+        filter: `userId=eq.${userId}`,
+      }, callback)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'Notification',
+        filter: `userId=eq.${userId}`,
+      }, callback)
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'Notification',
+        filter: `userId=eq.${userId}`,
+      }, callback)
+      .subscribe();
+  },
+
+  /**
    * Subscribe to real-time feed updates
    */
   subscribeToFeedUpdates: (callback: (payload: any) => void) => {
+    // Debounce rapid updates
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedCallback = (payload: any) => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => callback(payload), 300);
+    };
+
     return supabase
       .channel('viewer-feed')
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'Post',
-      }, callback)
+      }, debouncedCallback)
       .subscribe();
   },
 
@@ -452,7 +527,7 @@ export const CreatorApi = {
       category: post.category,
       thumbnail: post.thumbnail,
       subtitle: post.subtitle,
-      video_duration: post.videoDuration,
+      videoDuration: post.videoDuration,
       voteCount: post.Vote?.length || 0,
       commentCount: post.Comment?.length || 0,
       createdAt: post.createdAt,
@@ -537,7 +612,7 @@ export const CreatorApi = {
 
     const { data: comments, error } = await supabase
       .from('Comment')
-      .select('*, User!userId(id, username, avatarUrl)')
+      .select('*, author:User!userId(id, username, avatarUrl)')
       .in('postId', postIds)
       .order('createdAt', { ascending: false });
 
@@ -548,8 +623,8 @@ export const CreatorApi = {
       content: c.content,
       postId: c.postId,
       postTitle: postMap[c.postId] || 'Unknown Post',
-      username: c.User?.username || 'Anonymous',
-      avatarUrl: c.User?.avatarUrl,
+      username: (Array.isArray(c.author) ? c.author[0]?.username : c.author?.username) || 'Anonymous',
+      avatarUrl: Array.isArray(c.author) ? c.author[0]?.avatarUrl : c.author?.avatarUrl,
       createdAt: c.createdAt,
     }));
   },

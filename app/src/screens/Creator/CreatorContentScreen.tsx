@@ -119,7 +119,7 @@ export default function CreatorContentScreen() {
       ) : (
         <FlatList
           data={posts}
-          keyExtractor={item => item.id}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
           renderItem={renderItem}
           contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}

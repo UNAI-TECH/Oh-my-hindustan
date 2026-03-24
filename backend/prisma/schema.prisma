@@ -57,6 +57,7 @@ model Post {
   category      String?
   thumbnail     String?
   videoDuration String?
+  videoUrl      String?
   authorId      String
   author        User           @relation(fields: [authorId], references: [id])
   votes         Vote[]

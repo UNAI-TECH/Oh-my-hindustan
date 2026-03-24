@@ -9,6 +9,9 @@ import { FeedItemType } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { generateUUID } from '../../utils/uuid';
+import RenderHtml from 'react-native-render-html';
+import { useWindowDimensions } from 'react-native';
+import { WebView } from 'react-native-webview';
 
 const formatVoteCount = (n: number): string => {
   if (n >= 10000) {
@@ -21,6 +24,7 @@ const formatVoteCount = (n: number): string => {
 export default function ArticleDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
   const { id } = route.params || {};
   const { userProfile } = useAuth();
   
@@ -231,8 +235,31 @@ export default function ArticleDetailScreen() {
 
   const { title, category, authorName, authorImage, subtitle, thumbnail, type, content, excerpt, quote } = selectedArticle;
   const onShare = async () => { try { await Share.share({ message: `${title}\n\nRead more at Oh My Hindustan` }); } catch (e) {} };
-  const paragraphs = (content || excerpt || "Content not available.").split('\n\n');
   const netVotes = upvotes - downvotes;
+
+  const htmlTagsStyles = {
+    p: {
+      color: Colors.DarkText,
+      fontSize: 16,
+      lineHeight: 28,
+      marginBottom: 24,
+    },
+    b: { fontWeight: 'bold' as const },
+    strong: { fontWeight: 'bold' as const },
+    i: { fontStyle: 'italic' as const },
+    em: { fontStyle: 'italic' as const },
+    u: { textDecorationLine: 'underline' as const },
+    blockquote: {
+      borderLeftWidth: 4,
+      borderLeftColor: Colors.PrimaryRed,
+      backgroundColor: Colors.PrimaryRedAlpha5,
+      padding: 16,
+      fontStyle: 'italic' as const,
+      marginVertical: 16,
+    },
+    ul: { marginVertical: 16 },
+    ol: { marginVertical: 16 },
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -275,29 +302,37 @@ export default function ArticleDetailScreen() {
 
         {thumbnail && (
           <View style={{ width: '100%', aspectRatio: 16/9 }}>
-            <Image source={{ uri: thumbnail }} style={{ flex: 1, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 }} />
-            {type === FeedItemType.VIDEO && (
-              <View style={styles.playOverlay}>
-                <View style={styles.playButton}>
-                  <Ionicons name="play" size={24} color={Colors.PrimaryRed} style={{ marginLeft: 4 }} />
-                </View>
-              </View>
+            {type === FeedItemType.VIDEO && selectedArticle.videoUrl ? (
+            <View style={{ flex: 1, backgroundColor: 'black', borderBottomLeftRadius: 24, borderBottomRightRadius: 24, height: 250 }}>
+              <WebView
+                source={{ uri: selectedArticle.videoUrl }}
+                style={{ flex: 1 }}
+                allowsFullscreenVideo={true}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+                originWhitelist={['*']}
+              />
+            </View>            ) : (
+              <>
+                <Image source={{ uri: thumbnail }} style={{ flex: 1, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 }} />
+                {type === FeedItemType.VIDEO && (
+                  <View style={styles.playOverlay}>
+                    <View style={styles.playButton}>
+                      <Ionicons name="play" size={24} color={Colors.PrimaryRed} style={{ marginLeft: 4 }} />
+                    </View>
+                  </View>
+                )}
+              </>
             )}
           </View>
         )}
 
         <View style={{ padding: 24 }}>
-          {paragraphs.map((p: string, index: number) => (
-            <React.Fragment key={index}>
-              <Text style={styles.paragraph}>{p}</Text>
-              {index === 0 && quote && (
-                <View style={styles.quoteBox}>
-                  <View style={styles.quoteAccent} />
-                  <Text style={styles.quoteText}>"{quote}"</Text>
-                </View>
-              )}
-            </React.Fragment>
-          ))}
+          <RenderHtml
+            contentWidth={width - 48}
+            source={{ html: selectedArticle.content || selectedArticle.excerpt || "Content not available." }}
+            tagsStyles={htmlTagsStyles}
+          />
         </View>
       </ScrollView>
 
@@ -346,7 +381,7 @@ export default function ArticleDetailScreen() {
               ) : (
                 <FlatList
                   data={comments}
-                  keyExtractor={(item) => item.id}
+                  keyExtractor={(item, index) => `${item.id}-${index}`}
                   style={{ maxHeight: 300 }}
                   renderItem={({ item }) => (
                     <View style={styles.commentItem}>

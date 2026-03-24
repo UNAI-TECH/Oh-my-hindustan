@@ -183,9 +183,9 @@ export default function CreatorProfileScreen() {
               <Text style={{ color: Colors.Slate500, marginTop: 12 }}>No posts yet</Text>
             </View>
           ) : (
-            posts.map(item => (
+            posts.map((item, idx) => (
               <TouchableOpacity 
-                key={item.id} 
+                key={`post-${item.id}-${idx}`} 
                 style={styles.postCard}
                 onPress={() => navigation.navigate('ArticleDetail', { id: item.id })}
               >
