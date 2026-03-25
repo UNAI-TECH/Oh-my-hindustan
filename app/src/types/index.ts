@@ -16,10 +16,14 @@ export interface FeedItem {
   subtitle?: string | null;
   authorName?: string | null;
   authorImage?: string | null;
+  authorId?: string | null;
   thumbnail?: string | null;
   timestamp?: string | null;
-  votes?: string | null;
+  votes?: number | null;
+  upvoteCount?: number;
+  downvoteCount?: number;
   comments?: number | null;
+  repostCount?: number;
   category?: string | null;
   excerpt?: string | null;
   videoDuration?: string | null;

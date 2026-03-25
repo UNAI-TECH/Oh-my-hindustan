@@ -86,7 +86,7 @@ export default function UsernameSetupScreen() {
     setErrorMsg(null);
     try {
       await updateOnboardingProfile({ username });
-      navigation.navigate('LanguageSelection');
+      navigation.navigate('ProfileImageUpload');
     } catch (e: any) {
       setErrorMsg(e.message || 'Failed to save username. Please try again.');
     }

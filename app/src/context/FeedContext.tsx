@@ -53,11 +53,6 @@ const mapPostType = (type: string): FeedItemType => {
 };
 
 const toFeedItem = (post: any): FeedItem => {
-  const voteCount = post.voteCount || 0;
-  const calculatedVotes = voteCount > 1000 
-    ? (voteCount / 1000).toFixed(1) + 'k' 
-    : voteCount.toString();
-    
   return {
     id: post.id,
     type: mapPostType(post.type),
@@ -65,11 +60,15 @@ const toFeedItem = (post: any): FeedItem => {
     subtitle: post.subtitle || "Oh My Hindustan",
     authorName: post.author?.username || "Creator",
     authorImage: post.author?.avatarUrl || "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&q=80&w=800",
+    authorId: post.authorId || post.author?.id || null,
     thumbnail: post.thumbnail || post.mediaUrl || null,
     category: post.category || "General",
     timestamp: formatTimeAgo(post.createdAt),
-    votes: calculatedVotes,
+    votes: post.voteCount || 0,
+    upvoteCount: post.upvoteCount || 0,
+    downvoteCount: post.downvoteCount || 0,
     comments: post.commentCount || 0,
+    repostCount: post.repostCount || 0,
     excerpt: post.content?.substring(0, 150) || null,
     content: post.content,
     videoDuration: post.video_duration || null,

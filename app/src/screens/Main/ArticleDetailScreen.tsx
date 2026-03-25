@@ -33,6 +33,8 @@ export default function ArticleDetailScreen() {
   const [downvotes, setDownvotes] = useState(0);
   const [myVote, setMyVote] = useState<1 | -1 | 0>(0);
   const [isSaved, setIsSaved] = useState(false);
+  const [isReposted, setIsReposted] = useState(false);
+  const [repostCount, setRepostCount] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
   const [commentsCount, setCommentsCount] = useState(0);
   const [showComments, setShowComments] = useState(false);
@@ -54,8 +56,10 @@ export default function ArticleDetailScreen() {
         const { count: upCount } = await supabase.from('Vote').select('id', { count: 'exact', head: true }).eq('postId', id).eq('type', 1);
         // Downvotes
         const { count: downCount } = await supabase.from('Vote').select('id', { count: 'exact', head: true }).eq('postId', id).eq('type', -1);
-        // Comments count
-        const { count: cCount } = await supabase.from('Comment').select('id', { count: 'exact', head: true }).eq('postId', id);
+        // Comments count (excluding reposts)
+        const { count: cCount } = await supabase.from('Comment').select('id', { count: 'exact', head: true }).eq('postId', id).neq('content', '[SYSTEM_REPOST]');
+        // Repost count
+        const { count: rCount } = await supabase.from('Comment').select('id', { count: 'exact', head: true }).eq('postId', id).eq('content', '[SYSTEM_REPOST]');
         // Get post author
         const { data: postData } = await supabase.from('Post').select('authorId').eq('id', id).single();
         if (postData?.authorId) setPostAuthorId(postData.authorId);
@@ -63,13 +67,16 @@ export default function ArticleDetailScreen() {
         setUpvotes(upCount || 0);
         setDownvotes(downCount || 0);
         setCommentsCount(cCount || 0);
+        setRepostCount(rCount || 0);
 
         // User-specific interactions (if logged in)
         if (userProfile?.id) {
           const { data: myVoteData } = await supabase.from('Vote').select('type').eq('postId', id).eq('userId', userProfile.id).maybeSingle();
           const { data: savedData } = await supabase.from('Save').select('id').eq('postId', id).eq('userId', userProfile.id).maybeSingle();
+          const { data: repostData } = await supabase.from('Comment').select('id').eq('postId', id).eq('userId', userProfile.id).eq('content', '[SYSTEM_REPOST]').maybeSingle();
           setMyVote(myVoteData?.type || 0);
           setIsSaved(!!savedData);
+          setIsReposted(!!repostData);
           
           if (postData?.authorId) {
             const { data: followData } = await supabase.from('Follow').select('id').eq('followerId', userProfile.id).eq('followingId', postData.authorId).maybeSingle();
@@ -160,6 +167,33 @@ export default function ArticleDetailScreen() {
     }
   };
 
+  const handleRepost = async () => {
+    if (!userProfile?.id) { Alert.alert('Login Required', 'Please login to repost'); return; }
+    try {
+      if (isReposted) {
+        const { error } = await supabase.from('Comment').delete().eq('userId', userProfile.id).eq('postId', id).eq('content', '[SYSTEM_REPOST]');
+        if (error) throw error;
+      } else {
+        const now = new Date().toISOString();
+        const { error } = await supabase.from('Comment').insert({
+          id: generateUUID(),
+          userId: userProfile.id,
+          postId: id,
+          content: '[SYSTEM_REPOST]',
+          createdAt: now,
+          updatedAt: now,
+        });
+        if (error) throw error;
+        createNotification('REPOST', 'New Repost', `${userProfile.username || 'Someone'} reposted your content`);
+      }
+      setIsReposted(!isReposted);
+      if (!isReposted) setRepostCount(c => c + 1);
+      else setRepostCount(c => Math.max(0, c - 1));
+    } catch (e: any) {
+      Alert.alert('Repost Failed', e?.message || 'Could not repost');
+    }
+  };
+
   const handleFollow = async () => {
     if (!userProfile?.id || !postAuthorId) { Alert.alert('Login Required', 'Please login to follow creators'); return; }
     try {
@@ -189,6 +223,7 @@ export default function ArticleDetailScreen() {
         .from('Comment')
         .select('*, User:userId(id, username, avatarUrl)')
         .eq('postId', id)
+        .neq('content', '[SYSTEM_REPOST]')
         .order('createdAt', { ascending: false });
       if (error) console.warn('Fetch comments error:', error.message);
       setComments(data || []);
@@ -350,6 +385,13 @@ export default function ArticleDetailScreen() {
               <Ionicons name="arrow-down" size={20} color={myVote === -1 ? '#3B82F6' : Colors.Slate500} />
             </TouchableOpacity>
           </View>
+          
+          <View style={styles.divider} />
+
+          <TouchableOpacity style={styles.commentControl} onPress={handleRepost}>
+            <Ionicons name="repeat" size={20} color={isReposted ? Colors.PrimaryRed : "gray"} />
+            <Text style={{ marginLeft: 6, fontWeight: 'bold', color: isReposted ? Colors.PrimaryRed : 'gray' }}>{repostCount}</Text>
+          </TouchableOpacity>
           
           <View style={styles.divider} />
           

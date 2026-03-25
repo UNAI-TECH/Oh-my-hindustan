@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '../../theme/Theme';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function PersonalDetailsScreen() {
   const navigation = useNavigation<any>();
-  const { userProfile } = useAuth();
+  const { userProfile, uploadProfileImage } = useAuth();
   const [dbUser, setDbUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -23,6 +26,7 @@ export default function PersonalDetailsScreen() {
           .eq('id', userProfile.id)
           .single();
         setDbUser(data);
+        if (data?.avatarUrl) setCurrentAvatarUrl(data.avatarUrl);
       } catch (e) {
         console.warn('Failed to fetch user details:', e);
       } finally {
@@ -31,6 +35,43 @@ export default function PersonalDetailsScreen() {
     };
     fetchUser();
   }, [userProfile?.id]);
+
+  const handleUpdateProfilePicture = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Please allow access to your photos to update your profile picture.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setUploadingImage(true);
+        const publicUrl = await uploadProfileImage(result.assets[0].uri);
+        
+        // Update the User table
+        const { error: updateErr } = await supabase
+          .from('User')
+          .update({ avatarUrl: publicUrl, updatedAt: new Date().toISOString() })
+          .eq('id', userProfile.id);
+
+        if (updateErr) throw updateErr;
+
+        setCurrentAvatarUrl(publicUrl);
+        Alert.alert('Success', 'Profile picture updated successfully!');
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to update profile picture. Please try again.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -42,12 +83,16 @@ export default function PersonalDetailsScreen() {
     );
   }
 
-  const fullName = userProfile?.username || dbUser?.username || 'N/A';
+  // Get full name from Supabase auth user_metadata or User table
+  const authFullName = userProfile?.user_metadata?.full_name || userProfile?.full_name;
+  const fullName = authFullName || dbUser?.username || 'N/A';
   const username = dbUser?.username || userProfile?.username || 'N/A';
   const email = dbUser?.email || userProfile?.email || 'N/A';
   const phone = dbUser?.phone || userProfile?.phone || 'Not set';
-  const topics = userProfile?.selected_topics || [];
-  const language = userProfile?.preferred_language || 'English';
+  const topics = dbUser?.selected_topics || userProfile?.selected_topics || [];
+  const language = dbUser?.preferred_language || userProfile?.preferred_language || 'English';
+  const displayName = username || email?.split('@')[0] || 'User';
+  const avatarUrl = currentAvatarUrl || dbUser?.avatarUrl || userProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E53935&color=fff&size=200`;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -60,6 +105,30 @@ export default function PersonalDetailsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        {/* Profile Picture Section */}
+        <View style={styles.profilePictureSection}>
+          <View style={styles.avatarWrapper}>
+            <Image source={{ uri: avatarUrl }} style={styles.profileAvatar} />
+            {uploadingImage && (
+              <View style={styles.uploadOverlay}>
+                <ActivityIndicator size="small" color="white" />
+              </View>
+            )}
+          </View>
+          <TouchableOpacity 
+            style={styles.updatePhotoBtn} 
+            onPress={handleUpdateProfilePicture}
+            disabled={uploadingImage}
+          >
+            <Ionicons name="camera-outline" size={18} color={Colors.PrimaryRed} />
+            <Text style={styles.updatePhotoText}>
+              {uploadingImage ? 'Uploading...' : 'Update Profile Picture'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.sectionDivider} />
+
         <DetailRow label="Full Name" value={fullName} icon="person-outline" />
         <DetailRow label="Username" value={`@${username}`} icon="at-outline" />
         <DetailRow label="Email ID" value={email} icon="mail-outline" />
@@ -108,6 +177,46 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   header: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC' },
   headerTitle: { fontSize: 20, fontWeight: 'bold' },
+  profilePictureSection: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  avatarWrapper: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  profileAvatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: Colors.PrimaryRed,
+  },
+  uploadOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 50,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  updatePhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: 'rgba(229, 57, 53, 0.08)',
+    gap: 8,
+  },
+  updatePhotoText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.PrimaryRed,
+  },
   detailRow: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: 'white',
     padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 12,

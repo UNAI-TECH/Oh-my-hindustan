@@ -19,13 +19,15 @@ import { useAuth } from '../../context/AuthContext';
 
 export default function SignUpScreen() {
   const navigation = useNavigation<any>();
-  const { register, signInWithGoogle, isLoading, error, signupSuccess, isAuthenticated, needsOnboarding, clearState } = useAuth();
+  const { register, signInWithGoogle, isLoading, error, isAuthenticated, needsOnboarding, clearState } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     clearState();
@@ -43,11 +45,7 @@ export default function SignUpScreen() {
 
   useEffect(() => {
     if (error) {
-      let message = error;
-      if (error.includes('email') || error.includes('sending confirmation')) {
-        message += '\n\nWhy this happens: Your database (Supabase) has reached its 3 emails-per-hour limit on the default server. Wait 1 hour or configure a custom SMTP in Supabase to fix this.';
-      }
-      Alert.alert('Authentication Failed', message);
+      Alert.alert('Authentication Failed', error);
     }
   }, [error]);
 
@@ -66,7 +64,6 @@ export default function SignUpScreen() {
     }
     setLocalError(null);
     
-    // We do not navigate manually; AuthContext will auto-login and handle onboarding routing
     await register(email.trim(), name.trim(), password, mobile.trim());
   };
 
@@ -118,23 +115,49 @@ export default function SignUpScreen() {
             keyboardType="phone-pad"
           />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="#64748B"
-            value={password}
-            onChangeText={(text) => { setPassword(text); setLocalError(null); }}
-            secureTextEntry
-          />
+          {/* Password with eye icon */}
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Password"
+              placeholderTextColor="#64748B"
+              value={password}
+              onChangeText={(text) => { setPassword(text); setLocalError(null); }}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity 
+              style={styles.eyeIcon} 
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Ionicons 
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
+                size={22} 
+                color="#64748B" 
+              />
+            </TouchableOpacity>
+          </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            placeholderTextColor="#64748B"
-            value={confirmPassword}
-            onChangeText={(text) => { setConfirmPassword(text); setLocalError(null); }}
-            secureTextEntry
-          />
+          {/* Confirm Password with eye icon */}
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Confirm Password"
+              placeholderTextColor="#64748B"
+              value={confirmPassword}
+              onChangeText={(text) => { setConfirmPassword(text); setLocalError(null); }}
+              secureTextEntry={!showConfirmPassword}
+            />
+            <TouchableOpacity 
+              style={styles.eyeIcon} 
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+            >
+              <Ionicons 
+                name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} 
+                size={22} 
+                color="#64748B" 
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {displayError && (
@@ -231,6 +254,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000000',
     backgroundColor: '#FFFFFF',
+  },
+  passwordContainer: {
+    width: '100%',
+    height: 56,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  passwordInput: {
+    flex: 1,
+    height: '100%',
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: '#000000',
+  },
+  eyeIcon: {
+    paddingHorizontal: 14,
+    height: '100%',
+    justifyContent: 'center',
   },
   errorText: {
     color: '#DC2626',

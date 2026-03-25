@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ScrollView, TouchableOpacity, Image, Share, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ScrollView, TouchableOpacity, Image, Share, ActivityIndicator, Platform, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Colors } from '../../theme/Theme';
@@ -11,7 +11,7 @@ import { FeedItemType, FeedItem } from '../../types';
 
 export default function HomeFeedScreen() {
   const navigation = useNavigation<any>();
-  const { feedItems, isLoading } = useFeed();
+  const { feedItems, isLoading, isRefreshing, refreshFeed } = useFeed();
   const { unreadCount } = useNotifications();
   
   const [selectedTab, setSelectedTab] = useState('Trending');
@@ -91,6 +91,14 @@ export default function HomeFeedScreen() {
           keyExtractor={(item, index) => `${item.id}-${index}`}
           contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
           ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+          refreshControl={
+            <RefreshControl 
+              refreshing={isRefreshing} 
+              onRefresh={refreshFeed} 
+              colors={[Colors.PrimaryRed]} 
+              tintColor={Colors.PrimaryRed}
+            />
+          }
           renderItem={({ item }) => (
             <FeedCard 
               item={item} 
@@ -106,19 +114,31 @@ export default function HomeFeedScreen() {
       )}
 
       <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
-        <AppBottomNavBar currentRoute="Home" onNavigate={(route) => navigation.navigate(route)} />
+        <AppBottomNavBar 
+          currentRoute="Home" 
+          onNavigate={(route) => navigation.navigate(route)} 
+          onDoubleTapHome={refreshFeed}
+        />
       </View>
     </SafeAreaView>
   );
 }
 
+const formatCount = (n: number): string => {
+  if (n >= 10000) return `${(n / 1000).toFixed(1)}K`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return n.toString();
+};
+
 const FeedCard = ({ item, onClick, onShare }: { item: FeedItem, onClick: () => void, onShare: () => void }) => {
-  const [votes, setVotes] = useState<number>(parseFloat(item.votes?.toString().replace('k', '') || '0'));
-  const [commentsCount, setCommentsCount] = useState<number>(parseInt(item.comments?.toString() || '0') || 0);
+  const upvotes = item.upvoteCount || 0;
+  const downvotes = item.downvoteCount || 0;
+  const commentCount = item.comments || 0;
+  const repostCount = item.repostCount || 0;
+  const netVotes = upvotes - downvotes;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onClick} activeOpacity={0.8}>
-      {/* Simplify rendering based on type for brevity, but matching UI closely */}
       <View style={{ padding: 16 }}>
         {item.type === FeedItemType.PROMO ? (
           <View style={{ backgroundColor: Colors.PrimaryRed, padding: 24, borderRadius: 12, alignItems: 'center' }}>
@@ -142,8 +162,28 @@ const FeedCard = ({ item, onClick, onShare }: { item: FeedItem, onClick: () => v
                <Image source={{ uri: item.authorImage }} style={{ width: 40, height: 40, borderRadius: 20 }} />
                <View style={{ flex: 1, marginLeft: 12 }}>
                  <Text style={{ fontWeight: 'bold', fontSize: 16 }} numberOfLines={1}>{item.title}</Text>
-                 <Text style={{ color: Colors.Slate500, fontSize: 12 }}>{item.authorName} • 456k views</Text>
+                 <Text style={{ color: Colors.Slate500, fontSize: 12 }}>{item.authorName} • {item.timestamp}</Text>
                </View>
+            </View>
+            {/* Engagement Bar */}
+            <View style={styles.engagementBar}>
+              <View style={styles.engagementItem}>
+                <Ionicons name="arrow-up" size={16} color={Colors.PrimaryRed} />
+                <Text style={styles.engagementCount}>{formatCount(upvotes)}</Text>
+                <Ionicons name="arrow-down" size={16} color={Colors.Slate400} />
+                <Text style={[styles.engagementCount, { color: Colors.Slate400 }]}>{formatCount(downvotes)}</Text>
+              </View>
+              <View style={styles.engagementItem}>
+                <Ionicons name="chatbubble-outline" size={15} color={Colors.Slate500} />
+                <Text style={styles.engagementCount}>{formatCount(commentCount)}</Text>
+              </View>
+              <View style={styles.engagementItem}>
+                <Ionicons name="repeat-outline" size={16} color={Colors.Slate500} />
+                <Text style={styles.engagementCount}>{formatCount(repostCount)}</Text>
+              </View>
+              <TouchableOpacity onPress={onShare} style={{ padding: 4 }}>
+                <Ionicons name="share-social-outline" size={18} color={Colors.Slate500} />
+              </TouchableOpacity>
             </View>
           </View>
         ) : (
@@ -158,18 +198,22 @@ const FeedCard = ({ item, onClick, onShare }: { item: FeedItem, onClick: () => v
               <Image source={{ uri: item.thumbnail }} style={{ width: 80, height: 80, borderRadius: 8, marginLeft: 16 }} />
             </View>
             
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 4 }}>
-                <TouchableOpacity onPress={() => setVotes(v => v + 0.1)}><Ionicons name="arrow-up" size={16} color={Colors.Slate500} /></TouchableOpacity>
-                <Text style={{ fontWeight: 'bold', fontSize: 12, marginHorizontal: 4 }}>{votes.toFixed(1)}k</Text>
-                <TouchableOpacity onPress={() => setVotes(v => Math.max(0, v - 0.1))}><Ionicons name="arrow-down" size={16} color={Colors.Slate500} /></TouchableOpacity>
+            {/* Engagement Bar */}
+            <View style={styles.engagementBar}>
+              <View style={styles.engagementItem}>
+                <Ionicons name="arrow-up" size={16} color={Colors.PrimaryRed} />
+                <Text style={styles.engagementCount}>{formatCount(upvotes)}</Text>
+                <Ionicons name="arrow-down" size={16} color={Colors.Slate400} />
+                <Text style={[styles.engagementCount, { color: Colors.Slate400 }]}>{formatCount(downvotes)}</Text>
               </View>
-              
-              <TouchableOpacity onPress={() => setCommentsCount(c => c + 1)} style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16 }}>
-                <Ionicons name="chatbubble-outline" size={16} color={Colors.Slate500} style={{ marginRight: 4 }} />
-                <Text style={{ fontSize: 14, color: Colors.Slate500 }}>{commentsCount}</Text>
-              </TouchableOpacity>
-              
+              <View style={styles.engagementItem}>
+                <Ionicons name="chatbubble-outline" size={15} color={Colors.Slate500} />
+                <Text style={styles.engagementCount}>{formatCount(commentCount)}</Text>
+              </View>
+              <View style={styles.engagementItem}>
+                <Ionicons name="repeat-outline" size={16} color={Colors.Slate500} />
+                <Text style={styles.engagementCount}>{formatCount(repostCount)}</Text>
+              </View>
               <View style={{ flex: 1 }} />
               <TouchableOpacity onPress={onShare} style={{ padding: 4, marginRight: 8 }}>
                 <Ionicons name="share-social-outline" size={20} color={Colors.Slate500} />
@@ -283,5 +327,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2
-  }
+  },
+  engagementBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  engagementItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  engagementCount: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.Slate500,
+    marginLeft: 3,
+    marginRight: 4,
+  },
 });

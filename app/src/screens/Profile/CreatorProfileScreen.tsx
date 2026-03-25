@@ -22,7 +22,7 @@ export default function CreatorProfileScreen() {
   const [postCount, setPostCount] = useState(0);
   const [isFollowed, setIsFollowed] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showOptionsSheet, setShowOptionsSheet] = useState(false);
+
 
   useEffect(() => {
     const fetchCreatorData = async () => {
@@ -111,14 +111,7 @@ export default function CreatorProfileScreen() {
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Creator</Text>
-        <View style={{ flexDirection: 'row' }}>
-           <TouchableOpacity style={{ padding: 8 }}>
-             <Ionicons name="notifications-outline" size={24} color="black" />
-           </TouchableOpacity>
-           <TouchableOpacity onPress={() => setShowOptionsSheet(true)} style={{ padding: 8 }}>
-             <Ionicons name="ellipsis-vertical" size={24} color="black" />
-           </TouchableOpacity>
-        </View>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }} bounces={false}>
@@ -215,20 +208,7 @@ export default function CreatorProfileScreen() {
         </View>
       </ScrollView>
 
-      {/* Options Bottom Sheet */}
-      {showOptionsSheet && (
-        <Modal transparent animationType="slide" visible={showOptionsSheet} onRequestClose={() => setShowOptionsSheet(false)}>
-          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowOptionsSheet(false)}>
-            <View style={styles.bottomSheet}>
-              {["Restrict", "Block", "Report", "Share this profile", "Copy profile URL"].map(opt => (
-                <TouchableOpacity key={opt} style={styles.sheetItem} onPress={() => setShowOptionsSheet(false)}>
-                  <Text style={{ fontSize: 16, color: opt === 'Report' ? 'red' : 'black' }}>{opt}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </TouchableOpacity>
-        </Modal>
-      )}
+
     </SafeAreaView>
   );
 }

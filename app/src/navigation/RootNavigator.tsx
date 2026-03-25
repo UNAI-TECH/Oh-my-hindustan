@@ -10,6 +10,7 @@ import ProfileSetupScreen from '../screens/Auth/ProfileSetupScreen';
 import UsernameSetupScreen from '../screens/Auth/UsernameSetupScreen';
 import LanguageSelectionScreen from '../screens/Auth/LanguageSelectionScreen';
 import TopicSelectionScreen from '../screens/Auth/TopicSelectionScreen';
+import ProfileImageUploadScreen from '../screens/Auth/ProfileImageUploadScreen';
 
 // Main / Detail Screens
 import HomeFeedScreen from '../screens/Main/HomeFeedScreen';
@@ -22,6 +23,7 @@ import NotificationScreen from '../screens/Other/NotificationScreen';
 import InterestsSelectionScreen from '../screens/Other/InterestsSelectionScreen';
 import SettingsScreen from '../screens/Other/SettingsScreen';
 import PersonalDetailsScreen from '../screens/Other/PersonalDetailsScreen';
+import PrivacySecurityScreen from '../screens/Other/PrivacySecurityScreen';
 import SearchScreen from '../screens/Other/SearchScreen';
 
 // Creator Studio Screens
@@ -57,6 +59,7 @@ export default function RootNavigator() {
       <Stack.Screen name="UsernameSetup" component={UsernameSetupScreen} options={{ animation: 'slide_from_right', gestureEnabled: false }} />
       <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="TopicSelection" component={TopicSelectionScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="ProfileImageUpload" component={ProfileImageUploadScreen} options={{ animation: 'slide_from_right' }} />
 
       {/* Main Tabs Equivalent Screens */}
       <Stack.Screen name="Home" component={HomeFeedScreen} />
@@ -71,6 +74,7 @@ export default function RootNavigator() {
       <Stack.Screen name="InterestsSelection" component={InterestsSelectionScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="PrivacySecurity" component={PrivacySecurityScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="Search" component={SearchScreen} />
       
       {/* Creator Studio Screens */}

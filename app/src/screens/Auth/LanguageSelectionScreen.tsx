@@ -50,6 +50,8 @@ export default function LanguageSelectionScreen() {
         <View style={styles.stepIndicator}>
           <View style={[styles.stepDot, styles.stepDotCompleted]} />
           <View style={[styles.stepLine, styles.stepLineCompleted]} />
+          <View style={[styles.stepDot, styles.stepDotCompleted]} />
+          <View style={[styles.stepLine, styles.stepLineCompleted]} />
           <View style={[styles.stepDot, styles.stepDotActive]} />
           <View style={styles.stepLine} />
           <View style={styles.stepDot} />

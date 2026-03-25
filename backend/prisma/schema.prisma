@@ -41,6 +41,7 @@ model User {
   votes         Vote[]
   comments      Comment[]
   saves         Save[]
+  reposts       Repost[]
   notifications Notification[]
   followers     Follow[]       @relation("following")
   following     Follow[]       @relation("follower")
@@ -63,6 +64,7 @@ model Post {
   votes         Vote[]
   comments      Comment[]
   saves         Save[]
+  reposts       Repost[]
   isTrending    Boolean        @default(false)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -141,5 +143,16 @@ model CreatorRequest {
   adminMessage String?       // Optional message from admin when rejecting/approving
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+}
+
+model Repost {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
 }
 

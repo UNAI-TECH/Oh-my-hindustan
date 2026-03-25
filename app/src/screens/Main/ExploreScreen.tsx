@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AppBottomNavBar from '../../components/BottomNavBar';
 import { useFeed } from '../../context/FeedContext';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
 import { FeedItemType, FeedItem } from '../../types';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -22,6 +23,7 @@ export default function ExploreScreen() {
   const navigation = useNavigation<any>();
   const { feedItems, isLoading: feedLoading } = useFeed();
   const { isAuthenticated, userProfile } = useAuth();
+  const { unreadCount } = useNotifications();
   const [followedCreators, setFollowedCreators] = useState<FollowedCreator[]>([]);
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [refreshing, setRefreshing] = useState(false);
@@ -157,6 +159,29 @@ export default function ExploreScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {/* JAN SAMVAD Header */}
+      <View style={styles.header}>
+        <View style={styles.headerTitle}>
+          <View style={styles.logoBox}>
+            <Ionicons name="globe" size={20} color="white" />
+          </View>
+          <Text style={styles.headerText}>JAN SAMVAD</Text>
+        </View>
+        <View style={styles.headerIcons}>
+          <TouchableOpacity onPress={() => navigation.navigate('Search')} style={styles.headerIconBtn}>
+            <Ionicons name="search" size={24} color={Colors.Slate500} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={styles.headerIconBtn}>
+            <Ionicons name="notifications" size={24} color={Colors.Slate500} />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* Followed Creators Row */}
       {followedCreators.length > 0 && (
         <View style={styles.creatorsSection}>
@@ -167,7 +192,7 @@ export default function ExploreScreen() {
               style={styles.creatorItem}
               onPress={() => navigation.navigate('Search')}
             >
-              <View style={[styles.creatorAvatarRing, { borderColor: Colors.Slate300 }]}>
+              <View style={[styles.creatorAvatarRing, { borderColor: '#E2E8F0' }]}>
                 <View style={[styles.creatorAvatar, { backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }]}>
                   <Text style={{ fontSize: 11, fontWeight: 'bold', color: Colors.Slate500 }}>All</Text>
                 </View>
@@ -227,72 +252,140 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FAFAFA', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   
+  // JAN SAMVAD Header
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  headerTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoBox: {
+    backgroundColor: Colors.PrimaryRed,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  headerText: {
+    fontWeight: '900',
+    fontSize: 18,
+    color: Colors.PrimaryRed,
+    letterSpacing: 1,
+  },
+  headerIcons: {
+    flexDirection: 'row',
+  },
+  headerIconBtn: {
+    padding: 8,
+    marginLeft: 8,
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: Colors.PrimaryRed,
+    borderWidth: 1.5,
+    borderColor: 'white',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 9,
+    fontWeight: 'bold' as const,
+  },
+  
   // Creators Row
   creatorsSection: {
-    backgroundColor: 'white',
-    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
+    paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: 'rgba(0,0,0,0.03)',
   },
   creatorItem: {
     alignItems: 'center',
-    marginHorizontal: 6,
-    width: 68,
+    marginHorizontal: 8,
+    width: 64,
   },
   creatorAvatarRing: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 2.5,
-    borderColor: Colors.PrimaryRed,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1.5,
+    borderColor: Colors.PrimaryRedAlpha10 || '#FEE2E2',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 2,
   },
   creatorAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
   },
   creatorName: {
-    fontSize: 11,
-    color: '#1E293B',
-    marginTop: 5,
+    fontSize: 12,
+    color: '#0F172A',
+    marginTop: 8,
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '600',
   },
 
   // Filter Row
   filterRow: {
-    backgroundColor: 'white',
-    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: 'rgba(0,0,0,0.03)',
   },
   filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
-    marginRight: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: '#F8FAFC',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   filterChipActive: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
   },
   filterText: {
-    color: Colors.Slate600,
+    color: '#64748B',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   filterTextActive: {
-    color: 'white',
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 
   // Content Card
   contentCard: {
-    backgroundColor: 'white',
-    marginBottom: 12,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 20,
+    marginHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+    overflow: 'hidden',
   },
   thumbnailContainer: {
     position: 'relative',
@@ -302,76 +395,85 @@ const styles = StyleSheet.create({
   contentThumbnail: {
     width: '100%',
     height: '100%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   playOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.15)',
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
   durationBadge: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(15,23,42,0.85)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   durationText: {
-    color: 'white',
-    fontSize: 11,
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   typeBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: Colors.PrimaryRed,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
+    top: 12,
+    left: 12,
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    shadowColor: '#EF4444',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
   typeBadgeText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   contentInfo: {
     flexDirection: 'row',
-    padding: 12,
+    padding: 16,
     alignItems: 'flex-start',
   },
   authorAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   contentTitle: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    color: '#1E293B',
-    lineHeight: 20,
+    fontWeight: '800',
+    fontSize: 16,
+    color: '#0F172A',
+    lineHeight: 22,
+    marginBottom: 4,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 2,
     flexWrap: 'wrap',
   },
   authorText: {
-    fontSize: 12,
-    color: Colors.Slate500,
-    fontWeight: '500',
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '600',
   },
   metaDot: {
     fontSize: 12,
-    color: Colors.Slate400,
-    marginHorizontal: 4,
+    color: '#CBD5E1',
+    marginHorizontal: 6,
   },
   metaText: {
     fontSize: 12,
-    color: Colors.Slate400,
+    color: '#94A3B8',
+    fontWeight: '500',
   },
 
   // States

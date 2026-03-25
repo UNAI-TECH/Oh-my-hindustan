@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppApi } from '../api/services';
 import { useAuth } from './AuthContext';
+import { supabase } from '../lib/supabaseClient';
 
 export interface NotificationItem {
   id: string;
@@ -85,19 +86,62 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await AppApi.getNotifications(1, 50);
       const rawNotifs = response.data || [];
-      // Map using raw fields from API (which returns title/message from payload)
-      const mapped = rawNotifs.map((n: any) => ({
-        id: n.id,
-        title: n.payload?.title || 'New Notification',
-        subtitle: n.payload?.message || n.payload?.body || 'You have a new update.',
-        time: formatTimeAgo(n.createdAt),
-        imageUrl: 'https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&q=80&w=100',
-        targetId: n.payload?.referenceId || '',
-        isRead: n.isRead ?? false,
-        type: n.type || 'GENERAL',
-        createdAt: n.createdAt,
-      }));
-      setNotifications(mapped);
+      const mapped = rawNotifs.map((n: any) => {
+        const titleStr = n.title || n.payload?.title || 'New Notification';
+        const msgStr = n.message || n.payload?.message || n.payload?.body || 'You have a new update.';
+        return {
+          id: n.id,
+          title: titleStr,
+          subtitle: msgStr,
+          time: formatTimeAgo(n.createdAt),
+          imageUrl: 'https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&q=80&w=100',
+          targetId: n.targetId || n.payload?.referenceId || '',
+          isRead: n.isRead ?? false,
+          type: n.type || 'GENERAL',
+          createdAt: n.createdAt,
+        };
+      });
+
+      // Extract potential usernames
+      const usernamesArray = mapped.map((m: any) => {
+        const tWords = m.title.split(' ');
+        const mWords = m.subtitle.split(' ');
+        return tWords[0] || mWords[0];
+      }).filter(Boolean);
+
+      const uniqueNames = Array.from(new Set(usernamesArray));
+      let avatarMap: Record<string, string> = {};
+
+      if (uniqueNames.length > 0) {
+        try {
+          const { data: usersData } = await supabase
+            .from('User')
+            .select('username, avatarUrl')
+            .in('username', uniqueNames);
+          
+          if (usersData) {
+            usersData.forEach((u: any) => {
+              if (u.avatarUrl) avatarMap[u.username] = u.avatarUrl;
+            });
+          }
+        } catch(e) { console.warn('Fetch avatar error:', e); }
+      }
+
+      const finalMapped = mapped.map((m: any) => {
+        const tWords = m.title.split(' ');
+        const mWords = m.subtitle.split(' ');
+        const nameFocus = m.type === 'NEW_POST' || m.title.includes('published') ? tWords[0] : mWords[0];
+        
+        const avatar = avatarMap[nameFocus] || avatarMap[tWords[0]] || avatarMap[mWords[0]];
+        if (avatar) {
+          m.imageUrl = avatar;
+        } else {
+          m.imageUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(nameFocus || 'U')}&background=E53935&color=fff`;
+        }
+        return m;
+      });
+
+      setNotifications(finalMapped);
     } catch (e) {
       console.log('Notifications fetch error:', e);
     } finally {

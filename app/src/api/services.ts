@@ -98,42 +98,54 @@ export const AppApi = {
 
     const { data, error, count } = await supabase
       .from('Post')
-      .select('id, title, content, type, thumbnail, category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, author:User!authorId(id, username, avatarUrl), Vote:Vote(type), Comment:Comment(id)', { count: 'exact' })
+      .select('id, title, content, type, thumbnail, category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, author:User!authorId(id, username, avatarUrl), Vote:Vote(type), Comment:Comment(id, content)', { count: 'exact' })
       .order('createdAt', { ascending: false })
       .range(from, to);
 
     if (error) throw error;
 
-    const posts = (data || []).map((post: any) => ({
-      id: post.id,
-      title: post.title,
-      body: post.content,
-      type: post.type,
-      mediaUrl: post.thumbnail,
-      thumbnail: post.thumbnail,
-      authorId: post.authorId,
-      voteCount: post.Vote?.length || 0,
-      commentCount: post.Comment?.length || 0,
-      hotScore: 0,
-      category: post.category || 'General',
-      createdAt: post.createdAt,
-      updatedAt: post.updatedAt,
-      content: post.content,
-      subtitle: post.subtitle,
-      videoDuration: post.videoDuration,
-      videoUrl: post.videoUrl || null,
-      isTrending: post.isTrending,
-      author: post.author ? {
-        id: (Array.isArray(post.author) ? post.author[0]?.id : (post.author as any).id),
-        username: (Array.isArray(post.author) ? post.author[0]?.username : (post.author as any).username) || 'Creator',
-        avatarUrl: (Array.isArray(post.author) ? post.author[0]?.avatarUrl : (post.author as any).avatarUrl),
-      } : null,
-      community: {
-        id: post.category || 'general',
-        name: post.category || 'Oh My Hindustan',
-        slug: (post.category || 'general').toLowerCase().replace(/\s+/g, '-'),
-      },
-    }));
+    const posts = (data || []).map((post: any) => {
+      const votes = post.Vote || [];
+      const allComments = post.Comment || [];
+      const upvotes = votes.filter((v: any) => v.type === 1).length;
+      const downvotes = votes.filter((v: any) => v.type === -1).length;
+      const realComments = allComments.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length;
+      const reposts = allComments.filter((c: any) => c.content === '[SYSTEM_REPOST]').length;
+
+      return {
+        id: post.id,
+        title: post.title,
+        body: post.content,
+        type: post.type,
+        mediaUrl: post.thumbnail,
+        thumbnail: post.thumbnail,
+        authorId: post.authorId,
+        voteCount: upvotes - downvotes,
+        upvoteCount: upvotes,
+        downvoteCount: downvotes,
+        commentCount: realComments,
+        repostCount: reposts,
+        hotScore: 0,
+        category: post.category || 'General',
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        content: post.content,
+        subtitle: post.subtitle,
+        videoDuration: post.videoDuration,
+        videoUrl: post.videoUrl || null,
+        isTrending: post.isTrending,
+        author: post.author ? {
+          id: (Array.isArray(post.author) ? post.author[0]?.id : (post.author as any).id),
+          username: (Array.isArray(post.author) ? post.author[0]?.username : (post.author as any).username) || 'Creator',
+          avatarUrl: (Array.isArray(post.author) ? post.author[0]?.avatarUrl : (post.author as any).avatarUrl),
+        } : null,
+        community: {
+          id: post.category || 'general',
+          name: post.category || 'Oh My Hindustan',
+          slug: (post.category || 'general').toLowerCase().replace(/\s+/g, '-'),
+        },
+      };
+    });
 
     return {
       data: posts,

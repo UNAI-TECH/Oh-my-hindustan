@@ -20,7 +20,8 @@ interface AuthContextProps {
   verifySignupOtp: (email: string, token: string) => Promise<boolean>;
   signInWithGoogle: () => Promise<void>;
   checkUsernameAvailability: (username: string) => Promise<{ available: boolean; suggestions: string[] }>;
-  updateOnboardingProfile: (data: { username?: string; language?: string; topics?: string[] }) => Promise<void>;
+  updateOnboardingProfile: (data: { username?: string; language?: string; topics?: string[]; avatarUrl?: string }) => Promise<void>;
+  uploadProfileImage: (imageUri: string) => Promise<string>;
   updateProfile: (username: string, bio: string) => Promise<void>;
   clearState: () => void;
   logout: () => Promise<void>;
@@ -41,6 +42,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Guard: prevents onAuthStateChange from racing with manual Google OAuth flow
   const isHandlingOAuthRef = useRef(false);
+  // Guard: prevents onAuthStateChange from racing with registration flow
+  const isRegisteringRef = useRef(false);
 
   // ─── Fetch profile from User table ───
   const fetchProfile = async (userId: string) => {
@@ -125,9 +128,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.warn('[AUTH] onAuthStateChange:', event);
 
-      // Skip if we're currently handling Google OAuth manually
-      if (isHandlingOAuthRef.current) {
-        console.warn('[AUTH] Skipping onAuthStateChange — OAuth in progress');
+      // Skip if we're currently handling Google OAuth or Registration manually
+      if (isHandlingOAuthRef.current || isRegisteringRef.current) {
+        console.warn('[AUTH] Skipping onAuthStateChange — manual flow in progress');
         return;
       }
 
@@ -142,28 +145,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ─── Email/Mobile Password Login ───
+  // ─── Email/Mobile/Username Password Login ───
   const login = async (identifier: string, pass: string) => {
     setIsLoading(true);
     setError(null);
     try {
       let loginEmail = identifier.trim().toLowerCase();
       
-      // Look up email by phone if an @ is not present
+      // If identifier contains '@', it's already an email
       if (!loginEmail.includes('@')) {
-        const { data, error: lookupErr } = await supabase
+        // First try looking up by phone number
+        const { data: phoneData } = await supabase
           .from('User')
           .select('email')
           .eq('phone', identifier.trim())
           .maybeSingle();
           
-        if (data && data.email) {
-          loginEmail = data.email;
+        if (phoneData && phoneData.email) {
+          loginEmail = phoneData.email;
           console.warn('[AUTH] Found email for phone:', loginEmail);
         } else {
-          setError('No account found with this mobile number.');
-          setIsLoading(false);
-          return;
+          // Then try looking up by username
+          const { data: usernameData } = await supabase
+            .from('User')
+            .select('email')
+            .eq('username', loginEmail)
+            .maybeSingle();
+            
+          if (usernameData && usernameData.email) {
+            loginEmail = usernameData.email;
+            console.warn('[AUTH] Found email for username:', loginEmail);
+          } else {
+            setError('No account found with this email, mobile number, or username.');
+            setIsLoading(false);
+            return;
+          }
         }
       }
 
@@ -203,51 +219,141 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (email: string, name: string, pass: string, mobile: string) => {
     setIsLoading(true);
     setError(null);
+    isRegisteringRef.current = true; // Guard: prevent onAuthStateChange from racing
     try {
+      // ── Duplicate email check ──
+      const { data: existingEmail } = await supabase
+        .from('User')
+        .select('id')
+        .eq('email', email.trim().toLowerCase())
+        .maybeSingle();
+
+      if (existingEmail) {
+        setError('Email ID already exists. Please login instead.');
+        setIsLoading(false);
+        isRegisteringRef.current = false;
+        return false;
+      }
+
+      // ── Duplicate phone check ──
+      if (mobile.trim()) {
+        const { data: existingPhone } = await supabase
+          .from('User')
+          .select('id')
+          .eq('phone', mobile.trim())
+          .maybeSingle();
+
+        if (existingPhone) {
+          setError('Mobile number already exists. Please login instead.');
+          setIsLoading(false);
+          isRegisteringRef.current = false;
+          return false;
+        }
+      }
+
+      // Generate a unique username for the profiles trigger (avoids unique constraint conflicts)
+      const uniqueUsername = `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password: pass,
         options: {
           data: {
             full_name: name,
-            role: 'CITIZEN',
+            role: 'viewer',
+            username: uniqueUsername,
           },
         },
       });
 
       if (authError) {
         if (authError.message.includes('already registered')) {
-          setError('This email is already registered. Please login instead.');
+          setError('Email ID already exists. Please login instead.');
+        } else if (authError.message.includes('Database error')) {
+          setError('Registration failed. Please try again with a different email.');
         } else {
           setError(authError.message);
         }
+        isRegisteringRef.current = false;
         return false;
       }
 
       if (authData.user) {
-        console.warn('[AUTH] User signed up, updating phone number...');
-        // Save the mobile number to the User table
-        const { error: updateErr } = await supabase.from('User').update({ phone: mobile }).eq('id', authData.user.id);
-        if (updateErr) console.error('[AUTH] Failed to save mobile number:', updateErr);
+        console.warn('[AUTH] Auth user created:', authData.user.id);
         
-        // Let the DB trigger finish
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Fetch profile to set up session immediately
+        // Wait for any DB triggers to finish
+        await new Promise(resolve => setTimeout(resolve, 2500));
+
+        // Check if User row exists (may have been created by a DB trigger)
+        const { data: existingUser } = await supabase
+          .from('User')
+          .select('id')
+          .eq('id', authData.user.id)
+          .maybeSingle();
+
+        if (existingUser) {
+          // User row exists — update it with phone and set onboarding to false
+          console.warn('[AUTH] User row exists, updating...');
+          await supabase
+            .from('User')
+            .update({
+              phone: mobile.trim(),
+              onboarding_complete: false,
+              updatedAt: new Date().toISOString(),
+            })
+            .eq('id', authData.user.id);
+        } else {
+          // User row does NOT exist — create it
+          console.warn('[AUTH] User row does not exist, creating...');
+          const { error: insertErr } = await supabase
+            .from('User')
+            .insert({
+              id: authData.user.id,
+              email: email.trim().toLowerCase(),
+              phone: mobile.trim(),
+              role: 'CITIZEN',
+              onboarding_complete: false,
+              createdAt: new Date().toISOString(),
+            });
+          if (insertErr) {
+            console.error('[AUTH] Failed to insert User row:', insertErr);
+            // Try updating instead (maybe race condition)
+            await supabase
+              .from('User')
+              .update({
+                phone: mobile.trim(),
+                onboarding_complete: false,
+              })
+              .eq('id', authData.user.id);
+          }
+        }
+
+        // Wait a bit then fetch the profile
+        await new Promise(resolve => setTimeout(resolve, 500));
         const profile = await fetchProfile(authData.user.id);
+        
         if (profile) {
+          console.warn('[AUTH] ✅ Registration complete, onboarding_complete:', profile.onboarding_complete);
           setAuthState(profile, true);
-          setLoginSuccess(true);
+          setSignupSuccess(true);
+        } else {
+          // Even if profile fetch fails, we know onboarding is needed
+          console.warn('[AUTH] Profile not found after registration, forcing onboarding state');
+          setUserProfile({ id: authData.user.id, email: email.trim().toLowerCase(), phone: mobile.trim(), onboarding_complete: false });
+          setNeedsOnboarding(true);
+          setIsAuthenticated(true);
           setSignupSuccess(true);
         }
       }
 
       return true;
     } catch (e: any) {
+      console.error('[AUTH] Registration error:', e);
       setError('Registration failed. Please try again.');
       return false;
     } finally {
       setIsLoading(false);
+      isRegisteringRef.current = false;
     }
   };
 
@@ -420,8 +526,62 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // ─── Upload Profile Image ───
+  const uploadProfileImage = async (imageUri: string): Promise<string> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id || userProfile?.id;
+    if (!userId) throw new Error('Not authenticated');
+    if (!session?.access_token) throw new Error('No access token');
+
+    const fileExt = imageUri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg';
+    const fileName = `profile-images/${userId}/avatar_${Date.now()}.${fileExt}`;
+    const contentType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
+    const supabaseUrl = 'https://vxenjlgoatbkfrfrkoeq.supabase.co';
+    const supabaseKey = 'sb_publishable_BnXqtLVTeJtbCmI4ipng5A_kOCulArG';
+
+    try {
+      // React Native FormData with {uri, name, type} — RN reads the file natively
+      const formData = new FormData();
+      formData.append('file', {
+        uri: imageUri,
+        name: `avatar.${fileExt}`,
+        type: contentType,
+      } as any);
+
+      console.warn('[UPLOAD] Uploading to:', `${supabaseUrl}/storage/v1/object/media/${fileName}`);
+
+      const uploadResponse = await fetch(
+        `${supabaseUrl}/storage/v1/object/media/${fileName}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': supabaseKey,
+            'x-upsert': 'true',
+            // Do NOT set Content-Type — fetch sets it automatically with boundary for FormData
+          },
+          body: formData,
+        }
+      );
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error('[UPLOAD] Server error:', uploadResponse.status, errorText);
+        throw new Error(`Upload failed (${uploadResponse.status}): ${errorText}`);
+      }
+
+      // Get the public URL
+      const { data: urlData } = supabase.storage.from('media').getPublicUrl(fileName);
+      console.warn('[UPLOAD] ✅ Profile image uploaded:', urlData.publicUrl);
+      return urlData.publicUrl;
+    } catch (e: any) {
+      console.error('[UPLOAD] Profile image upload error:', e);
+      throw e;
+    }
+  };
+
   // ─── Update Profile During Onboarding ───
-  const updateOnboardingProfile = async (data: { username?: string; language?: string; topics?: string[] }) => {
+  const updateOnboardingProfile = async (data: { username?: string; language?: string; topics?: string[]; avatarUrl?: string }) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -435,6 +595,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const updateData: any = { updatedAt: new Date().toISOString() };
       if (data.username) updateData.username = data.username.toLowerCase();
       if (data.language) updateData.preferred_language = data.language;
+      if (data.avatarUrl) updateData.avatarUrl = data.avatarUrl;
       if (data.topics) {
         updateData.selected_topics = data.topics;
         updateData.onboarding_complete = true;
@@ -519,7 +680,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isLoading, error, loginSuccess, signupSuccess, updateProfileSuccess,
       isAuthenticated, needsOnboarding, userProfile,
       login, register, verifySignupOtp, signInWithGoogle, checkUsernameAvailability,
-      updateOnboardingProfile, updateProfile, clearState, logout
+      updateOnboardingProfile, uploadProfileImage, updateProfile, clearState, logout
     }}>
       {!initializing && children}
     </AuthContext.Provider>

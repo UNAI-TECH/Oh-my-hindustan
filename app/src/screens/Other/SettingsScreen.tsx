@@ -1,22 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Switch, Modal, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../theme/Theme';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
 import AppBottomNavBar from '../../components/BottomNavBar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen() {
   const navigation = useNavigation<any>();
   const { userProfile, logout } = useAuth();
+  const { notificationsEnabled, setNotificationsEnabled } = useNotifications();
   
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isDataSaver, setIsDataSaver] = useState(true);
-  const [selectedLanguage, setSelectedLanguage] = useState('English');
   
-  const [showLanguageDialog, setShowLanguageDialog] = useState(false);
   const [showAboutDialog, setShowAboutDialog] = useState(false);
+  const [showNotifSettings, setShowNotifSettings] = useState(false);
+  const [showHelpDialog, setShowHelpDialog] = useState(false);
+
+  useEffect(() => {
+    // Load persisted preferences
+    AsyncStorage.getItem('omh_dark_mode').then(v => { if (v) setIsDarkMode(v === 'true') });
+    AsyncStorage.getItem('omh_data_saver').then(v => { if (v) setIsDataSaver(v === 'true') });
+  }, []);
+
+  const handleDarkModeToggle = (val: boolean) => {
+    setIsDarkMode(val);
+    AsyncStorage.setItem('omh_dark_mode', String(val));
+  };
+
+  const handleDataSaverToggle = (val: boolean) => {
+    setIsDataSaver(val);
+    AsyncStorage.setItem('omh_data_saver', String(val));
+  };
 
   const displayName = userProfile?.username || userProfile?.email?.split('@')[0] || 'User';
   const avatarUrl = userProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E53935&color=fff&size=200`;
@@ -35,43 +54,38 @@ export default function SettingsScreen() {
         <TouchableOpacity style={styles.userHeader} onPress={() => navigation.navigate('PersonalDetails')}>
           <Image source={{ uri: avatarUrl }} style={styles.userAvatar} />
           <View style={{ flex: 1, marginLeft: 16 }}>
-            <Text style={styles.userName}>{displayName}</Text>
-            <Text style={styles.userEmail}>{email}</Text>
+             <Text style={styles.userName}>{displayName}</Text>
+             <Text style={styles.userEmail}>{email}</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={Colors.Slate400} />
         </TouchableOpacity>
 
         <SettingsGroup title="Account">
           <SettingsItem label="Personal Details" icon="person-outline" onClick={() => navigation.navigate('PersonalDetails')} />
-          <SettingsItem label="Notification Settings" icon="notifications-outline" onClick={() => navigation.navigate('Notifications')} />
-          <SettingsItem label="Privacy & Security" icon="shield-checkmark-outline" onClick={() => {}} />
+          <SettingsItem label="Notification Settings" icon="notifications-outline" onClick={() => setShowNotifSettings(true)} />
+          <SettingsItem label="Privacy & Security" icon="shield-checkmark-outline" onClick={() => navigation.navigate('PrivacySecurity')} />
         </SettingsGroup>
 
         <SettingsGroup title="Preferences">
           <SettingsItem 
             label="Appearance" icon="color-palette-outline" 
             trailing={
-              <Switch value={isDarkMode} onValueChange={setIsDarkMode} trackColor={{ false: '#767577', true: Colors.PrimaryRedAlpha10 }} thumbColor={isDarkMode ? Colors.PrimaryRed : '#f4f3f4'} />
+              <Switch value={isDarkMode} onValueChange={handleDarkModeToggle} trackColor={{ false: '#767577', true: Colors.PrimaryRedAlpha10 }} thumbColor={isDarkMode ? Colors.PrimaryRed : '#f4f3f4'} />
             } 
-            onClick={() => setIsDarkMode(!isDarkMode)}
-          />
-          <SettingsItem 
-            label="Language" icon="globe-outline" 
-            trailing={<Text style={{ color: Colors.Slate500 }}>{selectedLanguage}</Text>}
-            onClick={() => setShowLanguageDialog(true)}
+            onClick={() => handleDarkModeToggle(!isDarkMode)}
           />
           <SettingsItem 
             label="Data Saver" icon="bar-chart-outline" 
             trailing={
-              <Switch value={isDataSaver} onValueChange={setIsDataSaver} trackColor={{ false: '#767577', true: Colors.PrimaryRedAlpha10 }} thumbColor={isDataSaver ? Colors.PrimaryRed : '#f4f3f4'} />
+              <Switch value={isDataSaver} onValueChange={handleDataSaverToggle} trackColor={{ false: '#767577', true: Colors.PrimaryRedAlpha10 }} thumbColor={isDataSaver ? Colors.PrimaryRed : '#f4f3f4'} />
             } 
-            onClick={() => setIsDataSaver(!isDataSaver)}
+            onClick={() => handleDataSaverToggle(!isDataSaver)}
           />
         </SettingsGroup>
 
         <SettingsGroup title="Support">
-          <SettingsItem label="Help Center" icon="help-circle-outline" onClick={() => {}} />
-          <SettingsItem label="About Jan Samvad" icon="information-circle-outline" onClick={() => setShowAboutDialog(true)} />
+           <SettingsItem label="Help Center" icon="help-circle-outline" onClick={() => setShowHelpDialog(true)} />
+           <SettingsItem label="About Jan Samvad" icon="information-circle-outline" onClick={() => setShowAboutDialog(true)} />
         </SettingsGroup>
 
         {/* Join as Creator CTA */}
@@ -80,11 +94,11 @@ export default function SettingsScreen() {
           onPress={() => Linking.openURL('https://creators-ohmy.vercel.app/')}
         >
           <View style={styles.creatorIconBox}>
-            <Ionicons name="rocket" size={22} color="white" />
+             <Ionicons name="rocket" size={22} color="white" />
           </View>
           <View style={{ flex: 1, marginLeft: 14 }}>
-            <Text style={styles.creatorCTATitle}>Join as a Creator</Text>
-            <Text style={styles.creatorCTADesc}>Become a voice for the nation!</Text>
+             <Text style={styles.creatorCTATitle}>Join as a Creator</Text>
+             <Text style={styles.creatorCTADesc}>Become a voice for the nation!</Text>
           </View>
           <Ionicons name="open-outline" size={20} color="#0284C7" />
         </TouchableOpacity>
@@ -101,24 +115,27 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Language Dialog */}
-      {showLanguageDialog && (
-        <Modal transparent animationType="fade" visible={showLanguageDialog}>
-          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowLanguageDialog(false)}>
+      {/* Help Center Dialog */}
+      {showHelpDialog && (
+        <Modal transparent animationType="fade" visible={showHelpDialog}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowHelpDialog(false)}>
             <View style={styles.dialog}>
-              <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 16 }}>Select Language</Text>
-              {['English', 'Hindi', 'Marathi', 'Bengali', 'Tamil', 'Telugu'].map(lang => (
-                <TouchableOpacity 
-                  key={lang} 
-                  style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12 }}
-                  onPress={() => { setSelectedLanguage(lang); setShowLanguageDialog(false); }}
-                >
-                  <View style={[styles.radio, selectedLanguage === lang && styles.radioSelected]}>
-                    {selectedLanguage === lang && <View style={styles.radioInner} />}
-                  </View>
-                  <Text style={{ marginLeft: 12 }}>{lang}</Text>
-                </TouchableOpacity>
-              ))}
+              <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 12 }}>Help Center</Text>
+              <Text style={{ color: Colors.DarkText, marginBottom: 16, lineHeight: 22 }}>
+                Need assistance with Jan Samvad? Reach out to our support team any time!
+              </Text>
+              
+              <TouchableOpacity style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }} onPress={() => Linking.openURL('mailto:support@ohmyhindustan.com')}>
+                 <Text style={{ color: Colors.PrimaryRed, fontWeight: 'bold' }}>Email Support</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={{ paddingVertical: 12, marginBottom: 16 }} onPress={() => Linking.openURL('https://ohmyhindustan.com/faq')}>
+                 <Text style={{ color: Colors.PrimaryRed, fontWeight: 'bold' }}>Read FAQs</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => setShowHelpDialog(false)} style={{ alignSelf: 'flex-end' }}>
+                <Text style={{ color: Colors.Slate500, fontWeight: 'bold', padding: 4 }}>Close</Text>
+              </TouchableOpacity>
             </View>
           </TouchableOpacity>
         </Modal>
@@ -134,6 +151,34 @@ export default function SettingsScreen() {
               <Text style={{ color: Colors.DarkText, marginBottom: 16 }}>Jan Samvad is a platform for citizen analysis and political discourse. Empowering voices for a better nation.</Text>
               <TouchableOpacity onPress={() => setShowAboutDialog(false)} style={{ alignSelf: 'flex-end' }}>
                 <Text style={{ color: Colors.PrimaryRed, fontWeight: 'bold' }}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
+
+      {/* Notification Settings Dialog */}
+      {showNotifSettings && (
+        <Modal transparent animationType="fade" visible={showNotifSettings}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowNotifSettings(false)}>
+            <View style={styles.dialog}>
+              <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 16 }}>Notification Settings</Text>
+              
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, marginTop: 8 }}>
+                <View style={{ flex: 1, paddingRight: 16 }}>
+                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: Colors.DarkText }}>Push Notifications</Text>
+                  <Text style={{ fontSize: 13, color: Colors.Slate500, marginTop: 4 }}>Receive alerts for new Posts, Blogs, Videos, News</Text>
+                </View>
+                <Switch 
+                  value={notificationsEnabled} 
+                  onValueChange={setNotificationsEnabled} 
+                  trackColor={{ false: '#767577', true: Colors.PrimaryRedAlpha10 }} 
+                  thumbColor={notificationsEnabled ? Colors.PrimaryRed : '#f4f3f4'} 
+                />
+              </View>
+
+              <TouchableOpacity onPress={() => setShowNotifSettings(false)} style={{ alignSelf: 'flex-end' }}>
+                <Text style={{ color: Colors.PrimaryRed, fontWeight: 'bold', padding: 4 }}>Done</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -193,7 +238,4 @@ const styles = StyleSheet.create({
   },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   dialog: { backgroundColor: 'white', width: '85%', borderRadius: 16, padding: 24, elevation: 4 },
-  radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: Colors.Slate400, justifyContent: 'center', alignItems: 'center' },
-  radioSelected: { borderColor: Colors.PrimaryRed },
-  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.PrimaryRed }
 });

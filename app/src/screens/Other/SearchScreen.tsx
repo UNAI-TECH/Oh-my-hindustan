@@ -39,6 +39,7 @@ export default function SearchScreen() {
         const { data, error } = await supabase
           .from('User')
           .select('id, username, "avatarUrl", bio, role')
+          .eq('role', 'ANALYST')
           .ilike('username', `%${q}%`)
           .limit(10);
         if (error) console.warn('Creator search error:', error);
