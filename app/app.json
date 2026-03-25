@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "app",
-    "slug": "app",
-    "scheme": "app",
+    "name": "Antigravity",
+    "slug": "antigravity",
+    "scheme": "antigravity",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -22,13 +22,18 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.ohmyhindustan.app"
+      "package": "com.unai.antigravity"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "7dd2dbb8-a8a7-4daa-a4c8-ad2d45ce1201"
+      }
+    }
   }
 }
