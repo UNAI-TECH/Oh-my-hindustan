@@ -92,15 +92,21 @@ export const AuthApi = {
  * Application API - Supabase direct queries with real-time support
  */
 export const AppApi = {
-  getHomeFeed: async (page = 1, limit = 20) => {
+  getHomeFeed: async (page = 1, limit = 20, sortBy: 'latest' | 'trending' = 'latest') => {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    const { data, error, count } = await supabase
+    let query = supabase
       .from('Post')
-      .select('id, title, content, type, thumbnail, category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, author:User!authorId(id, username, avatarUrl), Vote:Vote(type), Comment:Comment(id, content)', { count: 'exact' })
-      .order('createdAt', { ascending: false })
-      .range(from, to);
+      .select('id, title, content, type, thumbnail, category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, trending_score, author:User!authorId(id, username, avatarUrl), Vote:Vote(type), Comment:Comment(id, content)', { count: 'exact' });
+
+    if (sortBy === 'trending') {
+      query = query.order('trending_score', { ascending: false });
+    } else {
+      query = query.order('createdAt', { ascending: false });
+    }
+
+    const { data, error, count } = await query.range(from, to);
 
     if (error) throw error;
 
@@ -219,7 +225,8 @@ export const AppApi = {
         isRead: n.isRead,
         createdAt: n.createdAt,
         targetId: n.targetId || '',
-        payload: { title: n.title, message: n.message, body: n.message, referenceId: n.targetId },
+        title: n.title,
+        message: n.message,
       })),
       total: count || 0,
       page,
@@ -425,6 +432,65 @@ export const AppApi = {
         filter: `userId=eq.${userId}`,
       }, callback)
       .subscribe();
+  },
+
+  /**
+   * Register a new device push token
+   */
+  registerDevice: async (token: string, deviceName?: string, platform?: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) throw new Error('Not authenticated');
+
+    const { error } = await supabase
+      .from('UserDevice')
+      .upsert({
+        userId: user.id,
+        pushToken: token,
+        deviceName: deviceName || 'Mobile Device',
+        platform: platform || 'android',
+        lastUsed: new Date().toISOString(),
+      }, { onConflict: 'pushToken' });
+
+    if (error) throw error;
+    
+    // Also update the legacy single token on the User table for redundancy
+    await supabase.from('User').update({ push_token: token }).eq('id', user.id);
+  },
+
+  /**
+   * Unregister a device push token (on logout)
+   */
+  unregisterDevice: async (token: string) => {
+    const { error } = await supabase
+      .from('UserDevice')
+      .delete()
+      .eq('pushToken', token);
+    if (error) throw error;
+  },
+
+  /**
+   * Update the user's push token (Legacy - redirects to registerDevice)
+   */
+  updatePushToken: async (token: string | null) => {
+    if (token) {
+      await AppApi.registerDevice(token);
+    }
+  },
+
+  /**
+   * Update the user's push notification enablement status
+   */
+  updateNotificationSettings: async (enabled: boolean) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) throw new Error('Not authenticated');
+
+    const { error } = await supabase
+      .from('User')
+      .update({ push_notifications_enabled: enabled })
+      .eq('id', user.id);
+    if (error) throw error;
   },
 
   /**

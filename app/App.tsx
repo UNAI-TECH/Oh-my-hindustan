@@ -7,13 +7,14 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { AuthProvider } from './src/context/AuthContext';
 import { FeedProvider } from './src/context/FeedContext';
 import { NotificationProvider } from './src/context/NotificationContext';
+import { navigationRef } from './src/utils/navigation';
 
 export default function App() {
   return (
     <AuthProvider>
       <FeedProvider>
         <NotificationProvider>
-          <NavigationContainer>
+          <NavigationContainer ref={navigationRef}>
             <RootNavigator />
             <StatusBar style="auto" />
           </NavigationContainer>

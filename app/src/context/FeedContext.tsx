@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AppApi } from '../api/services';
 import { FeedItem, FeedItemType } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -11,8 +11,12 @@ interface FeedContextProps {
   selectedArticle: FeedItem | null;
   isLoading: boolean;
   isRefreshing: boolean;
+  hasMore: boolean;
+  sortBy: 'latest' | 'trending';
+  setSortBy: (sort: 'latest' | 'trending') => void;
   fetchArticle: (id: string) => Promise<void>;
-  fetchHomeFeed: (showLoading?: boolean) => Promise<void>;
+  fetchHomeFeed: (showLoading?: boolean, reset?: boolean) => Promise<void>;
+  loadMoreFeed: () => Promise<void>;
   refreshFeed: () => void;
 }
 
@@ -84,6 +88,9 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   const [selectedArticle, setSelectedArticle] = useState<FeedItem | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  const [sortBy, setSortByState] = useState<'latest' | 'trending'>('trending');
 
   const saveToCache = async (data: FeedItem[]) => {
     try {
@@ -104,42 +111,64 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const fetchHomeFeed = async (showLoading = true) => {
+  const setSortBy = (sort: 'latest' | 'trending') => {
+    setSortByState(sort);
+    setPage(1);
+    setFeedItems([]);
+  };
+
+  const fetchHomeFeed = async (showLoading = true, reset = false) => {
     if (showLoading && feedItems.length === 0) setIsLoading(true);
+    const targetPage = reset ? 1 : page;
+    
     try {
-      // Load from cache first for instant UI
-      if (showLoading && feedItems.length === 0) await loadFromCache();
+      if (reset && showLoading && feedItems.length === 0) await loadFromCache();
       
-      const response = await AppApi.getHomeFeed(1, 50);
+      const response = await AppApi.getHomeFeed(targetPage, 15, sortBy);
       const posts = response.data || [];
       const mapped = posts.map(toFeedItem);
-      // Deduplicate by id to prevent "two children with the same key" errors
-      const seen = new Set<string>();
-      const unique = mapped.filter(item => {
-        if (seen.has(item.id)) return false;
-        seen.add(item.id);
-        return true;
+      
+      setFeedItems(prev => {
+        const combined = reset ? mapped : [...prev, ...mapped];
+        const seen = new Set();
+        return combined.filter(it => {
+          if (seen.has(it.id)) return false;
+          seen.add(it.id);
+          return true;
+        });
       });
-      setFeedItems(unique);
-      await saveToCache(unique);
+      
+      setHasMore(posts.length === 15);
+      if (reset) await saveToCache(mapped.slice(0, 50));
     } catch (e) {
       console.error('Feed fetch error:', e);
-      if (feedItems.length === 0) setFeedItems([]);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
   };
 
+  const loadMoreFeed = async () => {
+    if (isLoading || !hasMore) return;
+    setPage(prev => prev + 1);
+  };
+
+  useEffect(() => {
+    fetchHomeFeed(page === 1, page === 1);
+  }, [page, sortBy]);
+
   const refreshFeed = () => {
-    setIsRefreshing(true);
-    fetchHomeFeed(false);
+    if (page === 1) {
+      setIsRefreshing(true);
+      fetchHomeFeed(false, true);
+    } else {
+      setPage(1);
+    }
   };
 
   const fetchArticle = async (id: string) => {
     setIsLoading(true);
     try {
-      // Check if article is already in local feed items
       const localItem = feedItems.find(it => it.id === id);
       if (localItem) {
         setSelectedArticle(localItem);
@@ -159,24 +188,14 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Fetch feed on mount
+  // Real-time: listen for new published posts
   useEffect(() => {
-    fetchHomeFeed();
-  }, []);
-
-  // Real-time: listen for new published posts with debounce + incremental updates
-  useEffect(() => {
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    
+    let debounceTimer: any = null;
     const subscription = AppApi.subscribeToFeedUpdates((payload: any) => {
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
-        // For INSERT events, try incremental update first for speed
-        if (payload.eventType === 'INSERT' && payload.new) {
-          // Still do a full refetch to get proper author info joins
-          fetchHomeFeed();
-        } else {
-          fetchHomeFeed();
+        if (page === 1) {
+          fetchHomeFeed(false, true);
         }
       }, 300);
     });
@@ -185,7 +204,7 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
       if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(subscription);
     };
-  }, []);
+  }, [page]);
 
   return (
     <FeedContext.Provider value={{ 
@@ -193,8 +212,12 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
       selectedArticle, 
       isLoading, 
       isRefreshing, 
+      hasMore,
+      sortBy,
+      setSortBy,
       fetchArticle, 
       fetchHomeFeed,
+      loadMoreFeed,
       refreshFeed
     }}>
       {children}

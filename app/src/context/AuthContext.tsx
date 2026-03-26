@@ -2,9 +2,12 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import { supabase } from '../lib/supabaseClient';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Required for Expo AuthSession to intercept the redirect
 WebBrowser.maybeCompleteAuthSession();
+
+const PROFILE_CACHE_KEY = 'user_profile_cache';
 
 interface AuthContextProps {
   isLoading: boolean;
@@ -45,11 +48,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Guard: prevents onAuthStateChange from racing with registration flow
   const isRegisteringRef = useRef(false);
 
+  // ─── Cache Helpers ───
+  const saveProfileToCache = async (profile: any) => {
+    try {
+      if (profile) {
+        await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
+      } else {
+        await AsyncStorage.removeItem(PROFILE_CACHE_KEY);
+      }
+    } catch (e) {
+      console.warn('[AUTH] Cache save error:', e);
+    }
+  };
+
+  const loadProfileFromCache = async () => {
+    try {
+      const cached = await AsyncStorage.getItem(PROFILE_CACHE_KEY);
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      console.warn('[AUTH] Cache load error:', e);
+      return null;
+    }
+  };
+
   // ─── Fetch profile from User table ───
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, skipRetries = false) => {
     try {
       let profileData = null;
-      for (let attempt = 0; attempt < 5; attempt++) {
+      const maxAttempts = skipRetries ? 1 : 5;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
         const { data, error: profileError } = await supabase
           .from('User')
           .select('*')
@@ -65,8 +93,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           profileData = data;
           break;
         }
-        // Wait longer on each retry to give the DB trigger time
-        await new Promise(resolve => setTimeout(resolve, 800 * (attempt + 1)));
+
+        if (!skipRetries) {
+          // Wait longer on each retry to give the DB trigger time
+          await new Promise(resolve => setTimeout(resolve, 800 * (attempt + 1)));
+        }
       }
 
       if (profileData) {
@@ -94,26 +125,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUserProfile(profile);
     setNeedsOnboarding(onboarding);
     setIsAuthenticated(authenticated);
+    saveProfileToCache(profile);
   };
 
   // ─── Check for existing session on mount ───
   useEffect(() => {
     const checkSession = async () => {
       try {
+        // Optimistic UI: Try to load from cache first
+        const cachedProfile = await loadProfileFromCache();
+        if (cachedProfile) {
+          console.warn('[AUTH] Loading profile from cache...');
+          setAuthState(cachedProfile, true);
+          setInitializing(false); // Stop initializing early if we have a cache
+        }
+
         const { data: { session } } = await supabase.auth.getSession();
 
         if (session?.user) {
           console.warn('[AUTH] Existing session found for:', session.user.email);
-          const profile = await fetchProfile(session.user.id);
+          // Refresh profile in background, skip retries for speed
+          const profile = await fetchProfile(session.user.id, true);
 
-          if (profile?.role === 'CREATOR' || profile?.role === 'ADMIN') {
-            console.warn('[AUTH] Non-citizen role, signing out');
-            await supabase.auth.signOut();
-          } else {
-            setAuthState(profile, true);
+          if (profile) {
+            if (profile.role === 'CREATOR' || profile.role === 'ADMIN') {
+              console.warn('[AUTH] Non-citizen role, signing out');
+              await supabase.auth.signOut();
+            } else {
+              setAuthState(profile, true);
+            }
+          } else if (!cachedProfile) {
+            // Only sign out if we have no cached profile AND no remote profile
+            // Actually, if session exists but profile doesn't, we might need onboarding
+            setAuthState(null, true);
           }
         } else {
           console.warn('[AUTH] No existing session');
+          if (cachedProfile) setAuthState(null, false);
         }
       } catch (e) {
         console.error('[AUTH] Session check failed:', e);
@@ -137,13 +185,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (event === 'SIGNED_OUT') {
         setAuthState(null, false);
       } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
-        const profile = await fetchProfile(session.user.id);
+        // Skip retries for background refreshes
+        const profile = await fetchProfile(session.user.id, event === 'TOKEN_REFRESHED');
         setAuthState(profile, true);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
 
   // ─── Email/Mobile/Username Password Login ───
   const login = async (identifier: string, pass: string) => {

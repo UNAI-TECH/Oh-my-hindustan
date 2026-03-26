@@ -61,11 +61,19 @@ export default function CreatorProfileScreen() {
 
   const handleFollow = async () => {
     if (!userProfile?.id || !authorId) { Alert.alert('Login Required', 'Please login to follow creators'); return; }
+    
+    // Save current state for rollback
+    const prevFollowed = isFollowed;
+    const prevFollowerCount = followerCount;
+
     try {
-      if (isFollowed) {
+      // Optimistic Update
+      setIsFollowed(!isFollowed);
+      setFollowerCount(c => prevFollowed ? Math.max(0, c - 1) : c + 1);
+
+      if (prevFollowed) {
         const { error } = await supabase.from('Follow').delete().eq('followerId', userProfile.id).eq('followingId', authorId);
         if (error) throw error;
-        setFollowerCount(c => Math.max(0, c - 1));
       } else {
         const { error } = await supabase.from('Follow').insert({
           id: generateUUID(),
@@ -73,9 +81,9 @@ export default function CreatorProfileScreen() {
           followingId: authorId,
         });
         if (error) throw error;
-        setFollowerCount(c => c + 1);
-        // Notify creator
-        await supabase.from('Notification').insert({
+
+        // Notify creator (non-critical, don't wait for it if possible, but keep it for functionality)
+        supabase.from('Notification').insert({
           id: generateUUID(),
           userId: authorId,
           type: 'FOLLOW',
@@ -83,11 +91,18 @@ export default function CreatorProfileScreen() {
           message: `${userProfile.username || 'Someone'} started following you`,
           targetId: userProfile.id,
           createdAt: new Date().toISOString(),
+        }).then(({ error: nErr }) => {
+          if (nErr) console.warn('Follow notification error:', nErr.message);
         });
       }
-      setIsFollowed(!isFollowed);
-    } catch (e: any) { Alert.alert('Follow Failed', e?.message || 'Could not follow creator'); }
+    } catch (e: any) {
+      // Rollback
+      setIsFollowed(prevFollowed);
+      setFollowerCount(prevFollowerCount);
+      Alert.alert('Follow Failed', e?.message || 'Could not follow creator');
+    }
   };
+
 
   const displayName = creator?.username || paramAuthorName || 'Creator';
   const avatarUrl = creator?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E53935&color=fff&size=200`;

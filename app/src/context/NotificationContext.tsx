@@ -1,8 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Device from 'expo-device';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { AppApi } from '../api/services';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabaseClient';
+import { NavigationService } from '../utils/navigation';
 
 export interface NotificationItem {
   id: string;
@@ -21,6 +26,7 @@ interface NotificationContextProps {
   unreadCount: number;
   isLoading: boolean;
   notificationsEnabled: boolean;
+  pushToken: string | null;
   fetchNotifications: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
@@ -47,101 +53,190 @@ const formatTimeAgo = (isoString: string): string => {
   }
 };
 
-const mapRawNotification = (n: any): NotificationItem => ({
-  id: n.id,
-  title: n.title || n.payload?.title || 'New Notification',
-  subtitle: n.message || n.payload?.body || n.payload?.message || 'You have a new update.',
-  time: formatTimeAgo(n.createdAt),
-  imageUrl: n.payload?.iconUrl || 'https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&q=80&w=100',
-  targetId: n.targetId || n.payload?.referenceId || '',
-  isRead: n.isRead ?? false,
-  type: n.type || 'GENERAL',
-  createdAt: n.createdAt,
-});
-
 const NotificationContext = createContext<NotificationContextProps | undefined>(undefined);
 
 export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [notificationsEnabled, setNotificationsEnabledState] = useState(true);
+  const [pushToken, setPushToken] = useState<string | null>(null);
+  
   const { isAuthenticated, userProfile } = useAuth();
-  const subscriptionRef = useRef<any>(null);
+  
+  // Safe environment check for SDK 53+
+  const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
-  // Load notification preference from storage
+  // 1. Initial Load of Preferences
   useEffect(() => {
     AsyncStorage.getItem(NOTIF_ENABLED_KEY).then(val => {
       if (val !== null) setNotificationsEnabledState(val === 'true');
     });
   }, []);
 
-  const setNotificationsEnabled = useCallback((enabled: boolean) => {
+  // 2. Register for Push Notifications
+  async function registerForPushNotificationsAsync() {
+    if (isExpoGo) {
+       console.log('[NOTIF] Skipping push registration in Expo Go.');
+       return null;
+    }
+    
+    try {
+      let token;
+      if (Device.isDevice) {
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+        if (finalStatus !== 'granted') return null;
+        
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+        token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+      }
+
+      if (Platform.OS === 'android') {
+        Notifications.setNotificationChannelAsync('default', {
+          name: 'default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF231F7C',
+        });
+      }
+
+      return token ?? null;
+    } catch (e) {
+      console.warn('[NOTIF] Registration error:', e);
+      return null;
+    }
+  }
+
+  // 3. Setup Notification Listeners & Handler (CONDITIONAL FOR EXPO GO)
+  useEffect(() => {
+    if (isExpoGo) return;
+
+    // Set handler
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+
+    // Foreground listener
+    const notifSub = Notifications.addNotificationReceivedListener(notification => {
+      fetchNotifications();
+    });
+
+    // Response (Tap) listener
+    const responseSub = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      const postId = data?.postId;
+      if (postId) {
+        NavigationService.navigate('ArticleDetail', { id: postId });
+      } else {
+        NavigationService.navigate('Notifications');
+      }
+    });
+
+    return () => {
+      notifSub.remove();
+      responseSub.remove();
+    };
+  }, [isExpoGo]);
+
+  // 4. Token Sync
+  useEffect(() => {
+    if (isAuthenticated && userProfile?.id && !isExpoGo) {
+      const syncToken = async () => {
+        try {
+          const token = await registerForPushNotificationsAsync();
+          if (token) {
+            setPushToken(token);
+            await AppApi.registerDevice(token, Device.deviceName || 'Mobile Device', Platform.OS);
+          }
+          await AppApi.updateNotificationSettings(notificationsEnabled);
+        } catch (e) {
+          console.warn('[NOTIF] Token sync error:', e);
+        }
+      };
+      syncToken();
+    } else if (!isAuthenticated && pushToken && !isExpoGo) {
+      const cleanup = async () => {
+        try {
+          await AppApi.unregisterDevice(pushToken);
+          setPushToken(null);
+        } catch (e) {
+          console.warn('[NOTIF] Unregistration failed:', e);
+        }
+      };
+      cleanup();
+    }
+  }, [isAuthenticated, userProfile?.id, notificationsEnabled, isExpoGo]);
+
+  const setNotificationsEnabled = useCallback(async (enabled: boolean) => {
     setNotificationsEnabledState(enabled);
     AsyncStorage.setItem(NOTIF_ENABLED_KEY, String(enabled));
-  }, []);
+    
+    if (isAuthenticated && !isExpoGo) {
+      try {
+        await AppApi.updateNotificationSettings(enabled);
+        if (enabled) {
+          const token = await registerForPushNotificationsAsync();
+          if (token) {
+            setPushToken(token);
+            await AppApi.registerDevice(token, Device.deviceName || 'Mobile Device', Platform.OS);
+          }
+        }
+      } catch (e) {
+        console.warn('[NOTIF] Settings sync failed:', e);
+      }
+    }
+  }, [isAuthenticated, isExpoGo]);
 
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated) return;
     setIsLoading(true);
     try {
-      const response = await AppApi.getNotifications(1, 50);
+      const response = await AppApi.getNotifications(1, 100);
       const rawNotifs = response.data || [];
-      const mapped = rawNotifs.map((n: any) => {
-        const titleStr = n.title || n.payload?.title || 'New Notification';
-        const msgStr = n.message || n.payload?.message || n.payload?.body || 'You have a new update.';
-        return {
-          id: n.id,
-          title: titleStr,
-          subtitle: msgStr,
-          time: formatTimeAgo(n.createdAt),
-          imageUrl: 'https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&q=80&w=100',
-          targetId: n.targetId || n.payload?.referenceId || '',
-          isRead: n.isRead ?? false,
-          type: n.type || 'GENERAL',
-          createdAt: n.createdAt,
-        };
-      });
+      
+      // Initial mapping with fallback avatars
+      const mapped = rawNotifs.map((n: any) => ({
+        id: n.id,
+        title: n.title || 'Notification',
+        subtitle: n.message || 'You have an update.',
+        time: formatTimeAgo(n.createdAt),
+        imageUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(n.title?.split(' ')[0] || 'U')}&background=E53935&color=fff`,
+        targetId: n.targetId || '',
+        isRead: n.isRead ?? false,
+        type: n.type || 'GENERAL',
+        createdAt: n.createdAt,
+      }));
 
-      // Extract potential usernames
-      const usernamesArray = mapped.map((m: any) => {
-        const tWords = m.title.split(' ');
-        const mWords = m.subtitle.split(' ');
-        return tWords[0] || mWords[0];
-      }).filter(Boolean);
-
-      const uniqueNames = Array.from(new Set(usernamesArray));
-      let avatarMap: Record<string, string> = {};
-
-      if (uniqueNames.length > 0) {
-        try {
-          const { data: usersData } = await supabase
-            .from('User')
-            .select('username, avatarUrl')
-            .in('username', uniqueNames);
+      // Enhanced mapping: Fetch real avatars from User table
+      const usernames = Array.from(new Set(mapped.map(m => m.title.split(' ')[0]).filter(Boolean)));
+      if (usernames.length > 0) {
+        const { data: userData } = await supabase
+          .from('User')
+          .select('username, avatarUrl')
+          .in('username', usernames);
+        
+        if (userData) {
+          const avatarMap: Record<string, string> = {};
+          userData.forEach(u => { if (u.avatarUrl) avatarMap[u.username] = u.avatarUrl; });
           
-          if (usersData) {
-            usersData.forEach((u: any) => {
-              if (u.avatarUrl) avatarMap[u.username] = u.avatarUrl;
-            });
-          }
-        } catch(e) { console.warn('Fetch avatar error:', e); }
+          mapped.forEach(m => {
+            const name = m.title.split(' ')[0];
+            if (avatarMap[name]) m.imageUrl = avatarMap[name];
+          });
+        }
       }
 
-      const finalMapped = mapped.map((m: any) => {
-        const tWords = m.title.split(' ');
-        const mWords = m.subtitle.split(' ');
-        const nameFocus = m.type === 'NEW_POST' || m.title.includes('published') ? tWords[0] : mWords[0];
-        
-        const avatar = avatarMap[nameFocus] || avatarMap[tWords[0]] || avatarMap[mWords[0]];
-        if (avatar) {
-          m.imageUrl = avatar;
-        } else {
-          m.imageUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(nameFocus || 'U')}&background=E53935&color=fff`;
-        }
-        return m;
-      });
-
-      setNotifications(finalMapped);
+      setNotifications(mapped);
     } catch (e) {
       console.log('Notifications fetch error:', e);
     } finally {
@@ -178,28 +273,19 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  // Setup real-time subscription
   useEffect(() => {
-    if (!isAuthenticated || !userProfile?.id) {
-      setNotifications([]);
-      return;
-    }
-
-    fetchNotifications();
-
-    // Subscribe to real-time notification changes
-    subscriptionRef.current = AppApi.subscribeToNotifications(userProfile.id, (_payload: any) => {
-      // Re-fetch on any change (insert/update/delete)
+    if (isAuthenticated && userProfile?.id) {
       fetchNotifications();
-    });
-
-    return () => {
-      if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe();
-        subscriptionRef.current = null;
-      }
-    };
-  }, [isAuthenticated, userProfile?.id]);
+      const subscription = AppApi.subscribeToNotifications(userProfile.id, () => {
+        fetchNotifications();
+      });
+      return () => {
+        supabase.removeChannel(subscription);
+      };
+    } else {
+      setNotifications([]);
+    }
+  }, [isAuthenticated, userProfile?.id, fetchNotifications]);
 
   return (
     <NotificationContext.Provider value={{
@@ -207,6 +293,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       unreadCount,
       isLoading,
       notificationsEnabled,
+      pushToken,
       fetchNotifications,
       markAsRead,
       markAllAsRead,

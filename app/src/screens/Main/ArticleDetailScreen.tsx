@@ -108,24 +108,43 @@ export default function ArticleDetailScreen() {
 
   const handleVote = async (voteType: 1 | -1) => {
     if (!userProfile?.id) { Alert.alert('Login Required', 'Please login to vote'); return; }
+    
+    // Save current state for rollback
+    const prevUpvotes = upvotes;
+    const prevDownvotes = downvotes;
+    const prevMyVote = myVote;
+    
     try {
       if (myVote === voteType) {
-        // Toggle off — remove vote
-        const { error } = await supabase.from('Vote').delete().eq('postId', id).eq('userId', userProfile.id);
-        if (error) throw error;
+        // Optimistic Update: Toggle off
         if (voteType === 1) setUpvotes(v => Math.max(0, v - 1));
         else setDownvotes(v => Math.max(0, v - 1));
         setMyVote(0);
+        
+        const { error } = await supabase.from('Vote').delete().eq('postId', id).eq('userId', userProfile.id);
+        if (error) throw error;
       } else {
+        // Optimistic Update: Switch or New vote
+        let newUpvotes = upvotes;
+        let newDownvotes = downvotes;
+        
+        if (myVote === 1) newUpvotes = Math.max(0, newUpvotes - 1);
+        else if (myVote === -1) newDownvotes = Math.max(0, newDownvotes - 1);
+        
+        if (voteType === 1) newUpvotes += 1;
+        else newDownvotes += 1;
+        
+        setUpvotes(newUpvotes);
+        setDownvotes(newDownvotes);
+        setMyVote(voteType);
+
         // Check if existing vote
         const { data: existing } = await supabase.from('Vote').select('id').eq('userId', userProfile.id).eq('postId', id).maybeSingle();
         
         if (existing) {
-          // Update existing vote
           const { error } = await supabase.from('Vote').update({ type: voteType }).eq('id', existing.id);
           if (error) throw error;
         } else {
-          // Insert new vote
           const { error } = await supabase.from('Vote').insert({
             id: generateUUID(),
             postId: id,
@@ -135,22 +154,25 @@ export default function ArticleDetailScreen() {
           if (error) throw error;
         }
         
-        // Update local state
-        if (myVote === 1) setUpvotes(v => Math.max(0, v - 1));
-        else if (myVote === -1) setDownvotes(v => Math.max(0, v - 1));
-        if (voteType === 1) { setUpvotes(v => v + 1); createNotification('LIKE', 'New Like', `${userProfile.username || 'Someone'} liked your post`); }
-        else setDownvotes(v => v + 1);
-        setMyVote(voteType);
+        if (voteType === 1) createNotification('LIKE', 'New Like', `${userProfile.username || 'Someone'} liked your post`);
       }
     } catch (e: any) {
+      // Rollback
+      setUpvotes(prevUpvotes);
+      setDownvotes(prevDownvotes);
+      setMyVote(prevMyVote);
       Alert.alert('Vote Failed', e?.message || 'Could not register vote');
     }
   };
 
   const handleSave = async () => {
     if (!userProfile?.id) { Alert.alert('Login Required', 'Please login to save posts'); return; }
+    const prevSaved = isSaved;
     try {
-      if (isSaved) {
+      // Optimistic
+      setIsSaved(!isSaved);
+      
+      if (prevSaved) {
         const { error } = await supabase.from('Save').delete().eq('userId', userProfile.id).eq('postId', id);
         if (error) throw error;
       } else {
@@ -161,16 +183,23 @@ export default function ArticleDetailScreen() {
         });
         if (error) throw error;
       }
-      setIsSaved(!isSaved);
     } catch (e: any) {
+      setIsSaved(prevSaved);
       Alert.alert('Save Failed', e?.message || 'Could not save post');
     }
   };
 
   const handleRepost = async () => {
     if (!userProfile?.id) { Alert.alert('Login Required', 'Please login to repost'); return; }
+    const prevReposted = isReposted;
+    const prevCount = repostCount;
+    
     try {
-      if (isReposted) {
+      // Optimistic
+      setIsReposted(!isReposted);
+      setRepostCount(c => prevReposted ? Math.max(0, c - 1) : c + 1);
+      
+      if (prevReposted) {
         const { error } = await supabase.from('Comment').delete().eq('userId', userProfile.id).eq('postId', id).eq('content', '[SYSTEM_REPOST]');
         if (error) throw error;
       } else {
@@ -186,21 +215,23 @@ export default function ArticleDetailScreen() {
         if (error) throw error;
         createNotification('REPOST', 'New Repost', `${userProfile.username || 'Someone'} reposted your content`);
       }
-      setIsReposted(!isReposted);
-      if (!isReposted) setRepostCount(c => c + 1);
-      else setRepostCount(c => Math.max(0, c - 1));
     } catch (e: any) {
+      setIsReposted(prevReposted);
+      setRepostCount(prevCount);
       Alert.alert('Repost Failed', e?.message || 'Could not repost');
     }
   };
 
   const handleFollow = async () => {
     if (!userProfile?.id || !postAuthorId) { Alert.alert('Login Required', 'Please login to follow creators'); return; }
+    const prevFollowing = isFollowing;
     try {
-      if (isFollowing) {
+      // Optimistic
+      setIsFollowing(!isFollowing);
+      
+      if (prevFollowing) {
         const { error } = await supabase.from('Follow').delete().eq('followerId', userProfile.id).eq('followingId', postAuthorId);
         if (error) throw error;
-        setIsFollowing(false);
       } else {
         const { error } = await supabase.from('Follow').insert({
           id: generateUUID(),
@@ -208,10 +239,10 @@ export default function ArticleDetailScreen() {
           followingId: postAuthorId,
         });
         if (error) throw error;
-        setIsFollowing(true);
         createNotification('FOLLOW', 'New Follower', `${userProfile.username || 'Someone'} started following you`);
       }
     } catch (e: any) {
+      setIsFollowing(prevFollowing);
       Alert.alert('Follow Failed', e?.message || 'Could not follow creator');
     }
   };
@@ -239,7 +270,31 @@ export default function ArticleDetailScreen() {
   const submitComment = async () => {
     if (!newComment.trim()) return;
     if (!userProfile?.id) { Alert.alert('Login Required', 'Please login to comment'); return; }
+    
+    const commentContent = newComment.trim();
+    const prevComments = [...comments];
+    const prevCount = commentsCount;
+    
     try {
+      // Optimistic
+      const tempId = `temp-${Date.now()}`;
+      const optimisticComment = {
+        id: tempId,
+        content: commentContent,
+        postId: id,
+        userId: userProfile.id,
+        createdAt: new Date().toISOString(),
+        User: {
+          id: userProfile.id,
+          username: userProfile.username,
+          avatarUrl: userProfile.avatarUrl
+        }
+      };
+      
+      setComments(prev => [optimisticComment, ...prev]);
+      setCommentsCount(c => c + 1);
+      setNewComment('');
+      
       const now = new Date().toISOString();
       const { error } = await supabase
         .from('Comment')
@@ -247,19 +302,24 @@ export default function ArticleDetailScreen() {
           id: generateUUID(),
           postId: id,
           userId: userProfile.id,
-          content: newComment.trim(),
+          content: commentContent,
           createdAt: now,
           updatedAt: now,
         });
+        
       if (error) throw error;
-      setNewComment('');
-      setCommentsCount(c => c + 1);
       createNotification('COMMENT', 'New Comment', `${userProfile.username || 'Someone'} commented on your post`);
+      
+      // Re-fetch to get the real ID and proper data
       fetchComments();
     } catch (e: any) {
+      setComments(prevComments);
+      setCommentsCount(prevCount);
+      setNewComment(commentContent);
       Alert.alert('Comment Failed', e?.message || 'Could not post comment');
     }
   };
+
 
   if (isLoading && !selectedArticle) {
     return <View style={styles.center}><ActivityIndicator size="large" color={Colors.PrimaryRed} /></View>;

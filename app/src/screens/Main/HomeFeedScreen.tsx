@@ -11,7 +11,7 @@ import { FeedItemType, FeedItem } from '../../types';
 
 export default function HomeFeedScreen() {
   const navigation = useNavigation<any>();
-  const { feedItems, isLoading, isRefreshing, refreshFeed } = useFeed();
+  const { feedItems, isLoading, isRefreshing, refreshFeed, loadMoreFeed, hasMore, sortBy, setSortBy } = useFeed();
   const { unreadCount } = useNotifications();
   
   const [selectedTab, setSelectedTab] = useState('Trending');
@@ -20,7 +20,7 @@ export default function HomeFeedScreen() {
   const filteredItems = useMemo(() => {
     const items = feedItems;
     switch (selectedTab) {
-      case 'Trending': return [...items].sort(() => 0.5 - Math.random()).slice(0, 5);
+      case 'Trending': return items;
       case 'News': return items.filter(it => [FeedItemType.NEWS, FeedItemType.UPDATE, FeedItemType.POLICY_TYPE, FeedItemType.PROMO].includes(it.type));
       case 'Blogs': return items.filter(it => [FeedItemType.BLOG, FeedItemType.FORUM, FeedItemType.PROMO].includes(it.type));
       case 'Videos': return items.filter(it => [FeedItemType.VIDEO, FeedItemType.DEBATE, FeedItemType.PROMO].includes(it.type));
@@ -29,10 +29,16 @@ export default function HomeFeedScreen() {
     }
   }, [selectedTab, feedItems]);
 
+  const handleTabPress = (tab: string) => {
+    setSelectedTab(tab);
+    if (tab === 'Trending') setSortBy('trending');
+    if (tab === 'For You') setSortBy('latest');
+  };
+
   const onShare = async (item: FeedItem) => {
     try {
       await Share.share({
-        message: `${item.title}\n\nRead more at Viewer App`,
+        message: `${item.title}\n\nRead more at Oh My Hindustan`,
       });
     } catch (error) {
       console.error(error);
@@ -69,7 +75,7 @@ export default function HomeFeedScreen() {
             <TouchableOpacity 
               key={tab} 
               style={[styles.tab, selectedTab === tab && styles.tabActive]}
-              onPress={() => setSelectedTab(tab)}
+              onPress={() => handleTabPress(tab)}
             >
               <Text style={[styles.tabText, selectedTab === tab && styles.tabTextActive]}>{tab}</Text>
             </TouchableOpacity>
@@ -91,6 +97,13 @@ export default function HomeFeedScreen() {
           keyExtractor={(item, index) => `${item.id}-${index}`}
           contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
           ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+          onEndReached={loadMoreFeed}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={() => (
+            isLoading && hasMore ? (
+              <ActivityIndicator size="small" color={Colors.PrimaryRed} style={{ marginVertical: 20 }} />
+            ) : null
+          )}
           refreshControl={
             <RefreshControl 
               refreshing={isRefreshing} 
@@ -135,7 +148,6 @@ const FeedCard = ({ item, onClick, onShare }: { item: FeedItem, onClick: () => v
   const downvotes = item.downvoteCount || 0;
   const commentCount = item.comments || 0;
   const repostCount = item.repostCount || 0;
-  const netVotes = upvotes - downvotes;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onClick} activeOpacity={0.8}>
@@ -152,7 +164,7 @@ const FeedCard = ({ item, onClick, onShare }: { item: FeedItem, onClick: () => v
           <View>
             <View style={{ width: '100%', aspectRatio: 16/9, borderRadius: 8, overflow: 'hidden' }}>
               <Image source={{ uri: item.thumbnail }} style={{ flex: 1 }} />
-              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' }}>
                 <View style={{ backgroundColor: 'rgba(255,255,255,0.9)', width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' }}>
                   <Ionicons name="play" size={24} color={Colors.PrimaryRed} style={{ marginLeft: 4 }} />
                 </View>
@@ -165,7 +177,6 @@ const FeedCard = ({ item, onClick, onShare }: { item: FeedItem, onClick: () => v
                  <Text style={{ color: Colors.Slate500, fontSize: 12 }}>{item.authorName} • {item.timestamp}</Text>
                </View>
             </View>
-            {/* Engagement Bar */}
             <View style={styles.engagementBar}>
               <View style={styles.engagementItem}>
                 <Ionicons name="arrow-up" size={16} color={Colors.PrimaryRed} />
@@ -197,8 +208,6 @@ const FeedCard = ({ item, onClick, onShare }: { item: FeedItem, onClick: () => v
               </View>
               <Image source={{ uri: item.thumbnail }} style={{ width: 80, height: 80, borderRadius: 8, marginLeft: 16 }} />
             </View>
-            
-            {/* Engagement Bar */}
             <View style={styles.engagementBar}>
               <View style={styles.engagementItem}>
                 <Ionicons name="arrow-up" size={16} color={Colors.PrimaryRed} />
@@ -268,9 +277,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     position: 'relative'
   },
-  iconText: {
-    fontSize: 20
-  },
   badge: {
     position: 'absolute',
     top: 2,
@@ -281,14 +287,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.PrimaryRed,
     borderWidth: 1.5,
     borderColor: 'white',
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 3,
   },
   badgeText: {
     color: 'white',
     fontSize: 9,
-    fontWeight: 'bold' as const,
+    fontWeight: 'bold',
   },
   tabsContainer: {
     backgroundColor: Colors.SurfaceWhite,

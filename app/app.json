@@ -28,12 +28,19 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-notifications"
     ],
     "extra": {
       "eas": {
         "projectId": "7dd2dbb8-a8a7-4daa-a4c8-ad2d45ce1201"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7dd2dbb8-a8a7-4daa-a4c8-ad2d45ce1201"
     }
   }
 }
