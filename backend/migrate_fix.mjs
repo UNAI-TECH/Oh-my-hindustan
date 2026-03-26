@@ -1,8 +1,8 @@
 // Migration script to fix Feedback table and Post columns
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://vxenjlgoatbkfrfrkoeq.supabase.co';
-const serviceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4ZW5qbGdvYXRia2ZyZnJrb2VxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDI0NjU1OCwiZXhwIjoyMDg5ODIyNTU4fQ.3jVTMO_lIFTDPYKJzKg_mk_9DzEG5P10416GA97YrBM';
+const supabaseUrl = process.env.SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabase = createClient(supabaseUrl, serviceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false }
