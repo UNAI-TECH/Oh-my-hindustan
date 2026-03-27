@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
-import { Colors } from '../theme/Theme';
+import { useAppTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 
 interface Props {
@@ -10,6 +10,8 @@ interface Props {
 }
 
 export default function StudioBottomNavBar({ currentRoute, onNavigate, onExit }: Props) {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const [showExitDialog, setShowExitDialog] = useState(false);
 
   const items = [
@@ -33,7 +35,7 @@ export default function StudioBottomNavBar({ currentRoute, onNavigate, onExit }:
                   <Text style={{ color: 'gray', fontWeight: 'bold' }}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => { setShowExitDialog(false); onExit(); }} style={styles.actionButton}>
-                  <Text style={{ color: Colors.PrimaryRed, fontWeight: 'bold' }}>Exit</Text>
+                  <Text style={{ color: colors.PrimaryRed, fontWeight: 'bold' }}>Exit</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -63,12 +65,12 @@ export default function StudioBottomNavBar({ currentRoute, onNavigate, onExit }:
               <Ionicons 
                 name={item.icon as any} 
                 size={24} 
-                color={isSelected ? Colors.PrimaryRed : Colors.Slate500} 
+                color={isSelected ? colors.PrimaryRed : colors.Slate500} 
               />
               <Text
                 style={[
                   styles.label,
-                  { color: isSelected ? Colors.PrimaryRed : Colors.SlateText, opacity: isSelected ? 1 : 0.4 }
+                  { color: isSelected ? colors.PrimaryRed : colors.SlateText, opacity: isSelected ? 1 : 0.4 }
                 ]}
               >
                 {item.label}
@@ -81,7 +83,7 @@ export default function StudioBottomNavBar({ currentRoute, onNavigate, onExit }:
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     height: 80,

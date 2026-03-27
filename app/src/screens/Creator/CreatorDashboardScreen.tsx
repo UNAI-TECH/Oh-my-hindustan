@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { CreatorApi } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
 
@@ -32,6 +32,8 @@ const CREATE_OPTIONS = [
 ];
 
 export default function CreatorDashboardScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { userProfile, logout } = useAuth();
 
@@ -123,14 +125,14 @@ export default function CreatorDashboardScreen() {
 
         {isLoading ? (
           <View style={{ padding: 60, alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={Colors.PrimaryRed} />
+            <ActivityIndicator size="large" color={colors.PrimaryRed} />
           </View>
         ) : (
           <>
             {/* Stats Grid */}
             <View style={styles.statsGrid}>
               <StatCard icon="document-text" label="Total Posts" value={formatStat(stats.totalPosts)} color="#8B5CF6" />
-              <StatCard icon="heart" label="Total Votes" value={formatStat(stats.totalVotes)} color={Colors.PrimaryRed} />
+              <StatCard icon="heart" label="Total Votes" value={formatStat(stats.totalVotes)} color={colors.PrimaryRed} />
               <StatCard icon="chatbubble" label="Comments" value={formatStat(stats.totalComments)} color="#0EA5E9" />
               <StatCard icon="people" label="Followers" value={formatStat(stats.totalFollowers)} color="#10B981" />
             </View>
@@ -169,10 +171,10 @@ export default function CreatorDashboardScreen() {
                   <Text style={styles.recentTitle} numberOfLines={1}>{post.title}</Text>
                   <View style={styles.recentStats}>
                     <Text style={styles.recentStatText}>
-                      <Ionicons name="heart" size={12} color={Colors.Slate500} /> {post.voteCount}
+                      <Ionicons name="heart" size={12} color={colors.Slate500} /> {post.voteCount}
                     </Text>
                     <Text style={styles.recentStatText}>
-                      <Ionicons name="chatbubble" size={12} color={Colors.Slate500} /> {post.commentCount}
+                      <Ionicons name="chatbubble" size={12} color={colors.Slate500} /> {post.commentCount}
                     </Text>
                   </View>
                 </View>
@@ -211,11 +213,11 @@ export default function CreatorDashboardScreen() {
                       <Ionicons
                         name={item.icon as any}
                         size={22}
-                        color={isLogout ? '#EF4444' : isActive ? Colors.PrimaryRed : '#475569'}
+                        color={isLogout ? '#EF4444' : isActive ? colors.PrimaryRed : '#475569'}
                       />
                       <Text style={[
                         styles.sidebarItemText,
-                        isActive && { color: Colors.PrimaryRed, fontWeight: '700' },
+                        isActive && { color: colors.PrimaryRed, fontWeight: '700' },
                         isLogout && { color: '#EF4444' }
                       ]}>
                         {item.label}
@@ -226,7 +228,7 @@ export default function CreatorDashboardScreen() {
               </ScrollView>
 
               <TouchableOpacity style={styles.sidebarExit} onPress={() => { setShowSidebar(false); navigation.navigate('Home'); }}>
-                <Ionicons name="arrow-back-circle-outline" size={22} color={Colors.Slate500} />
+                <Ionicons name="arrow-back-circle-outline" size={22} color={colors.Slate500} />
                 <Text style={styles.sidebarExitText}>Back to App</Text>
               </TouchableOpacity>
             </View>
@@ -268,7 +270,10 @@ const TYPE_COLORS: Record<string, string> = {
   FORUM: '#F59E0B', DEBATE: '#10B981', UPDATE: '#6366F1',
 };
 
-const StatCard = ({ icon, label, value, color }: any) => (
+const StatCard = ({ icon, label, value, color }: any) => {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
+  return (
   <View style={styles.statCard}>
     <View style={[styles.statIconBox, { backgroundColor: color + '15' }]}>
       <Ionicons name={icon} size={20} color={color} />
@@ -276,9 +281,9 @@ const StatCard = ({ icon, label, value, color }: any) => (
     <Text style={styles.statValue}>{value}</Text>
     <Text style={styles.statLabel}>{label}</Text>
   </View>
-);
+)};
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? 24 : 0 },
 
   // Header
@@ -290,14 +295,14 @@ const styles = StyleSheet.create({
   headerLeft: { flexDirection: 'row', alignItems: 'center' },
   logoRow: { flexDirection: 'row', alignItems: 'center' },
   logoBox: {
-    backgroundColor: Colors.PrimaryRed, width: 28, height: 28, borderRadius: 8,
+    backgroundColor: colors.PrimaryRed, width: 28, height: 28, borderRadius: 8,
     justifyContent: 'center', alignItems: 'center', marginRight: 8,
   },
   headerTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   createBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: Colors.PrimaryRed, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+    backgroundColor: colors.PrimaryRed, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
   },
   createBtnText: { color: 'white', fontWeight: '800', fontSize: 12, letterSpacing: 0.5 },
   avatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, borderColor: '#E2E8F0' },
@@ -355,7 +360,7 @@ const styles = StyleSheet.create({
     elevation: 20, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 20,
   },
   sidebarHeader: { paddingHorizontal: 20, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  sidebarAvatar: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: Colors.PrimaryRed + '30' },
+  sidebarAvatar: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: colors.PrimaryRed + '30' },
   sidebarName: { fontSize: 18, fontWeight: '700', marginTop: 12, color: '#1E293B' },
   sidebarRole: { fontSize: 13, color: '#64748B', textTransform: 'uppercase', fontWeight: '600', letterSpacing: 0.5 },
   sidebarDivider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 8, marginHorizontal: 20 },
@@ -363,13 +368,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 14,
     paddingVertical: 14, paddingHorizontal: 20,
   },
-  sidebarItemActive: { backgroundColor: Colors.PrimaryRed + '08' },
+  sidebarItemActive: { backgroundColor: colors.PrimaryRed + '08' },
   sidebarItemText: { fontSize: 15, color: '#475569', fontWeight: '500' },
   sidebarExit: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     padding: 20, borderTopWidth: 1, borderTopColor: '#F1F5F9',
   },
-  sidebarExitText: { fontSize: 14, color: Colors.Slate500, fontWeight: '500' },
+  sidebarExitText: { fontSize: 14, color: colors.Slate500, fontWeight: '500' },
 
   // Create Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },

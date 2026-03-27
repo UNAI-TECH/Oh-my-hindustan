@@ -3,10 +3,13 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platfo
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import CustomModal from '../../components/CustomModal';
 
 export default function CreatorSettingsScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { userProfile, updateProfile } = useAuth();
 
@@ -15,14 +18,15 @@ export default function CreatorSettingsScreen() {
   const [notifComments, setNotifComments] = useState(true);
   const [notifFollowers, setNotifFollowers] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [modalConfig, setModalConfig] = useState({ visible: false, title: '', message: '', isError: false });
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       await updateProfile(displayName, bio);
-      Alert.alert('Saved', 'Your settings have been updated.');
+      setModalConfig({ visible: true, title: 'Saved', message: 'Your settings have been updated.', isError: false });
     } catch (e: any) {
-      Alert.alert('Error', e.message || 'Failed to save.');
+      setModalConfig({ visible: true, title: 'Error', message: e.message || 'Failed to save.', isError: true });
     } finally {
       setIsSaving(false);
     }
@@ -36,7 +40,7 @@ export default function CreatorSettingsScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
         <TouchableOpacity onPress={handleSave} disabled={isSaving} style={{ padding: 8 }}>
-          <Text style={{ color: Colors.PrimaryRed, fontWeight: 'bold', opacity: isSaving ? 0.5 : 1 }}>Save</Text>
+          <Text style={{ color: colors.PrimaryRed, fontWeight: 'bold', opacity: isSaving ? 0.5 : 1 }}>Save</Text>
         </TouchableOpacity>
       </View>
 
@@ -66,7 +70,7 @@ export default function CreatorSettingsScreen() {
           </View>
           <Switch
             value={notifComments} onValueChange={setNotifComments}
-            trackColor={{ true: Colors.PrimaryRed, false: '#E2E8F0' }}
+            trackColor={{ true: colors.PrimaryRed, false: '#E2E8F0' }}
             thumbColor="white"
           />
         </View>
@@ -78,20 +82,28 @@ export default function CreatorSettingsScreen() {
           </View>
           <Switch
             value={notifFollowers} onValueChange={setNotifFollowers}
-            trackColor={{ true: Colors.PrimaryRed, false: '#E2E8F0' }}
+            trackColor={{ true: colors.PrimaryRed, false: '#E2E8F0' }}
             thumbColor="white"
           />
         </View>
       </ScrollView>
+
+      <CustomModal 
+        visible={modalConfig.visible} 
+        title={modalConfig.title} 
+        message={modalConfig.message} 
+        isError={modalConfig.isError} 
+        onPrimaryPress={() => setModalConfig(prev => ({ ...prev, visible: false }))} 
+      />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   header: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white' },
   headerTitle: { fontSize: 20, fontWeight: 'bold' },
-  sectionTitle: { fontSize: 14, fontWeight: '700', color: Colors.Slate500, letterSpacing: 0.5, marginBottom: 16, textTransform: 'uppercase' },
+  sectionTitle: { fontSize: 14, fontWeight: '700', color: colors.Slate500, letterSpacing: 0.5, marginBottom: 16, textTransform: 'uppercase' },
   inputGroup: { marginBottom: 16 },
   label: { fontSize: 14, fontWeight: '600', color: '#334155', marginBottom: 8 },
   input: {

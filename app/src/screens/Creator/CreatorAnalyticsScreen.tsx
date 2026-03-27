@@ -3,10 +3,12 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Activit
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { CreatorApi } from '../../api/services';
 
 export default function CreatorAnalyticsScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const [stats, setStats] = useState({ totalPosts: 0, totalComments: 0, totalVotes: 0, totalFollowers: 0 });
   const [posts, setPosts] = useState<any[]>([]);
@@ -60,7 +62,7 @@ export default function CreatorAnalyticsScreen() {
 
       {isLoading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={Colors.PrimaryRed} />
+          <ActivityIndicator size="large" color={colors.PrimaryRed} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
@@ -81,7 +83,7 @@ export default function CreatorAnalyticsScreen() {
           <View style={{ gap: 12 }}>
             <View style={styles.row}>
               <SmallStatCard label="Total Content" value={formatStat(stats.totalPosts)} icon="document-text" color="#8B5CF6" />
-              <SmallStatCard label="Engagement" value={formatStat(stats.totalVotes)} icon="heart" color={Colors.PrimaryRed} />
+              <SmallStatCard label="Engagement" value={formatStat(stats.totalVotes)} icon="heart" color={colors.PrimaryRed} />
             </View>
             <View style={styles.row}>
               <SmallStatCard label="Comments" value={formatStat(stats.totalComments)} icon="chatbubble" color="#0EA5E9" />
@@ -102,10 +104,10 @@ export default function CreatorAnalyticsScreen() {
                   <View key={type} style={{ marginBottom: 16 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
                       <Text style={{ fontSize: 14, fontWeight: '600' }}>{type}</Text>
-                      <Text style={{ fontSize: 14, color: Colors.Slate500 }}>{String(count)} ({percent}%)</Text>
+                      <Text style={{ fontSize: 14, color: colors.Slate500 }}>{String(count)} ({percent}%)</Text>
                     </View>
-                    <View style={{ width: '100%', height: 8, backgroundColor: Colors.PrimaryRedAlpha10, borderRadius: 4, overflow: 'hidden' }}>
-                      <View style={{ width: `${percent}%`, height: '100%', backgroundColor: TYPE_COLORS[type] || Colors.PrimaryRed }} />
+                    <View style={{ width: '100%', height: 8, backgroundColor: colors.PrimaryRedAlpha10, borderRadius: 4, overflow: 'hidden' }}>
+                      <View style={{ width: `${percent}%`, height: '100%', backgroundColor: TYPE_COLORS[type] || colors.PrimaryRed }} />
                     </View>
                   </View>
                 );
@@ -146,30 +148,33 @@ const TYPE_COLORS: Record<string, string> = {
   FORUM: '#F59E0B', DEBATE: '#10B981', UPDATE: '#6366F1',
 };
 
-const SmallStatCard = ({ label, value, icon, color }: any) => (
+const SmallStatCard = ({ label, value, icon, color }: any) => {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
+  return (
   <View style={styles.statCard}>
     <View style={[styles.statIconBox, { backgroundColor: color + '15' }]}>
       <Ionicons name={icon} size={18} color={color} />
     </View>
-    <Text style={{ fontSize: 12, color: Colors.Slate500, letterSpacing: 0.5, marginTop: 10 }}>{label.toUpperCase()}</Text>
+    <Text style={{ fontSize: 12, color: colors.Slate500, letterSpacing: 0.5, marginTop: 10 }}>{label.toUpperCase()}</Text>
     <Text style={{ fontSize: 24, fontWeight: 'bold', marginTop: 4 }}>{value}</Text>
   </View>
-);
+)};
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   header: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white' },
   headerTitle: { fontSize: 20, fontWeight: 'bold' },
   dateChip: { backgroundColor: '#F1F5F9', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8, marginRight: 8 },
-  dateChipActive: { backgroundColor: Colors.PrimaryRed },
-  dateText: { color: Colors.Slate500, fontWeight: 'bold', fontSize: 14 },
+  dateChipActive: { backgroundColor: colors.PrimaryRed },
+  dateText: { color: colors.Slate500, fontWeight: 'bold', fontSize: 14 },
   dateTextActive: { color: 'white' },
   row: { flexDirection: 'row', gap: 12 },
   statCard: { flex: 1, backgroundColor: 'white', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#E2E8F0' },
   statIconBox: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   chartCard: { backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: '#F1F5F9', padding: 20, marginTop: 24 },
   topPostRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F8FAFC' },
-  topPostRank: { fontSize: 16, fontWeight: '800', color: Colors.PrimaryRed, width: 30 },
+  topPostRank: { fontSize: 16, fontWeight: '800', color: colors.PrimaryRed, width: 30 },
   topPostTitle: { fontSize: 14, fontWeight: '600', color: '#1E293B' },
   topPostStats: { fontSize: 12, color: '#64748B', marginTop: 2 },
   topPostTypeBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },

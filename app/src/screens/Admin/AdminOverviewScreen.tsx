@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 
 export default function AdminOverviewScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
 
   return (
@@ -29,7 +31,7 @@ export default function AdminOverviewScreen() {
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
         <Text style={{ fontWeight: 'bold', fontSize: 24 }}>Governance Overview</Text>
-        <Text style={{ color: Colors.Slate500, fontSize: 14 }}>National level platform statistics</Text>
+        <Text style={{ color: colors.Slate500, fontSize: 14 }}>National level platform statistics</Text>
 
         <View style={{ marginTop: 24, gap: 12 }}>
           <View style={styles.row}>
@@ -63,7 +65,10 @@ export default function AdminOverviewScreen() {
   );
 }
 
-const AdminKpiCard = ({ label, value, change, icon, bgColor, iconColor }: any) => (
+const AdminKpiCard = ({ label, value, change, icon, bgColor, iconColor }: any) => {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
+  return (
   <View style={styles.kpiCard}>
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
       <View style={[styles.kpiIconWrapper, { backgroundColor: bgColor }]}>
@@ -71,19 +76,22 @@ const AdminKpiCard = ({ label, value, change, icon, bgColor, iconColor }: any) =
       </View>
       <Text style={{ color: '#16A34A', fontWeight: 'bold', fontSize: 12 }}>{change}</Text>
     </View>
-    <Text style={{ color: Colors.Slate500, fontSize: 14, marginTop: 12 }}>{label}</Text>
+    <Text style={{ color: colors.Slate500, fontSize: 14, marginTop: 12 }}>{label}</Text>
     <Text style={{ fontWeight: 'bold', fontSize: 24, marginTop: 4 }}>{value}</Text>
   </View>
-);
+)};
 
-const AdminPaymentRow = ({ user, amount, status, statusBg, statusColor }: any) => (
+const AdminPaymentRow = ({ user, amount, status, statusBg, statusColor }: any) => {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
+  return (
   <View style={styles.paymentRow}>
     <View style={styles.userIcon}>
       <Ionicons name="person" size={16} color="black" />
     </View>
     <View style={{ flex: 1, marginLeft: 12 }}>
       <Text style={{ fontWeight: 'bold', fontSize: 16 }}>@{user}</Text>
-      <Text style={{ color: Colors.Slate400, fontSize: 12 }}>Citizen Support</Text>
+      <Text style={{ color: colors.Slate400, fontSize: 12 }}>Citizen Support</Text>
     </View>
     <View style={{ alignItems: 'flex-end' }}>
       <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{amount}</Text>
@@ -92,12 +100,12 @@ const AdminPaymentRow = ({ user, amount, status, statusBg, statusColor }: any) =
       </View>
     </View>
   </View>
-);
+)};
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   header: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, backgroundColor: 'white', alignItems: 'center' },
-  appIcon: { width: 32, height: 32, backgroundColor: Colors.PrimaryRed, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+  appIcon: { width: 32, height: 32, backgroundColor: colors.PrimaryRed, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
   headerTitle: { fontWeight: 'bold', fontSize: 16 },
   profileIcon: { width: 32, height: 32, backgroundColor: '#E2E8F0', borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
   row: { flexDirection: 'row', gap: 12 },
@@ -108,5 +116,5 @@ const styles = StyleSheet.create({
   userIcon: { width: 32, height: 32, backgroundColor: '#E2E8F0', borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   statusBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginTop: 4 },
   divider: { height: 1, backgroundColor: '#F8FAFC', marginVertical: 12 },
-  actionBtn: { width: '100%', height: 56, backgroundColor: Colors.PrimaryRed, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 24 }
+  actionBtn: { width: '100%', height: 56, backgroundColor: colors.PrimaryRed, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 24 }
 });

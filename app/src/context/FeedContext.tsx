@@ -3,6 +3,8 @@ import { AppApi } from '../api/services';
 import { FeedItem, FeedItemType } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from './AuthContext';
+import { withRetry } from '../utils/networkUtils';
 
 const FEED_CACHE_KEY = 'home_feed_cache';
 
@@ -11,6 +13,7 @@ interface FeedContextProps {
   selectedArticle: FeedItem | null;
   isLoading: boolean;
   isRefreshing: boolean;
+  error: string | null;
   hasMore: boolean;
   sortBy: 'latest' | 'trending';
   setSortBy: (sort: 'latest' | 'trending') => void;
@@ -91,6 +94,8 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const [sortBy, setSortByState] = useState<'latest' | 'trending'>('trending');
+  const [error, setError] = useState<string | null>(null);
+  const { userProfile } = useAuth();
 
   const saveToCache = async (data: FeedItem[]) => {
     try {
@@ -124,7 +129,12 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
     try {
       if (reset && showLoading && feedItems.length === 0) await loadFromCache();
       
-      const response = await AppApi.getHomeFeed(targetPage, 15, sortBy);
+      // withRetry: automatically retries up to 3 times on network failures (mobile data)
+      const response = await withRetry(
+        () => AppApi.getHomeFeed(targetPage, 15, sortBy),
+        3,
+        1000,
+      );
       const posts = response.data || [];
       const mapped = posts.map(toFeedItem);
       
@@ -139,9 +149,11 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
       });
       
       setHasMore(posts.length === 15);
+      setError(null);
       if (reset) await saveToCache(mapped.slice(0, 50));
-    } catch (e) {
+    } catch (e: any) {
       console.error('Feed fetch error:', e);
+      setError(e.message || 'Failed to load feed. Please check your connection.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -188,23 +200,65 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Real-time: listen for new published posts
+  // Real-time: listen for new published posts + create notifications for followed creators
   useEffect(() => {
     let debounceTimer: any = null;
-    const subscription = AppApi.subscribeToFeedUpdates((payload: any) => {
+    const subscription = AppApi.subscribeToFeedUpdates(async (payload: any) => {
+      // Refresh the feed
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         if (page === 1) {
           fetchHomeFeed(false, true);
         }
       }, 300);
+
+      // Create notification if the current user follows the post author
+      if (payload?.new && userProfile?.id && payload.eventType === 'INSERT') {
+        try {
+          const newPost = payload.new;
+          const authorId = newPost.authorId;
+          if (!authorId || authorId === userProfile.id) return;
+
+          // Check if current user follows this author
+          const { data: followData } = await supabase
+            .from('Follow')
+            .select('id')
+            .eq('followerId', userProfile.id)
+            .eq('followingId', authorId)
+            .maybeSingle();
+
+          if (followData) {
+            // Get author name for the notification
+            const { data: authorData } = await supabase
+              .from('User')
+              .select('username')
+              .eq('id', authorId)
+              .maybeSingle();
+
+            const authorName = authorData?.username || 'A creator you follow';
+            const { generateUUID } = await import('../utils/uuid');
+
+            await supabase.from('Notification').insert({
+              id: generateUUID(),
+              userId: userProfile.id,
+              type: 'NEW_POST',
+              title: `${authorName} published a new post`,
+              message: newPost.title || 'Check out their latest content!',
+              targetId: newPost.id,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        } catch (e) {
+          console.warn('[FEED] Notification creation error:', e);
+        }
+      }
     });
 
     return () => {
       if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(subscription);
     };
-  }, [page]);
+  }, [page, userProfile?.id]);
 
   return (
     <FeedContext.Provider value={{ 
@@ -214,6 +268,7 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
       isRefreshing, 
       hasMore,
       sortBy,
+      error,
       setSortBy,
       fetchArticle, 
       fetchHomeFeed,

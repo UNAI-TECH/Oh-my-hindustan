@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform, Dimensions } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 
 export default function InterestsSelectionScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const categories = [
     "National Security", "Healthcare Policy", "Agricultural Reforms", "Digital India",
@@ -45,8 +47,8 @@ export default function InterestsSelectionScreen() {
                 onPress={() => toggleCategory(category)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.itemText, isSelected && { color: Colors.PrimaryRed, fontWeight: '800' }]}>{category}</Text>
-                {isSelected && <Ionicons name="checkmark" size={16} color={Colors.PrimaryRed} style={{ position: 'absolute', top: 8, right: 8 }} />}
+                <Text style={[styles.itemText, isSelected && { color: colors.PrimaryRed, fontWeight: '800' }]}>{category}</Text>
+                {isSelected && <Ionicons name="checkmark" size={16} color={colors.PrimaryRed} style={{ position: 'absolute', top: 8, right: 8 }} />}
               </TouchableOpacity>
             )
           })}
@@ -74,10 +76,10 @@ export default function InterestsSelectionScreen() {
 const numColumns = 2;
 const width = (Dimensions.get('window').width - 48 - 16) / 2;
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: 'white', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   title: { fontSize: 24, fontWeight: 'bold', marginTop: 32, marginBottom: 8 },
-  subtitle: { fontSize: 14, color: Colors.Slate500, textAlign: 'center', marginBottom: 32 },
+  subtitle: { fontSize: 14, color: colors.Slate500, textAlign: 'center', marginBottom: 32 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 16, flex: 1 },
   gridItem: { 
     width: width, 
@@ -92,8 +94,8 @@ const styles = StyleSheet.create({
     elevation: 1
   },
   gridItemActive: {
-    backgroundColor: Colors.PrimaryRedAlpha5,
-    borderColor: Colors.PrimaryRed,
+    backgroundColor: colors.PrimaryRedAlpha5,
+    borderColor: colors.PrimaryRed,
     borderWidth: 2,
     elevation: 0
   },
@@ -112,7 +114,7 @@ const styles = StyleSheet.create({
     marginBottom: 24
   },
   btnEnabled: {
-    backgroundColor: Colors.PrimaryRed
+    backgroundColor: colors.PrimaryRed
   },
   btnDisabled: {
     backgroundColor: 'gray',

@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 // Primary palette
-export const Colors = {
+export const lightColors = {
   PrimaryRed: '#BF3A2B',
   DeepCrimson: '#8E1F4F',
   WarmOrange: '#E8722A',
@@ -37,38 +37,66 @@ export const Colors = {
   AdminSidebar: '#8E1F4F',
 };
 
+export const darkColors = {
+  ...lightColors, // fallback if new colors are added
+
+  // Backgrounds
+  CreamBg: '#121212',
+  SurfaceWhite: '#1A1A1A',
+  BackgroundLight: '#000000',
+
+  // Text (inverted)
+  DarkText: '#F8FAFC',
+  MutedGray: '#94A3B8',
+  SlateText: '#E2E8F0',
+  Slate400: '#64748B',
+  Slate500: '#94A3B8',
+  Slate600: '#CBD5E1',
+  Slate100: '#1E293B',
+  Slate50: '#0F172A',
+  Slate200: '#334155',
+
+  // Accent overrides for visibility on dark
+  PrimaryRedAlpha10: 'rgba(191, 58, 43, 0.20)',
+  PrimaryRedAlpha20: 'rgba(191, 58, 43, 0.30)',
+  PrimaryRedAlpha5: 'rgba(191, 58, 43, 0.10)',
+};
+
+// Fallback for non-refactored files
+export const Colors = lightColors;
+
 export const LightColorScheme = {
-  primary: Colors.PrimaryRed,
-  onPrimary: Colors.SurfaceWhite,
-  secondary: Colors.WarmOrange,
-  onSecondary: Colors.SurfaceWhite,
-  tertiary: Colors.DeepCrimson,
-  onTertiary: Colors.SurfaceWhite,
-  background: Colors.CreamBg,
-  onBackground: Colors.DarkText,
-  surface: Colors.SurfaceWhite,
-  onSurface: Colors.DarkText,
-  surfaceVariant: Colors.BackgroundLight,
-  onSurfaceVariant: Colors.SlateText,
-  outline: Colors.Slate200,
-  outlineVariant: Colors.Slate100,
+  primary: lightColors.PrimaryRed,
+  onPrimary: lightColors.SurfaceWhite,
+  secondary: lightColors.WarmOrange,
+  onSecondary: lightColors.SurfaceWhite,
+  tertiary: lightColors.DeepCrimson,
+  onTertiary: lightColors.SurfaceWhite,
+  background: lightColors.CreamBg,
+  onBackground: lightColors.DarkText,
+  surface: lightColors.SurfaceWhite,
+  onSurface: lightColors.DarkText,
+  surfaceVariant: lightColors.BackgroundLight,
+  onSurfaceVariant: lightColors.SlateText,
+  outline: lightColors.Slate200,
+  outlineVariant: lightColors.Slate100,
 };
 
 export const DarkColorScheme = {
-  primary: Colors.PrimaryRed,
+  primary: darkColors.PrimaryRed,
   onPrimary: '#FFFFFF',
-  secondary: Colors.WarmOrange,
+  secondary: darkColors.WarmOrange,
   onSecondary: '#FFFFFF',
-  tertiary: Colors.DeepCrimson,
+  tertiary: darkColors.DeepCrimson,
   onTertiary: '#FFFFFF',
-  background: '#121212',
-  onBackground: '#E2E8F0',
-  surface: '#1E1E1E',
-  onSurface: '#E2E8F0',
-  surfaceVariant: '#2D2D2D',
-  onSurfaceVariant: '#94A3B8',
-  outline: '#475569',
-  outlineVariant: '#334155',
+  background: darkColors.CreamBg,
+  onBackground: darkColors.DarkText,
+  surface: darkColors.SurfaceWhite,
+  onSurface: darkColors.DarkText,
+  surfaceVariant: darkColors.BackgroundLight,
+  onSurfaceVariant: darkColors.MutedGray,
+  outline: darkColors.Slate400,
+  outlineVariant: darkColors.Slate200,
 };
 
 // Fallback sans-serif roughly matching Android's compose Type.kt setup

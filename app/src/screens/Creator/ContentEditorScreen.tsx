@@ -6,8 +6,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { CreatorApi } from '../../api/services';
+import CustomModal from '../../components/CustomModal';
 
 const CATEGORIES = [
   'Politics', 'Economy', 'Digital India', 'Policy', 'Viksit Bharat',
@@ -15,6 +16,8 @@ const CATEGORIES = [
 ];
 
 export default function ContentEditorScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const contentType: string = route.params?.contentType || 'BLOG';
@@ -27,6 +30,7 @@ export default function ContentEditorScreen() {
   const [videoDuration, setVideoDuration] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
+  const [modalConfig, setModalConfig] = useState<{ visible: boolean; title: string; message: string; isError: boolean; onPrimaryPress?: () => void }>({ visible: false, title: '', message: '', isError: false });
 
   const typeLabel = contentType === 'BLOG' ? 'Blog' : contentType === 'NEWS' ? 'News' : 'Video';
   const typeIcon = contentType === 'BLOG' ? 'document-text' : contentType === 'NEWS' ? 'newspaper' : 'videocam';
@@ -34,15 +38,15 @@ export default function ContentEditorScreen() {
 
   const handlePublish = async () => {
     if (!title.trim()) {
-      Alert.alert('Missing Title', 'Please enter a title for your content.');
+      setModalConfig({ visible: true, title: 'Missing Title', message: 'Please enter a title for your content.', isError: true });
       return;
     }
     if (!content.trim()) {
-      Alert.alert('Missing Content', 'Please enter the content body.');
+      setModalConfig({ visible: true, title: 'Missing Content', message: 'Please enter the content body.', isError: true });
       return;
     }
     if (!category) {
-      Alert.alert('Missing Category', 'Please select a category.');
+      setModalConfig({ visible: true, title: 'Missing Category', message: 'Please select a category.', isError: true });
       return;
     }
 
@@ -58,14 +62,19 @@ export default function ContentEditorScreen() {
         video_duration: contentType === 'VIDEO' ? videoDuration.trim() || undefined : undefined,
       });
 
-      Alert.alert(
-        '🎉 Published!',
-        `Your ${typeLabel.toLowerCase()} has been published successfully and is now live!`,
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      setModalConfig({
+        visible: true,
+        title: '🎉 Published!',
+        message: `Your ${typeLabel.toLowerCase()} has been published successfully and is now live!`,
+        isError: false,
+        onPrimaryPress: () => {
+          setModalConfig(prev => ({ ...prev, visible: false }));
+          navigation.goBack();
+        }
+      });
     } catch (error: any) {
       console.error('Publish error:', error);
-      Alert.alert('Publish Failed', error.message || 'Something went wrong. Please try again.');
+      setModalConfig({ visible: true, title: 'Publish Failed', message: error.message || 'Something went wrong. Please try again.', isError: true });
     } finally {
       setIsPublishing(false);
     }
@@ -113,11 +122,11 @@ export default function ContentEditorScreen() {
             style={styles.categorySelector}
             onPress={() => setShowCategories(!showCategories)}
           >
-            <Ionicons name="folder-outline" size={18} color={Colors.Slate500} />
+            <Ionicons name="folder-outline" size={18} color={colors.Slate500} />
             <Text style={[styles.categorySelectorText, category ? { color: '#000' } : {}]}>
               {category || 'Select Category'}
             </Text>
-            <Ionicons name={showCategories ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.Slate500} />
+            <Ionicons name={showCategories ? 'chevron-up' : 'chevron-down'} size={18} color={colors.Slate500} />
           </TouchableOpacity>
 
           {showCategories && (
@@ -151,7 +160,7 @@ export default function ContentEditorScreen() {
           <Text style={styles.sectionTitle}>Optional Details</Text>
 
           <View style={styles.inputRow}>
-            <Ionicons name="image-outline" size={18} color={Colors.Slate500} />
+            <Ionicons name="image-outline" size={18} color={colors.Slate500} />
             <TextInput
               style={styles.optionalInput}
               placeholder="Thumbnail URL (optional)"
@@ -162,7 +171,7 @@ export default function ContentEditorScreen() {
           </View>
 
           <View style={styles.inputRow}>
-            <Ionicons name="text-outline" size={18} color={Colors.Slate500} />
+            <Ionicons name="text-outline" size={18} color={colors.Slate500} />
             <TextInput
               style={styles.optionalInput}
               placeholder="Subtitle (optional)"
@@ -174,7 +183,7 @@ export default function ContentEditorScreen() {
 
           {contentType === 'VIDEO' && (
             <View style={styles.inputRow}>
-              <Ionicons name="time-outline" size={18} color={Colors.Slate500} />
+              <Ionicons name="time-outline" size={18} color={colors.Slate500} />
               <TextInput
                 style={styles.optionalInput}
                 placeholder="Video duration (e.g., 12:30)"
@@ -188,11 +197,18 @@ export default function ContentEditorScreen() {
           <View style={{ height: 80 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+      <CustomModal 
+        visible={modalConfig.visible} 
+        title={modalConfig.title} 
+        message={modalConfig.message} 
+        isError={modalConfig.isError} 
+        onPrimaryPress={modalConfig.onPrimaryPress || (() => setModalConfig(prev => ({ ...prev, visible: false })))} 
+      />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: 'white', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -205,7 +221,7 @@ const styles = StyleSheet.create({
   },
   typeBadgeText: { fontSize: 13, fontWeight: '700' },
   publishBtn: {
-    backgroundColor: Colors.PrimaryRed, paddingHorizontal: 20, paddingVertical: 10,
+    backgroundColor: colors.PrimaryRed, paddingHorizontal: 20, paddingVertical: 10,
     borderRadius: 20,
   },
   publishBtnDisabled: { opacity: 0.4 },
@@ -226,15 +242,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
     backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0',
   },
-  categoryChipActive: { backgroundColor: Colors.PrimaryRed + '1A', borderColor: Colors.PrimaryRed },
-  categoryChipText: { fontSize: 13, color: Colors.Slate500, fontWeight: '600' },
-  categoryChipTextActive: { color: Colors.PrimaryRed },
+  categoryChipActive: { backgroundColor: colors.PrimaryRed + '1A', borderColor: colors.PrimaryRed },
+  categoryChipText: { fontSize: 13, color: colors.Slate500, fontWeight: '600' },
+  categoryChipTextActive: { color: colors.PrimaryRed },
   contentInput: {
     fontSize: 16, lineHeight: 24, color: '#000', minHeight: 200,
     padding: 16, borderRadius: 12, backgroundColor: '#F8FAFC',
     borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 24,
   },
-  sectionTitle: { fontSize: 14, fontWeight: '700', color: Colors.Slate500, marginBottom: 12, letterSpacing: 0.5 },
+  sectionTitle: { fontSize: 14, fontWeight: '700', color: colors.Slate500, marginBottom: 12, letterSpacing: 0.5 },
   inputRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     padding: 12, borderRadius: 12, backgroundColor: '#F8FAFC',

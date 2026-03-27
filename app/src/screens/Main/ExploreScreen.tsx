@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Platform, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import AppBottomNavBar from '../../components/BottomNavBar';
 import { useFeed } from '../../context/FeedContext';
@@ -20,6 +20,8 @@ interface FollowedCreator {
 }
 
 export default function ExploreScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { feedItems, isLoading: feedLoading } = useFeed();
   const { isAuthenticated, userProfile } = useAuth();
@@ -127,8 +129,8 @@ export default function ExploreScreen() {
           {item.authorImage ? (
             <Image source={{ uri: item.authorImage }} style={styles.authorAvatar} />
           ) : (
-            <View style={[styles.authorAvatar, { backgroundColor: Colors.PrimaryRedAlpha10, justifyContent: 'center', alignItems: 'center' }]}>
-              <Ionicons name="person" size={14} color={Colors.PrimaryRed} />
+            <View style={[styles.authorAvatar, { backgroundColor: colors.PrimaryRedAlpha10, justifyContent: 'center', alignItems: 'center' }]}>
+              <Ionicons name="person" size={14} color={colors.PrimaryRed} />
             </View>
           )}
           <View style={{ flex: 1, marginLeft: 10 }}>
@@ -150,7 +152,7 @@ export default function ExploreScreen() {
             </View>
           </View>
           <TouchableOpacity style={{ padding: 4 }}>
-            <Ionicons name="ellipsis-vertical" size={16} color={Colors.Slate400} />
+            <Ionicons name="ellipsis-vertical" size={16} color={colors.Slate400} />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -169,10 +171,10 @@ export default function ExploreScreen() {
         </View>
         <View style={styles.headerIcons}>
           <TouchableOpacity onPress={() => navigation.navigate('Search')} style={styles.headerIconBtn}>
-            <Ionicons name="search" size={24} color={Colors.Slate500} />
+            <Ionicons name="search" size={24} color={colors.Slate500} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={styles.headerIconBtn}>
-            <Ionicons name="notifications" size={24} color={Colors.Slate500} />
+            <Ionicons name="notifications" size={24} color={colors.Slate500} />
             {unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
@@ -194,10 +196,10 @@ export default function ExploreScreen() {
             >
               <View style={[styles.creatorAvatarRing, { borderColor: '#E2E8F0' }]}>
                 <View style={[styles.creatorAvatar, { backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }]}>
-                  <Text style={{ fontSize: 11, fontWeight: 'bold', color: Colors.Slate500 }}>All</Text>
+                  <Text style={{ fontSize: 11, fontWeight: 'bold', color: colors.Slate500 }}>All</Text>
                 </View>
               </View>
-              <Text style={[styles.creatorName, { color: Colors.Slate400 }]}>Discover</Text>
+              <Text style={[styles.creatorName, { color: colors.Slate400 }]}>Discover</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -221,13 +223,13 @@ export default function ExploreScreen() {
       {/* Content Feed */}
       {feedLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.PrimaryRed} />
+          <ActivityIndicator size="large" color={colors.PrimaryRed} />
         </View>
       ) : contentFeed.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="compass-outline" size={48} color={Colors.Slate400} style={{ opacity: 0.3 }} />
-          <Text style={{ color: Colors.Slate500, fontSize: 16, fontWeight: '600', marginTop: 12 }}>No content found</Text>
-          <Text style={{ color: Colors.Slate400, fontSize: 13, marginTop: 4 }}>Follow creators to see their content here</Text>
+          <Ionicons name="compass-outline" size={48} color={colors.Slate400} style={{ opacity: 0.3 }} />
+          <Text style={{ color: colors.Slate500, fontSize: 16, fontWeight: '600', marginTop: 12 }}>No content found</Text>
+          <Text style={{ color: colors.Slate400, fontSize: 13, marginTop: 4 }}>Follow creators to see their content here</Text>
         </View>
       ) : (
         <FlatList
@@ -237,7 +239,7 @@ export default function ExploreScreen() {
           contentContainerStyle={{ paddingBottom: 100, paddingTop: 8 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.PrimaryRed} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.PrimaryRed} />
           }
         />
       )}
@@ -249,7 +251,7 @@ export default function ExploreScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FAFAFA', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   
   // JAN SAMVAD Header
@@ -266,7 +268,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoBox: {
-    backgroundColor: Colors.PrimaryRed,
+    backgroundColor: colors.PrimaryRed,
     width: 32,
     height: 32,
     borderRadius: 8,
@@ -277,7 +279,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontWeight: '900',
     fontSize: 18,
-    color: Colors.PrimaryRed,
+    color: colors.PrimaryRed,
     letterSpacing: 1,
   },
   headerIcons: {
@@ -295,7 +297,7 @@ const styles = StyleSheet.create({
     minWidth: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: Colors.PrimaryRed,
+    backgroundColor: colors.PrimaryRed,
     borderWidth: 1.5,
     borderColor: 'white',
     justifyContent: 'center' as const,
@@ -326,7 +328,7 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 32,
     borderWidth: 1.5,
-    borderColor: Colors.PrimaryRedAlpha10 || '#FEE2E2',
+    borderColor: colors.PrimaryRedAlpha10 || '#FEE2E2',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 2,

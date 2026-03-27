@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Colors } from '../theme/Theme';
+import { useAppTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRef } from 'react';
 
@@ -10,6 +10,8 @@ interface Props {
 }
 
 export default function AppBottomNavBar({ currentRoute, onNavigate, onDoubleTapHome }: Props) {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const lastTap = useRef<number>(0);
   const items = [
     { label: 'Home', route: 'Home', icon: 'home' },
@@ -45,13 +47,13 @@ export default function AppBottomNavBar({ currentRoute, onNavigate, onDoubleTapH
             <Ionicons 
               name={item.icon as any} 
               size={24} 
-              color={isSelected ? Colors.PrimaryRed : Colors.Slate500} 
+              color={isSelected ? colors.PrimaryRed : colors.Slate500} 
             />
 
             <Text
               style={[
                 styles.label,
-                { color: isSelected ? Colors.PrimaryRed : Colors.SlateText, opacity: isSelected ? 1 : 0.4 }
+                { color: isSelected ? colors.PrimaryRed : colors.SlateText, opacity: isSelected ? 1 : 0.4 }
               ]}
             >
               {item.label}
@@ -63,7 +65,7 @@ export default function AppBottomNavBar({ currentRoute, onNavigate, onDoubleTapH
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     height: 80,

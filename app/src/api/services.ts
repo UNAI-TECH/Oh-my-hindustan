@@ -170,6 +170,13 @@ export const AppApi = {
 
     if (error) throw error;
 
+    const votes = post.Vote || [];
+    const allComments = post.Comment || [];
+    const upvotes = votes.filter((v: any) => v.type === 1).length;
+    const downvotes = votes.filter((v: any) => v.type === -1).length;
+    const realComments = allComments.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length;
+    const reposts = allComments.filter((c: any) => c.content === '[SYSTEM_REPOST]').length;
+
     return {
       id: post.id,
       title: post.title,
@@ -179,8 +186,11 @@ export const AppApi = {
       mediaUrl: post.thumbnail,
       thumbnail: post.thumbnail,
       authorId: post.authorId,
-      voteCount: post.Vote?.length || 0,
-      commentCount: post.Comment?.length || 0,
+      voteCount: upvotes - downvotes,
+      upvoteCount: upvotes,
+      downvoteCount: downvotes,
+      commentCount: realComments,
+      repostCount: reposts,
       hotScore: 0,
       category: post.category || 'General',
       subtitle: post.subtitle,
@@ -506,11 +516,9 @@ export const AppApi = {
 
     return supabase
       .channel('viewer-feed')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'Post',
-      }, debouncedCallback)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'Post' }, debouncedCallback)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Vote' }, debouncedCallback)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Comment' }, debouncedCallback)
       .subscribe();
   },
 
@@ -591,26 +599,36 @@ export const CreatorApi = {
 
     const { data, error } = await supabase
       .from('Post')
-      .select('*, Vote(type), Comment(id)')
+      .select('*, Vote(type), Comment(id, content)')
       .eq('authorId', user.id)
       .order('createdAt', { ascending: false });
 
     if (error) throw error;
 
-    return (data || []).map((post: any) => ({
-      id: post.id,
-      title: post.title,
-      content: post.content,
-      type: post.type,
-      category: post.category,
-      thumbnail: post.thumbnail,
-      subtitle: post.subtitle,
-      videoDuration: post.videoDuration,
-      voteCount: post.Vote?.length || 0,
-      commentCount: post.Comment?.length || 0,
-      createdAt: post.createdAt,
-      updatedAt: post.updatedAt,
-    }));
+    return (data || []).map((post: any) => {
+      const votes = post.Vote || [];
+      const allComments = post.Comment || [];
+      const upvotes = votes.filter((v: any) => v.type === 1).length;
+      const downvotes = votes.filter((v: any) => v.type === -1).length;
+      const realComments = allComments.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length;
+
+      return {
+        id: post.id,
+        title: post.title,
+        content: post.content,
+        type: post.type,
+        category: post.category,
+        thumbnail: post.thumbnail,
+        subtitle: post.subtitle,
+        videoDuration: post.videoDuration,
+        voteCount: upvotes - downvotes,
+        upvoteCount: upvotes,
+        downvoteCount: downvotes,
+        commentCount: realComments,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+      };
+    });
   },
 
   /**
@@ -623,7 +641,7 @@ export const CreatorApi = {
 
     const { data: posts, error } = await supabase
       .from('Post')
-      .select('id, type, Vote(id), Comment(id)')
+      .select('id, type, Vote(type), Comment(id, content)')
       .eq('authorId', user.id);
 
     if (error) throw error;
@@ -632,8 +650,10 @@ export const CreatorApi = {
     let totalVotes = 0;
     let totalComments = 0;
     allPosts.forEach((p: any) => {
-      totalVotes += p.Vote?.length || 0;
-      totalComments += p.Comment?.length || 0;
+      const votes = p.Vote || [];
+      const allC = p.Comment || [];
+      totalVotes += votes.filter((v: any) => v.type === 1).length;
+      totalComments += allC.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length;
     });
 
     const { count: followerCount } = await supabase

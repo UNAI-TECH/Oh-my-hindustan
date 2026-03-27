@@ -3,16 +3,20 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform, Alert } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
+import CustomModal from '../../components/CustomModal';
 
 export default function CreatorFeedbackScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const [feedback, setFeedback] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [modalConfig, setModalConfig] = useState<{ visible: boolean; title: string; message: string; isError: boolean; onPrimaryPress?: () => void }>({ visible: false, title: '', message: '', isError: false });
 
   const handleSend = async () => {
     if (!feedback.trim()) {
-      Alert.alert('Empty Feedback', 'Please write your feedback before submitting.');
+      setModalConfig({ visible: true, title: 'Empty Feedback', message: 'Please write your feedback before submitting.', isError: true });
       return;
     }
     setIsSending(true);
@@ -20,9 +24,13 @@ export default function CreatorFeedbackScreen() {
     setTimeout(() => {
       setIsSending(false);
       setFeedback('');
-      Alert.alert('Thank You! 🙏', 'Your feedback has been submitted successfully. We appreciate it!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+      setModalConfig({ 
+        visible: true, 
+        title: 'Thank You! 🙏', 
+        message: 'Your feedback has been submitted successfully. We appreciate it!', 
+        isError: false, 
+        onPrimaryPress: () => { setModalConfig(prev => ({ ...prev, visible: false })); navigation.goBack(); } 
+      });
     }, 1000);
   };
 
@@ -57,11 +65,19 @@ export default function CreatorFeedbackScreen() {
           <Text style={styles.sendBtnText}>{isSending ? 'Sending...' : 'Submit Feedback'}</Text>
         </TouchableOpacity>
       </View>
+
+      <CustomModal 
+        visible={modalConfig.visible} 
+        title={modalConfig.title} 
+        message={modalConfig.message} 
+        isError={modalConfig.isError} 
+        onPrimaryPress={modalConfig.onPrimaryPress || (() => setModalConfig(prev => ({ ...prev, visible: false })))} 
+      />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   header: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white' },
   headerTitle: { fontSize: 20, fontWeight: 'bold' },
@@ -72,7 +88,7 @@ const styles = StyleSheet.create({
   },
   sendBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: Colors.PrimaryRed, padding: 16, borderRadius: 16, marginTop: 24,
+    backgroundColor: colors.PrimaryRed, padding: 16, borderRadius: 16, marginTop: 24,
   },
   sendBtnText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
 });

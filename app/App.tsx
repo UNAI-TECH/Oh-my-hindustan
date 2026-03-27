@@ -8,19 +8,22 @@ import { AuthProvider } from './src/context/AuthContext';
 import { FeedProvider } from './src/context/FeedContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import { navigationRef } from './src/utils/navigation';
+import { ThemeProvider } from './src/context/ThemeContext';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <FeedProvider>
-        <NotificationProvider>
-          <NavigationContainer ref={navigationRef}>
-            <RootNavigator />
-            <StatusBar style="auto" />
-          </NavigationContainer>
-        </NotificationProvider>
-      </FeedProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <FeedProvider>
+          <NotificationProvider>
+            <NavigationContainer ref={navigationRef}>
+              <RootNavigator />
+              <StatusBar style="auto" />
+            </NavigationContainer>
+          </NotificationProvider>
+        </FeedProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

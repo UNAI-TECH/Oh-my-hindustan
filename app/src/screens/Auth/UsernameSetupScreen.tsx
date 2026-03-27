@@ -13,10 +13,12 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
 export default function UsernameSetupScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { checkUsernameAvailability, updateOnboardingProfile, isLoading, userProfile } = useAuth();
   const [username, setUsername] = useState('');
@@ -113,7 +115,7 @@ export default function UsernameSetupScreen() {
         </View>
 
         <View style={styles.iconContainer}>
-          <Ionicons name="person-add" size={36} color={Colors.PrimaryRed} />
+          <Ionicons name="person-add" size={36} color={colors.PrimaryRed} />
         </View>
 
         <Text style={styles.title}>Choose your username</Text>
@@ -135,7 +137,7 @@ export default function UsernameSetupScreen() {
             maxLength={24}
           />
           {isChecking && (
-            <ActivityIndicator size="small" color={Colors.PrimaryRed} style={styles.inputIcon} />
+            <ActivityIndicator size="small" color={colors.PrimaryRed} style={styles.inputIcon} />
           )}
           {!isChecking && isAvailable === true && (
             <Ionicons name="checkmark-circle" size={22} color="#16A34A" style={styles.inputIcon} />
@@ -163,7 +165,7 @@ export default function UsernameSetupScreen() {
                 onPress={() => handleSuggestionTap(suggestion)}
               >
                 <Text style={styles.suggestionText}>@{suggestion}</Text>
-                <Ionicons name="arrow-forward" size={14} color={Colors.PrimaryRed} />
+                <Ionicons name="arrow-forward" size={14} color={colors.PrimaryRed} />
               </TouchableOpacity>
             ))}
           </View>
@@ -197,7 +199,7 @@ export default function UsernameSetupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
@@ -220,7 +222,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E2E8F0',
   },
   stepDotActive: {
-    backgroundColor: Colors.PrimaryRed,
+    backgroundColor: colors.PrimaryRed,
     width: 14,
     height: 14,
     borderRadius: 7,
@@ -322,7 +324,7 @@ const styles = StyleSheet.create({
   },
   suggestionText: {
     fontSize: 15,
-    color: Colors.PrimaryRed,
+    color: colors.PrimaryRed,
     fontWeight: '600',
   },
   buttonContainer: {

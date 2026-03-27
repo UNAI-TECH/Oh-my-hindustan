@@ -14,10 +14,13 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import CustomModal from '../../components/CustomModal';
 
 export default function SignUpScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { register, signInWithGoogle, isLoading, error, isAuthenticated, needsOnboarding, clearState } = useAuth();
   const [name, setName] = useState('');
@@ -28,6 +31,7 @@ export default function SignUpScreen() {
   const [localError, setLocalError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [modalConfig, setModalConfig] = useState({ visible: false, title: '', message: '', isError: false });
 
   useEffect(() => {
     clearState();
@@ -45,7 +49,7 @@ export default function SignUpScreen() {
 
   useEffect(() => {
     if (error) {
-      Alert.alert('Authentication Failed', error);
+      setModalConfig({ visible: true, title: 'Authentication Failed', message: error, isError: true });
     }
   }, [error]);
 
@@ -81,7 +85,7 @@ export default function SignUpScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.iconContainer}>
-          <Ionicons name="people" size={40} color={Colors.PrimaryRed} />
+          <Ionicons name="people" size={40} color={colors.PrimaryRed} />
         </View>
 
         <Text style={styles.title}>Join the National Dialogue</Text>
@@ -205,11 +209,18 @@ export default function SignUpScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <CustomModal 
+        visible={modalConfig.visible} 
+        title={modalConfig.title} 
+        message={modalConfig.message} 
+        isError={modalConfig.isError} 
+        onPrimaryPress={() => setModalConfig(prev => ({ ...prev, visible: false }))} 
+      />
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',

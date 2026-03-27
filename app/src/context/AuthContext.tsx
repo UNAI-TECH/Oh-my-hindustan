@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/supabaseClient';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -157,7 +157,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           } else if (!cachedProfile) {
             // Only sign out if we have no cached profile AND no remote profile
             // Actually, if session exists but profile doesn't, we might need onboarding
-            setAuthState(null, true);
+            setAuthState({ id: session.user.id, email: session.user.email, onboarding_complete: false }, true);
           }
         } else {
           console.warn('[AUTH] No existing session');
@@ -187,7 +187,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
         // Skip retries for background refreshes
         const profile = await fetchProfile(session.user.id, event === 'TOKEN_REFRESHED');
-        setAuthState(profile, true);
+        setAuthState(profile || { id: session.user.id, email: session.user.email, onboarding_complete: false }, true);
       }
     });
 
@@ -256,7 +256,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      setAuthState(profile, true);
+      setAuthState(profile || { id: authData.user.id, email: loginEmail, onboarding_complete: false }, true);
       setLoginSuccess(true);
     } catch (e: any) {
       setError('Login failed. Please try again.');
@@ -426,7 +426,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (data.session || data.user) {
         await new Promise(resolve => setTimeout(resolve, 1500));
         const profile = await fetchProfile(data.user!.id);
-        setAuthState(profile, true);
+        setAuthState(profile || { id: data.user!.id, email, onboarding_complete: false }, true);
         setSignupSuccess(true);
         return true;
       }
@@ -501,7 +501,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Wait for the database trigger to create the User row
             await new Promise(resolve => setTimeout(resolve, 2000));
             const profile = await fetchProfile(sessionData.user.id);
-            setAuthState(profile, true);
+            setAuthState(profile || { id: sessionData.user.id, onboarding_complete: false }, true);
             setLoginSuccess(true);
             console.warn('[GOOGLE AUTH] ✅ Auth complete! needsOnboarding:', checkOnboardingStatus(profile));
           }
@@ -586,8 +586,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const fileExt = imageUri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg';
     const fileName = `profile-images/${userId}/avatar_${Date.now()}.${fileExt}`;
     const contentType = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
-    const supabaseUrl = 'https://vxenjlgoatbkfrfrkoeq.supabase.co';
-    const supabaseKey = 'sb_publishable_BnXqtLVTeJtbCmI4ipng5A_kOCulArG';
+    const supabaseUrl = SUPABASE_URL;
+    const supabaseKey = SUPABASE_ANON_KEY;
 
     try {
       // React Native FormData with {uri, name, type} — RN reads the file natively

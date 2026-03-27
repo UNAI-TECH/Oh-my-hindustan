@@ -1,11 +1,13 @@
 import axios from 'axios';
 import { SessionManager } from '../utils/storage';
 
-// Same IP as ApiClient.kt 
-const BASE_URL = 'http://192.168.29.161:3001/api';
+// LEGACY: This API client is not currently used — all data flows through Supabase directly.
+// Kept for potential future backend API integration.
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || '';
 
 export const ApiClient = axios.create({
   baseURL: BASE_URL,
+  timeout: 15000, // 15s timeout to prevent infinite loading on mobile data
 });
 
 ApiClient.interceptors.request.use(

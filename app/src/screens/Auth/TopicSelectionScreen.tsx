@@ -12,7 +12,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
 const TOPICS = [
@@ -35,6 +35,8 @@ const TOPICS = [
 ];
 
 export default function TopicSelectionScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { updateOnboardingProfile, isLoading } = useAuth();
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -77,7 +79,7 @@ export default function TopicSelectionScreen() {
         </View>
 
         <View style={styles.iconContainer}>
-          <Ionicons name="newspaper" size={36} color={Colors.PrimaryRed} />
+          <Ionicons name="newspaper" size={36} color={colors.PrimaryRed} />
         </View>
 
         <Text style={styles.title}>What matters to you?</Text>
@@ -111,7 +113,7 @@ export default function TopicSelectionScreen() {
                   <Ionicons 
                     name={topic.icon as any} 
                     size={22} 
-                    color={isSelected ? Colors.PrimaryRed : '#94A3B8'} 
+                    color={isSelected ? colors.PrimaryRed : '#94A3B8'} 
                   />
                 </View>
                 <Text
@@ -162,7 +164,7 @@ export default function TopicSelectionScreen() {
 
 const cardWidth = (Dimensions.get('window').width - 48 - 12) / 2;
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
@@ -185,7 +187,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E2E8F0',
   },
   stepDotActive: {
-    backgroundColor: Colors.PrimaryRed,
+    backgroundColor: colors.PrimaryRed,
     width: 14,
     height: 14,
     borderRadius: 7,
@@ -240,7 +242,7 @@ const styles = StyleSheet.create({
   counterText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.PrimaryRed,
+    color: colors.PrimaryRed,
   },
   grid: {
     flexDirection: 'row',
@@ -260,7 +262,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   topicCardActive: {
-    borderColor: Colors.PrimaryRed,
+    borderColor: colors.PrimaryRed,
     backgroundColor: 'rgba(229, 57, 53, 0.05)',
     borderWidth: 2,
   },
@@ -286,7 +288,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   topicTextActive: {
-    color: Colors.PrimaryRed,
+    color: colors.PrimaryRed,
     fontWeight: '800',
   },
   checkBadge: {
@@ -296,7 +298,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: Colors.PrimaryRed,
+    backgroundColor: colors.PrimaryRed,
     justifyContent: 'center',
     alignItems: 'center',
   },

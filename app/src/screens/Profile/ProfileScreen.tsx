@@ -4,12 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import AppBottomNavBar from '../../components/BottomNavBar';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function ProfileScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { userProfile, logout, isAuthenticated } = useAuth();
   const [selectedTab, setSelectedTab] = useState('Posts');
@@ -78,7 +80,7 @@ export default function ProfileScreen() {
         {/* Cover + Avatar */}
         <View style={{ width: '100%', paddingBottom: 80 }}>
           <LinearGradient
-            colors={[Colors.DeepCrimson, Colors.WarmOrange]}
+            colors={[colors.DeepCrimson, colors.WarmOrange]}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={{ width: '100%', height: 160 }}
           />
@@ -90,11 +92,11 @@ export default function ProfileScreen() {
         {/* Name & Bio */}
         <View style={{ alignItems: 'center', paddingHorizontal: 16 }}>
           <Text style={{ fontWeight: 'bold', fontSize: 24 }}>@{displayName}</Text>
-          <Text style={{ color: Colors.Slate500, fontSize: 14, marginTop: 4 }}>{email}</Text>
-          {phone ? <Text style={{ color: Colors.Slate500, fontSize: 14, marginTop: 2 }}>{phone}</Text> : null}
-          <Text style={{ color: Colors.Slate500, fontSize: 13, marginTop: 6, textAlign: 'center' }}>{bio}</Text>
+          <Text style={{ color: colors.Slate500, fontSize: 14, marginTop: 4 }}>{email}</Text>
+          {phone ? <Text style={{ color: colors.Slate500, fontSize: 14, marginTop: 2 }}>{phone}</Text> : null}
+          <Text style={{ color: colors.Slate500, fontSize: 13, marginTop: 6, textAlign: 'center' }}>{bio}</Text>
           <View style={styles.roleBadge}>
-            <Ionicons name={role === 'CITIZEN' ? 'person' : 'megaphone'} size={12} color={Colors.PrimaryRed} />
+            <Ionicons name={role === 'CITIZEN' ? 'person' : 'megaphone'} size={12} color={colors.PrimaryRed} />
             <Text style={styles.roleText}>{role}</Text>
           </View>
         </View>
@@ -111,8 +113,8 @@ export default function ProfileScreen() {
         <View style={styles.preferencesContainer}>
           <Text style={styles.sectionTitle}>My Preferences</Text>
           <View style={styles.preferenceRow}>
-            <Ionicons name="language" size={20} color={Colors.Slate500} />
-            <Text style={styles.preferenceText}>Language: <Text style={{fontWeight: '600', color: Colors.PrimaryRed}}>{language}</Text></Text>
+            <Ionicons name="language" size={20} color={colors.Slate500} />
+            <Text style={styles.preferenceText}>Language: <Text style={{fontWeight: '600', color: colors.PrimaryRed}}>{language}</Text></Text>
           </View>
           {topics.length > 0 && (
             <View style={{marginTop: 12}}>
@@ -157,14 +159,17 @@ export default function ProfileScreen() {
   );
 }
 
-const ProfileStatCard = ({ value, label }: any) => (
+const ProfileStatCard = ({ value, label }: any) => {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
+  return (
   <View style={styles.statCard}>
     <Text style={{ fontSize: 20, fontWeight: 'bold' }}>{value}</Text>
-    <Text style={{ fontSize: 10, color: Colors.Slate400, marginTop: 4 }}>{label.toUpperCase()}</Text>
+    <Text style={{ fontSize: 10, color: colors.Slate400, marginTop: 4 }}>{label.toUpperCase()}</Text>
   </View>
-);
+)};
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: 'white', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   header: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', zIndex: 10 },
   headerTitle: { fontSize: 20, fontWeight: 'bold' },
@@ -175,7 +180,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(229, 57, 53, 0.08)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
     gap: 6,
   },
-  roleText: { fontSize: 12, fontWeight: '700', color: Colors.PrimaryRed, textTransform: 'uppercase', letterSpacing: 1 },
+  roleText: { fontSize: 12, fontWeight: '700', color: colors.PrimaryRed, textTransform: 'uppercase', letterSpacing: 1 },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, marginTop: 24 },
   statCard: { flex: 1, backgroundColor: '#F8FAFC', padding: 12, borderRadius: 12, alignItems: 'center', marginHorizontal: 4, borderWidth: 1, borderColor: '#E2E8F0' },
   creatorAction: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginVertical: 16, padding: 16, borderRadius: 16, borderWidth: 1 },
@@ -205,7 +210,7 @@ const styles = StyleSheet.create({
   },
   preferenceText: {
     fontSize: 15,
-    color: Colors.Slate600,
+    color: colors.Slate600,
   },
   topicsWrapper: {
     flexDirection: 'row',
@@ -220,7 +225,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   topicText: {
-    color: Colors.PrimaryRed,
+    color: colors.PrimaryRed,
     fontSize: 13,
     fontWeight: '600',
   },

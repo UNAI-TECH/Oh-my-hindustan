@@ -1,10 +1,14 @@
 import { createNavigationContainerRef } from '@react-navigation/native';
 
-export const navigationRef = createNavigationContainerRef();
+export const navigationRef = createNavigationContainerRef<any>();
 
 export function navigate(name: string, params?: object) {
   if (navigationRef.isReady()) {
-    navigationRef.navigate(name as never, params as never);
+    if (params) {
+      navigationRef.navigate(name, params);
+    } else {
+      navigationRef.navigate(name);
+    }
   } else {
     // If navigation is not ready, we can queue it or handle it appropriately
     console.warn('[NAV] Navigation not ready for:', name);

@@ -11,7 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
 const LANGUAGES = [
@@ -28,6 +28,8 @@ const LANGUAGES = [
 ];
 
 export default function LanguageSelectionScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { updateOnboardingProfile, isLoading } = useAuth();
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
@@ -58,7 +60,7 @@ export default function LanguageSelectionScreen() {
         </View>
 
         <View style={styles.iconContainer}>
-          <Ionicons name="language" size={36} color={Colors.PrimaryRed} />
+          <Ionicons name="language" size={36} color={colors.PrimaryRed} />
         </View>
 
         <Text style={styles.title}>Choose your language</Text>
@@ -124,7 +126,7 @@ export default function LanguageSelectionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
@@ -147,7 +149,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E2E8F0',
   },
   stepDotActive: {
-    backgroundColor: Colors.PrimaryRed,
+    backgroundColor: colors.PrimaryRed,
     width: 14,
     height: 14,
     borderRadius: 7,
@@ -209,7 +211,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   languageCardActive: {
-    borderColor: Colors.PrimaryRed,
+    borderColor: colors.PrimaryRed,
     backgroundColor: 'rgba(229, 57, 53, 0.05)',
     borderWidth: 2,
   },
@@ -224,7 +226,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   languageNameActive: {
-    color: Colors.PrimaryRed,
+    color: colors.PrimaryRed,
   },
   languageNative: {
     fontSize: 13,
@@ -232,7 +234,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   languageNativeActive: {
-    color: Colors.PrimaryRed,
+    color: colors.PrimaryRed,
   },
   checkBadge: {
     position: 'absolute',
@@ -241,7 +243,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: Colors.PrimaryRed,
+    backgroundColor: colors.PrimaryRed,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -13,10 +13,12 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
 export default function LoginScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { login, signInWithGoogle, isLoading, error, loginSuccess, isAuthenticated, needsOnboarding, clearState } = useAuth();
   const [identifier, setIdentifier] = useState('');
@@ -61,7 +63,7 @@ export default function LoginScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.iconContainer}>
-          <Ionicons name="megaphone" size={40} color={Colors.PrimaryRed} />
+          <Ionicons name="megaphone" size={40} color={colors.PrimaryRed} />
         </View>
 
         <Text style={styles.title}>Welcome to the Forum</Text>
@@ -158,7 +160,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF', 

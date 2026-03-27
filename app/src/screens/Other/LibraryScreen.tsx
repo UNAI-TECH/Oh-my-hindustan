@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Platform, Ac
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import AppBottomNavBar from '../../components/BottomNavBar';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
@@ -13,6 +13,8 @@ type LibraryTab = 'liked' | 'commented' | 'reposts' | 'saved';
 type FilterType = 'All' | 'Blogs' | 'Posts' | 'Videos' | 'News';
 
 export default function LibraryScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { userProfile } = useAuth();
   const { unreadCount } = useNotifications();
@@ -134,10 +136,10 @@ export default function LibraryScreen() {
         </View>
         <View style={styles.headerIcons}>
           <TouchableOpacity onPress={() => navigation.navigate('Search')} style={styles.iconBtn}>
-            <Ionicons name="search" size={24} color={Colors.Slate500} />
+            <Ionicons name="search" size={24} color={colors.Slate500} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={styles.iconBtn}>
-            <Ionicons name="notifications" size={24} color={Colors.Slate500} />
+            <Ionicons name="notifications" size={24} color={colors.Slate500} />
             {unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
@@ -189,16 +191,19 @@ export default function LibraryScreen() {
   );
 }
 
-const OptionCard = ({ icon, label, bg, color, active, onPress }: any) => (
+const OptionCard = ({ icon, label, bg, color, active, onPress }: any) => {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
+  return (
   <TouchableOpacity style={[styles.optionCard, active && styles.optionCardActive]} onPress={onPress} activeOpacity={0.8}>
     <View style={[styles.iconCircle, { backgroundColor: bg }]}>
       <Ionicons name={icon} size={22} color={color} />
     </View>
     <Text style={[styles.optionLabel, active && { color: '#0F172A', fontWeight: '800' }]}>{label}</Text>
   </TouchableOpacity>
-);
+)};
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FAFAFA', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   topHeader: {
     flexDirection: 'row',
@@ -213,7 +218,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoBox: {
-    backgroundColor: Colors.PrimaryRed,
+    backgroundColor: colors.PrimaryRed,
     width: 32,
     height: 32,
     borderRadius: 8,
@@ -224,7 +229,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontWeight: '900',
     fontSize: 18,
-    color: Colors.PrimaryRed,
+    color: colors.PrimaryRed,
     letterSpacing: 1,
   },
   headerIcons: {
@@ -242,7 +247,7 @@ const styles = StyleSheet.create({
     minWidth: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: Colors.PrimaryRed,
+    backgroundColor: colors.PrimaryRed,
     borderWidth: 1.5,
     borderColor: 'white',
     justifyContent: 'center' as const,

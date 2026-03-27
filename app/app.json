@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Antigravity",
+    "name": "Oh My Hindusthan",
     "slug": "antigravity",
     "scheme": "antigravity",
     "version": "1.0.0",
@@ -22,14 +22,14 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.unai.antigravity"
+      "package": "com.unai.antigravity",
+      "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser",
-      "expo-notifications"
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {

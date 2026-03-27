@@ -4,13 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { AppApi } from '../../api/services';
 import { generateUUID } from '../../utils/uuid';
+import CustomModal from '../../components/CustomModal';
 
 export default function CreatorProfileScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { authorId, authorName: paramAuthorName } = route.params || {};
@@ -22,45 +25,82 @@ export default function CreatorProfileScreen() {
   const [postCount, setPostCount] = useState(0);
   const [isFollowed, setIsFollowed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [modalConfig, setModalConfig] = useState({ visible: false, title: '', message: '', isError: false });
 
 
-  useEffect(() => {
-    const fetchCreatorData = async () => {
-      if (!authorId) { setLoading(false); return; }
-      try {
-        // Fetch creator profile
-        const { data: user } = await supabase.from('User').select('*').eq('id', authorId).single();
-        setCreator(user);
+  const fetchCreatorData = React.useCallback(async () => {
+    if (!authorId) { setLoading(false); return; }
+    try {
+      // Fetch creator profile
+      const { data: user } = await supabase.from('User').select('*').eq('id', authorId).single();
+      setCreator(user);
 
-        // Fetch posts by this creator
-        const { data: creatorPosts } = await supabase
-          .from('Post')
-          .select('*, Vote(type), Comment(id)')
-          .eq('authorId', authorId)
-          .order('createdAt', { ascending: false });
-        setPosts(creatorPosts || []);
-        setPostCount(creatorPosts?.length || 0);
+      // Fetch posts by this creator
+      const { data: creatorPosts } = await supabase
+        .from('Post')
+        .select('*, Vote(type), Comment(id, content)')
+        .eq('authorId', authorId)
+        .order('createdAt', { ascending: false });
+        
+      const mappedPosts = (creatorPosts || []).map((p: any) => {
+        const votes = p.Vote || [];
+        const allC = p.Comment || [];
+        return {
+          ...p,
+          upvotes: votes.filter((v: any) => v.type === 1).length,
+          downvotes: votes.filter((v: any) => v.type === -1).length,
+          realComments: allC.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length,
+          reposts: allC.filter((c: any) => c.content === '[SYSTEM_REPOST]').length,
+        };
+      });
+      
+      setPosts(mappedPosts);
+      setPostCount(mappedPosts.length);
 
-        // Fetch follower count
-        const { count } = await supabase.from('Follow').select('id', { count: 'exact', head: true }).eq('followingId', authorId);
-        setFollowerCount(count || 0);
+      // Fetch follower count
+      const { count } = await supabase.from('Follow').select('id', { count: 'exact', head: true }).eq('followingId', authorId);
+      setFollowerCount(count || 0);
 
-        // Check if current user follows this creator
-        if (userProfile?.id) {
-          const { data: followData } = await supabase.from('Follow').select('id').eq('followerId', userProfile.id).eq('followingId', authorId).maybeSingle();
-          setIsFollowed(!!followData);
-        }
-      } catch (e) {
-        console.warn('Failed to fetch creator data:', e);
-      } finally {
-        setLoading(false);
+      // Check if current user follows this creator
+      if (userProfile?.id) {
+        const { data: followData } = await supabase.from('Follow').select('id').eq('followerId', userProfile.id).eq('followingId', authorId).maybeSingle();
+        setIsFollowed(!!followData);
       }
-    };
-    fetchCreatorData();
+    } catch (e) {
+      console.warn('Failed to fetch creator data:', e);
+    } finally {
+      setLoading(false);
+    }
   }, [authorId, userProfile?.id]);
 
+  React.useEffect(() => {
+    fetchCreatorData();
+  }, [fetchCreatorData]);
+
+  React.useEffect(() => {
+    if (!authorId) return;
+    let timer: NodeJS.Timeout;
+    const handleChanges = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        fetchCreatorData();
+      }, 500);
+    };
+
+    const channel = supabase
+      .channel(`creator_profile_${authorId}_interactions`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Vote' }, handleChanges)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Comment' }, handleChanges)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearTimeout(timer);
+    };
+  }, [authorId, fetchCreatorData]);
+
   const handleFollow = async () => {
-    if (!userProfile?.id || !authorId) { Alert.alert('Login Required', 'Please login to follow creators'); return; }
+    if (!userProfile?.id || !authorId) { setModalConfig({ visible: true, title: 'Login Required', message: 'Please login to follow creators', isError: true }); return; }
     
     // Save current state for rollback
     const prevFollowed = isFollowed;
@@ -99,7 +139,7 @@ export default function CreatorProfileScreen() {
       // Rollback
       setIsFollowed(prevFollowed);
       setFollowerCount(prevFollowerCount);
-      Alert.alert('Follow Failed', e?.message || 'Could not follow creator');
+      setModalConfig({ visible: true, title: 'Follow Failed', message: e?.message || 'Could not follow creator', isError: true });
     }
   };
 
@@ -113,7 +153,7 @@ export default function CreatorProfileScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={Colors.PrimaryRed} />
+          <ActivityIndicator size="large" color={colors.PrimaryRed} />
         </View>
       </SafeAreaView>
     );
@@ -141,7 +181,7 @@ export default function CreatorProfileScreen() {
         ) : (
           <View style={{ width: '100%', paddingBottom: 60 }}>
             <LinearGradient
-              colors={[Colors.DeepCrimson, Colors.WarmOrange]}
+              colors={[colors.DeepCrimson, colors.WarmOrange]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
               style={{ width: '100%', height: 160 }}
             />
@@ -153,7 +193,7 @@ export default function CreatorProfileScreen() {
 
         <View style={{ alignItems: 'center', paddingTop: 12 }}>
           <Text style={{ fontWeight: 'bold', fontSize: 24 }}>@{displayName}</Text>
-          <Text style={{ color: Colors.Slate500, fontSize: 14, marginTop: 4, textAlign: 'center', paddingHorizontal: 32 }}>{bio}</Text>
+          <Text style={{ color: colors.Slate500, fontSize: 14, marginTop: 4, textAlign: 'center', paddingHorizontal: 32 }}>{bio}</Text>
         </View>
 
         {/* Stats */}
@@ -167,7 +207,7 @@ export default function CreatorProfileScreen() {
             <Text style={styles.statLabel}>Followers</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statNum}>{posts.reduce((sum, p) => sum + (p.Vote?.length || 0), 0)}</Text>
+            <Text style={styles.statNum}>{posts.reduce((sum, p: any) => sum + (p.upvotes || 0), 0)}</Text>
             <Text style={styles.statLabel}>Likes</Text>
           </View>
         </View>
@@ -187,8 +227,8 @@ export default function CreatorProfileScreen() {
         <View style={{ paddingHorizontal: 16, gap: 16 }}>
           {posts.length === 0 ? (
             <View style={{ padding: 48, alignItems: 'center' }}>
-              <Ionicons name="document-text-outline" size={48} color={Colors.Slate400} style={{ opacity: 0.4 }} />
-              <Text style={{ color: Colors.Slate500, marginTop: 12 }}>No posts yet</Text>
+              <Ionicons name="document-text-outline" size={48} color={colors.Slate400} style={{ opacity: 0.4 }} />
+              <Text style={{ color: colors.Slate500, marginTop: 12 }}>No posts yet</Text>
             </View>
           ) : (
             posts.map((item, idx) => (
@@ -207,15 +247,25 @@ export default function CreatorProfileScreen() {
                 )}
                 <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{item.title}</Text>
                 {item.content && (
-                  <Text style={{ fontSize: 13, color: 'gray', marginTop: 6 }} numberOfLines={2}>{item.content}</Text>
+                  <Text style={{ fontSize: 13, color: 'gray', marginTop: 6 }} numberOfLines={2}>
+                    {item.content.replace(/<[^>]*>?/gm, '')}
+                  </Text>
                 )}
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
-                  <Ionicons name="heart-outline" size={16} color="gray" />
-                  <Text style={{ color: 'gray', marginLeft: 4, marginRight: 16 }}>{item.Vote?.length || 0}</Text>
+                  <Ionicons name="arrow-up" size={16} color="gray" />
+                  <Text style={{ color: 'gray', marginLeft: 4, marginRight: 16 }}>{item.upvotes || 0}</Text>
+                  
+                  <Ionicons name="arrow-down" size={16} color="gray" />
+                  <Text style={{ color: 'gray', marginLeft: 4, marginRight: 16 }}>{item.downvotes || 0}</Text>
+
+                  <Ionicons name="repeat" size={16} color="gray" />
+                  <Text style={{ color: 'gray', marginLeft: 4, marginRight: 16 }}>{item.reposts || 0}</Text>
+
                   <Ionicons name="chatbubble-outline" size={16} color="gray" />
-                  <Text style={{ color: 'gray', marginLeft: 4 }}>{item.Comment?.length || 0}</Text>
+                  <Text style={{ color: 'gray', marginLeft: 4 }}>{item.realComments || 0}</Text>
+                  
                   <View style={{ flex: 1 }} />
-                  <Text style={{ fontSize: 11, color: Colors.Slate400 }}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+                  <Text style={{ fontSize: 11, color: colors.Slate400 }}>{new Date(item.createdAt).toLocaleDateString()}</Text>
                 </View>
               </TouchableOpacity>
             ))
@@ -223,29 +273,35 @@ export default function CreatorProfileScreen() {
         </View>
       </ScrollView>
 
-
+      <CustomModal 
+        visible={modalConfig.visible} 
+        title={modalConfig.title} 
+        message={modalConfig.message} 
+        isError={modalConfig.isError} 
+        onPrimaryPress={() => setModalConfig(prev => ({ ...prev, visible: false }))} 
+      />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: 'white', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   header: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', zIndex: 10 },
   headerTitle: { fontSize: 20, fontWeight: 'bold' },
-  avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: Colors.PrimaryRed },
+  avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: colors.PrimaryRed },
   statsRow: { 
     flexDirection: 'row', marginHorizontal: 24, marginTop: 20, 
     backgroundColor: '#F8FAFC', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0',
   },
   statItem: { flex: 1, alignItems: 'center', paddingVertical: 16 },
   statNum: { fontWeight: 'bold', fontSize: 20 },
-  statLabel: { fontSize: 12, color: Colors.Slate500, marginTop: 2 },
+  statLabel: { fontSize: 12, color: colors.Slate500, marginTop: 2 },
   followBtn: { 
     flexDirection: 'row', marginHorizontal: 24, marginTop: 20, height: 48, 
     borderRadius: 24, justifyContent: 'center', alignItems: 'center',
   },
   followingBtn: { backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
-  notFollowingBtn: { backgroundColor: Colors.PrimaryRed },
+  notFollowingBtn: { backgroundColor: colors.PrimaryRed },
   postCard: { padding: 16, backgroundColor: 'white', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   bottomSheet: { backgroundColor: 'white', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16, paddingBottom: 32 },

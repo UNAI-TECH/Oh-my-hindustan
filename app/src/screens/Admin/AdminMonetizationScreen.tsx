@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platfo
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 
 export default function AdminMonetizationScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
 
   return (
@@ -24,13 +26,13 @@ export default function AdminMonetizationScreen() {
           
           <View style={styles.donutPlaceholder}>
              <View style={styles.donutInner}>
-                <Text style={{ color: Colors.Slate500, fontSize: 12 }}>Total Fund</Text>
-                <Text style={{ fontWeight: 'bold', fontSize: 24, color: Colors.PrimaryRed }}>₹12.8Cr</Text>
+                <Text style={{ color: colors.Slate500, fontSize: 12 }}>Total Fund</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 24, color: colors.PrimaryRed }}>₹12.8Cr</Text>
              </View>
           </View>
 
           <View style={{ width: '100%' }}>
-            <DistributionRow label="Premium Membership" value="₹5.77Cr" color={Colors.PrimaryRed} />
+            <DistributionRow label="Premium Membership" value="₹5.77Cr" color={colors.PrimaryRed} />
             <DistributionRow label="Corporate Support" value="₹3.85Cr" color="#E2E8F0" />
             <DistributionRow label="Analyst Grants" value="₹3.21Cr" color="#475569" />
           </View>
@@ -54,7 +56,10 @@ export default function AdminMonetizationScreen() {
   );
 }
 
-const DistributionRow = ({ label, value, color }: any) => (
+const DistributionRow = ({ label, value, color }: any) => {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
+  return (
   <View style={styles.distributionRow}>
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
       <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }} />
@@ -62,9 +67,9 @@ const DistributionRow = ({ label, value, color }: any) => (
     </View>
     <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{value}</Text>
   </View>
-);
+)};
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   header: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white' },
   headerTitle: { fontSize: 20, fontWeight: 'bold' },
@@ -72,7 +77,7 @@ const styles = StyleSheet.create({
   donutPlaceholder: { width: 160, height: 160, borderRadius: 80, borderWidth: 16, borderColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginVertical: 24 },
   donutInner: { alignItems: 'center' },
   distributionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4, width: '100%' },
-  inputLabel: { alignSelf: 'flex-start', fontSize: 12, color: Colors.Slate500, marginBottom: 4, marginTop: 12 },
+  inputLabel: { alignSelf: 'flex-start', fontSize: 12, color: colors.Slate500, marginBottom: 4, marginTop: 12 },
   input: { width: '100%', height: 56, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, paddingHorizontal: 16, backgroundColor: 'white' },
-  btn: { width: '100%', height: 48, backgroundColor: Colors.PrimaryRed, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginTop: 16 }
+  btn: { width: '100%', height: 48, backgroundColor: colors.PrimaryRed, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginTop: 16 }
 });

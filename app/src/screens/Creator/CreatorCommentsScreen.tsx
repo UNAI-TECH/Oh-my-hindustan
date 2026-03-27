@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { CreatorApi } from '../../api/services';
 
 const formatTimeAgo = (iso: string) => {
@@ -21,6 +21,8 @@ const formatTimeAgo = (iso: string) => {
 };
 
 export default function CreatorCommentsScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const [comments, setComments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,7 +56,7 @@ export default function CreatorCommentsScreen() {
       </View>
       <Text style={styles.commentText}>{item.content}</Text>
       <View style={styles.postRef}>
-        <Ionicons name="document-text-outline" size={14} color={Colors.Slate500} />
+        <Ionicons name="document-text-outline" size={14} color={colors.Slate500} />
         <Text style={styles.postRefText} numberOfLines={1}>on: {item.postTitle}</Text>
       </View>
     </View>
@@ -72,7 +74,7 @@ export default function CreatorCommentsScreen() {
 
       {isLoading ? (
         <View style={styles.loader}>
-          <ActivityIndicator size="large" color={Colors.PrimaryRed} />
+          <ActivityIndicator size="large" color={colors.PrimaryRed} />
         </View>
       ) : comments.length === 0 ? (
         <View style={styles.emptyState}>
@@ -87,14 +89,14 @@ export default function CreatorCommentsScreen() {
           renderItem={renderItem}
           contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchComments(); }} colors={[Colors.PrimaryRed]} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchComments(); }} colors={[colors.PrimaryRed]} />}
         />
       )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   header: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white' },
   headerTitle: { fontSize: 20, fontWeight: 'bold' },
@@ -109,5 +111,5 @@ const styles = StyleSheet.create({
   timestamp: { fontSize: 12, color: '#94A3B8' },
   commentText: { fontSize: 14, color: '#334155', lineHeight: 22, marginBottom: 10 },
   postRef: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
-  postRefText: { fontSize: 12, color: Colors.Slate500, flex: 1 },
+  postRefText: { fontSize: 12, color: colors.Slate500, flex: 1 },
 });

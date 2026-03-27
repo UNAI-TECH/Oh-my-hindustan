@@ -13,15 +13,19 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import CustomModal from '../../components/CustomModal';
 
 export default function ProfileImageUploadScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { uploadProfileImage, updateOnboardingProfile, isLoading, userProfile } = useAuth();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [modalConfig, setModalConfig] = useState({ visible: false, title: '', message: '', isError: false });
 
   const displayName = userProfile?.username || userProfile?.email?.split('@')[0] || 'User';
 
@@ -30,7 +34,7 @@ export default function ProfileImageUploadScreen() {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert('Permission Required', 'Please allow access to your photos to upload a profile picture.');
+        setModalConfig({ visible: true, title: 'Permission Required', message: 'Please allow access to your photos to upload a profile picture.', isError: true });
         return;
       }
 
@@ -84,7 +88,7 @@ export default function ProfileImageUploadScreen() {
         </View>
 
         <View style={styles.iconContainer}>
-          <Ionicons name="camera" size={36} color={Colors.PrimaryRed} />
+          <Ionicons name="camera" size={36} color={colors.PrimaryRed} />
         </View>
 
         <Text style={styles.title}>Add a profile photo</Text>
@@ -107,7 +111,7 @@ export default function ProfileImageUploadScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.changePhotoBtn} onPress={pickImage}>
-          <Ionicons name="images-outline" size={18} color={Colors.PrimaryRed} />
+          <Ionicons name="images-outline" size={18} color={colors.PrimaryRed} />
           <Text style={styles.changePhotoText}>
             {imageUri ? 'Change Photo' : 'Choose from Gallery'}
           </Text>
@@ -154,11 +158,18 @@ export default function ProfileImageUploadScreen() {
           </TouchableOpacity>
         )}
       </View>
+      <CustomModal 
+        visible={modalConfig.visible} 
+        title={modalConfig.title} 
+        message={modalConfig.message} 
+        isError={modalConfig.isError} 
+        onPrimaryPress={() => setModalConfig(prev => ({ ...prev, visible: false }))} 
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
@@ -182,7 +193,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E2E8F0',
   },
   stepDotActive: {
-    backgroundColor: Colors.PrimaryRed,
+    backgroundColor: colors.PrimaryRed,
     width: 14,
     height: 14,
     borderRadius: 7,
@@ -237,7 +248,7 @@ const styles = StyleSheet.create({
     height: 140,
     borderRadius: 70,
     borderWidth: 3,
-    borderColor: Colors.PrimaryRed,
+    borderColor: colors.PrimaryRed,
   },
   cameraOverlay: {
     position: 'absolute',
@@ -257,7 +268,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: Colors.PrimaryRed,
+    backgroundColor: colors.PrimaryRed,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
@@ -276,7 +287,7 @@ const styles = StyleSheet.create({
   changePhotoText: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.PrimaryRed,
+    color: colors.PrimaryRed,
   },
   errorText: {
     color: '#DC2626',

@@ -12,10 +12,12 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
 export default function OTPScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { verifySignupOtp, isLoading, error } = useAuth();
@@ -52,7 +54,7 @@ export default function OTPScreen() {
         </TouchableOpacity>
 
         <View style={styles.iconContainer}>
-          <Ionicons name="mail-unread" size={40} color={Colors.PrimaryRed} />
+          <Ionicons name="mail-unread" size={40} color={colors.PrimaryRed} />
         </View>
 
         <Text style={styles.title}>Verify your email</Text>
@@ -97,7 +99,7 @@ export default function OTPScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',

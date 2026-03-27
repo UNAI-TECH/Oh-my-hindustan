@@ -4,17 +4,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Colors } from '../../theme/Theme';
+import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
+import CustomModal from '../../components/CustomModal';
 
 export default function PersonalDetailsScreen() {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { userProfile, uploadProfileImage } = useAuth();
   const [dbUser, setDbUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null);
+  const [modalConfig, setModalConfig] = useState({ visible: false, title: '', message: '', isError: false });
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -40,7 +44,7 @@ export default function PersonalDetailsScreen() {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert('Permission Required', 'Please allow access to your photos to update your profile picture.');
+        setModalConfig({ visible: true, title: 'Permission Required', message: 'Please allow access to your photos to update your profile picture.', isError: true });
         return;
       }
 
@@ -64,10 +68,10 @@ export default function PersonalDetailsScreen() {
         if (updateErr) throw updateErr;
 
         setCurrentAvatarUrl(publicUrl);
-        Alert.alert('Success', 'Profile picture updated successfully!');
+        setModalConfig({ visible: true, title: 'Success', message: 'Profile picture updated successfully!', isError: false });
       }
     } catch (e: any) {
-      Alert.alert('Error', e.message || 'Failed to update profile picture. Please try again.');
+      setModalConfig({ visible: true, title: 'Error', message: e.message || 'Failed to update profile picture. Please try again.', isError: true });
     } finally {
       setUploadingImage(false);
     }
@@ -77,7 +81,7 @@ export default function PersonalDetailsScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={Colors.PrimaryRed} />
+          <ActivityIndicator size="large" color={colors.PrimaryRed} />
         </View>
       </SafeAreaView>
     );
@@ -120,7 +124,7 @@ export default function PersonalDetailsScreen() {
             onPress={handleUpdateProfilePicture}
             disabled={uploadingImage}
           >
-            <Ionicons name="camera-outline" size={18} color={Colors.PrimaryRed} />
+            <Ionicons name="camera-outline" size={18} color={colors.PrimaryRed} />
             <Text style={styles.updatePhotoText}>
               {uploadingImage ? 'Uploading...' : 'Update Profile Picture'}
             </Text>
@@ -153,27 +157,37 @@ export default function PersonalDetailsScreen() {
 
         <Text style={styles.sectionTitle}>Language Preference</Text>
         <View style={styles.languageBox}>
-          <Ionicons name="globe-outline" size={20} color={Colors.PrimaryRed} />
+          <Ionicons name="globe-outline" size={20} color={colors.PrimaryRed} />
           <Text style={styles.languageText}>{language}</Text>
         </View>
       </ScrollView>
+      <CustomModal 
+        visible={modalConfig.visible} 
+        title={modalConfig.title} 
+        message={modalConfig.message} 
+        isError={modalConfig.isError} 
+        onPrimaryPress={() => setModalConfig(prev => ({ ...prev, visible: false }))} 
+      />
     </SafeAreaView>
   );
 }
 
-const DetailRow = ({ label, value, icon }: { label: string; value: string; icon: string }) => (
+const DetailRow = ({ label, value, icon }: { label: string; value: string; icon: string }) => {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
+  return (
   <View style={styles.detailRow}>
     <View style={styles.detailIcon}>
-      <Ionicons name={icon as any} size={20} color={Colors.Slate500} />
+      <Ionicons name={icon as any} size={20} color={colors.Slate500} />
     </View>
     <View style={{ flex: 1 }}>
       <Text style={styles.detailLabel}>{label}</Text>
       <Text style={styles.detailValue}>{value}</Text>
     </View>
   </View>
-);
+)};
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   header: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC' },
   headerTitle: { fontSize: 20, fontWeight: 'bold' },
@@ -190,7 +204,7 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: Colors.PrimaryRed,
+    borderColor: colors.PrimaryRed,
   },
   uploadOverlay: {
     position: 'absolute',
@@ -215,7 +229,7 @@ const styles = StyleSheet.create({
   updatePhotoText: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.PrimaryRed,
+    color: colors.PrimaryRed,
   },
   detailRow: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: 'white',
@@ -225,17 +239,17 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9',
     justifyContent: 'center', alignItems: 'center', marginRight: 14,
   },
-  detailLabel: { fontSize: 12, color: Colors.Slate500, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  detailValue: { fontSize: 16, fontWeight: '600', color: Colors.DarkText, marginTop: 2 },
+  detailLabel: { fontSize: 12, color: colors.Slate500, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  detailValue: { fontSize: 16, fontWeight: '600', color: colors.DarkText, marginTop: 2 },
   sectionDivider: { height: 1, backgroundColor: '#E2E8F0', marginVertical: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: Colors.DarkText, marginBottom: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: colors.DarkText, marginBottom: 12 },
   topicsWrapper: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   topicBadge: { backgroundColor: 'rgba(229,57,53,0.1)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
-  topicText: { color: Colors.PrimaryRed, fontSize: 13, fontWeight: '600' },
-  emptyText: { color: Colors.Slate400, fontSize: 14 },
+  topicText: { color: colors.PrimaryRed, fontSize: 13, fontWeight: '600' },
+  emptyText: { color: colors.Slate400, fontSize: 14 },
   languageBox: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: 'white',
     padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', gap: 10,
   },
-  languageText: { fontSize: 16, fontWeight: '600', color: Colors.PrimaryRed },
+  languageText: { fontSize: 16, fontWeight: '600', color: colors.PrimaryRed },
 });
