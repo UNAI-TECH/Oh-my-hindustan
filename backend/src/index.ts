@@ -12,6 +12,7 @@ import interactionRoutes from './routes/interaction.routes';
 import notificationRoutes from './routes/notification.routes';
 import adminRoutes from './routes/admin.routes';
 import creatorRoutes from './routes/creator.routes';
+import emailRoutes from './routes/email.routes';
 
 dotenv.config();
 
