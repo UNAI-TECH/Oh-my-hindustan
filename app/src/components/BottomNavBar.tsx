@@ -16,8 +16,8 @@ export default function AppBottomNavBar({ currentRoute, onNavigate, onDoubleTapH
   const items = [
     { label: 'Home', route: 'Home', icon: 'home' },
     { label: 'Explore', route: 'Explore', icon: 'search' },
-    { label: 'Library', route: 'Library', icon: 'library' },
-    { label: 'Settings', route: 'Settings', icon: 'settings' }
+    { label: 'Stories', route: 'StoryFeed', icon: 'aperture' },
+    { label: 'Library', route: 'Library', icon: 'library' }
   ];
 
   return (

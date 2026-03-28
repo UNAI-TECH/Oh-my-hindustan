@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import AppBottomNavBar from '../../components/BottomNavBar';
+import MainHeader from '../../components/MainHeader';
 import { useFeed } from '../../context/FeedContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
@@ -161,29 +162,8 @@ export default function ExploreScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* JAN SAMVAD Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTitle}>
-          <View style={styles.logoBox}>
-            <Ionicons name="globe" size={20} color="white" />
-          </View>
-          <Text style={styles.headerText}>JAN SAMVAD</Text>
-        </View>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity onPress={() => navigation.navigate('Search')} style={styles.headerIconBtn}>
-            <Ionicons name="search" size={24} color={colors.Slate500} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={styles.headerIconBtn}>
-            <Ionicons name="notifications" size={24} color={colors.Slate500} />
-            {unreadCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
+      <MainHeader />
+      
       {/* Followed Creators Row */}
       {followedCreators.length > 0 && (
         <View style={styles.creatorsSection}>

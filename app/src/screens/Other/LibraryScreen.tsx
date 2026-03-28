@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Platform, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Platform, ActivityIndicator, ScrollView, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import AppBottomNavBar from '../../components/BottomNavBar';
+import MainHeader from '../../components/MainHeader';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -22,6 +23,8 @@ export default function LibraryScreen() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('All');
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
 
   const userId = userProfile?.id;
 
@@ -103,12 +106,21 @@ export default function LibraryScreen() {
       </View>
 
       {/* Options Section */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionsScroll}>
-        <OptionCard icon="heart" label="Likes" bg="#FDF2F8" color="#EC4899" active={activeTab === 'liked'} onPress={() => setActiveTab('liked')} />
-        <OptionCard icon="chatbubble-ellipses" label="Comments" bg="#F5F3FF" color="#8B5CF6" active={activeTab === 'commented'} onPress={() => setActiveTab('commented')} />
-        <OptionCard icon="repeat" label="Reposts" bg="#ECFEFF" color="#06B6D4" active={activeTab === 'reposts'} onPress={() => setActiveTab('reposts')} />
-        <OptionCard icon="bookmark" label="Saved" bg="#FEF2F2" color="#EF4444" active={activeTab === 'saved'} onPress={() => setActiveTab('saved')} />
-      </ScrollView>
+      {isTablet ? (
+        <View style={styles.optionsTabletGrid}>
+          <OptionCard icon="heart" label="Likes" bg="#FDF2F8" color="#EC4899" active={activeTab === 'liked'} onPress={() => setActiveTab('liked')} isTablet={isTablet} />
+          <OptionCard icon="chatbubble-ellipses" label="Comments" bg="#F5F3FF" color="#8B5CF6" active={activeTab === 'commented'} onPress={() => setActiveTab('commented')} isTablet={isTablet} />
+          <OptionCard icon="repeat" label="Reposts" bg="#ECFEFF" color="#06B6D4" active={activeTab === 'reposts'} onPress={() => setActiveTab('reposts')} isTablet={isTablet} />
+          <OptionCard icon="bookmark" label="Saved" bg="#FEF2F2" color="#EF4444" active={activeTab === 'saved'} onPress={() => setActiveTab('saved')} isTablet={isTablet} />
+        </View>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionsScroll}>
+          <OptionCard icon="heart" label="Likes" bg="#FDF2F8" color="#EC4899" active={activeTab === 'liked'} onPress={() => setActiveTab('liked')} />
+          <OptionCard icon="chatbubble-ellipses" label="Comments" bg="#F5F3FF" color="#8B5CF6" active={activeTab === 'commented'} onPress={() => setActiveTab('commented')} />
+          <OptionCard icon="repeat" label="Reposts" bg="#ECFEFF" color="#06B6D4" active={activeTab === 'reposts'} onPress={() => setActiveTab('reposts')} />
+          <OptionCard icon="bookmark" label="Saved" bg="#FEF2F2" color="#EF4444" active={activeTab === 'saved'} onPress={() => setActiveTab('saved')} />
+        </ScrollView>
+      )}
 
       {/* Recent Posts Heading & Filters */}
       <View style={styles.recentSection}>
@@ -126,28 +138,7 @@ export default function LibraryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* JAN SAMVAD Header */}
-      <View style={styles.topHeader}>
-        <View style={styles.headerTitle}>
-          <View style={styles.logoBox}>
-            <Ionicons name="globe" size={20} color="white" />
-          </View>
-          <Text style={styles.headerText}>JAN SAMVAD</Text>
-        </View>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity onPress={() => navigation.navigate('Search')} style={styles.iconBtn}>
-            <Ionicons name="search" size={24} color={colors.Slate500} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={styles.iconBtn}>
-            <Ionicons name="notifications" size={24} color={colors.Slate500} />
-            {unreadCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+      <MainHeader />
 
       {loading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -155,9 +146,12 @@ export default function LibraryScreen() {
         </View>
       ) : (
         <FlatList
+          key={isTablet ? 'tablet-grid' : 'mobile-list'}
+          numColumns={isTablet ? 2 : 1}
           data={filteredItems}
           keyExtractor={(item, i) => `${item.id || 'item'}-${i}`}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: isTablet ? 10 : 0 }}
+          columnWrapperStyle={isTablet ? styles.columnWrapperTablet : undefined}
           ListHeaderComponent={renderHeader}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -166,7 +160,7 @@ export default function LibraryScreen() {
             </View>
           }
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.postCard} onPress={() => navigation.navigate('ArticleDetail', { id: item.id })}>
+            <TouchableOpacity style={[styles.postCard, isTablet && styles.postCardTablet]} onPress={() => navigation.navigate('ArticleDetail', { id: item.id })}>
               <View style={{ flex: 1 }}>
                 <View style={styles.categoryPillItem}>
                   <Text style={styles.categoryText}>{item.category || 'General'}</Text>
@@ -191,11 +185,15 @@ export default function LibraryScreen() {
   );
 }
 
-const OptionCard = ({ icon, label, bg, color, active, onPress }: any) => {
+const OptionCard = ({ icon, label, bg, color, active, onPress, isTablet }: any) => {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   return (
-  <TouchableOpacity style={[styles.optionCard, active && styles.optionCardActive]} onPress={onPress} activeOpacity={0.8}>
+  <TouchableOpacity style={[
+    styles.optionCard, 
+    active && styles.optionCardActive,
+    isTablet && styles.optionCardTablet
+  ]} onPress={onPress} activeOpacity={0.8}>
     <View style={[styles.iconCircle, { backgroundColor: bg }]}>
       <Ionicons name={icon} size={22} color={color} />
     </View>
@@ -301,6 +299,17 @@ const getStyles = (colors: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.02)',
   },
+  optionCardTablet: {
+    width: '47%',
+  },
+  optionsTabletGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    gap: 16,
+    paddingBottom: 24,
+  },
   optionCardActive: {
     borderColor: '#0F172A',
     borderWidth: 1.5,
@@ -363,6 +372,14 @@ const getStyles = (colors: any) => StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 2,
+  },
+  postCardTablet: {
+    width: '48%',
+    marginHorizontal: '1%',
+  },
+  columnWrapperTablet: {
+    justifyContent: 'flex-start',
+    paddingHorizontal: 10,
   },
   categoryPillItem: {
     backgroundColor: '#F8FAFC',

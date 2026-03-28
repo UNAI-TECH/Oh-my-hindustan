@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import AppBottomNavBar from '../../components/BottomNavBar';
+import MainHeader from '../../components/MainHeader';
 import { useFeed } from '../../context/FeedContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { FeedItemType, FeedItem } from '../../types';
@@ -20,25 +21,16 @@ export default function HomeFeedScreen() {
   const { feedItems, isLoading, isRefreshing, refreshFeed, loadMoreFeed, hasMore, sortBy, setSortBy } = useFeed();
   const { unreadCount } = useNotifications();
   
-  const [selectedTab, setSelectedTab] = useState('Trending');
+  const [activeTab, setActiveTab] = useState('Trending');
   const tabs = ['Trending', 'News', 'Blogs', 'Videos', 'For You'];
 
-  const filteredItems = useMemo(() => {
-    const items = feedItems;
-    switch (selectedTab) {
-      case 'Trending': return items;
-      case 'News': return items.filter(it => [FeedItemType.NEWS, FeedItemType.UPDATE, FeedItemType.POLICY_TYPE, FeedItemType.PROMO].includes(it.type));
-      case 'Blogs': return items.filter(it => [FeedItemType.BLOG, FeedItemType.FORUM, FeedItemType.PROMO].includes(it.type));
-      case 'Videos': return items.filter(it => [FeedItemType.VIDEO, FeedItemType.DEBATE, FeedItemType.PROMO].includes(it.type));
-      case 'For You': return items;
-      default: return items;
-    }
-  }, [selectedTab, feedItems]);
+  React.useEffect(() => {
+    if (activeTab === 'Trending' && sortBy !== 'trending') setSortBy('trending');
+    if (activeTab === 'For You' && sortBy !== 'latest') setSortBy('latest');
+  }, [activeTab]);
 
   const handleTabPress = (tab: string) => {
-    setSelectedTab(tab);
-    if (tab === 'Trending') setSortBy('trending');
-    if (tab === 'For You') setSortBy('latest');
+    setActiveTab(tab);
   };
 
   const onShare = async (item: FeedItem) => {
@@ -51,64 +43,52 @@ export default function HomeFeedScreen() {
     }
   };
 
+  const currentTabItems = useMemo(() => {
+    if (activeTab === 'Trending' || activeTab === 'For You') return feedItems;
+    if (activeTab === 'News') return feedItems.filter(it => [FeedItemType.NEWS, FeedItemType.UPDATE, FeedItemType.POLICY_TYPE, FeedItemType.PROMO].includes(it.type));
+    if (activeTab === 'Blogs') return feedItems.filter(it => [FeedItemType.BLOG, FeedItemType.FORUM, FeedItemType.PROMO].includes(it.type));
+    if (activeTab === 'Videos') return feedItems.filter(it => [FeedItemType.VIDEO, FeedItemType.DEBATE, FeedItemType.PROMO].includes(it.type));
+    return feedItems;
+  }, [feedItems, activeTab]);
+
   // Interleave ad placeholders after every 5 real posts
   const feedWithAds = useMemo(() => {
-    if (filteredItems.length < 5) return filteredItems;
+    if (currentTabItems.length < 5) return currentTabItems;
     const result: (FeedItem | { id: string; __isAd: true })[] = [];
-    filteredItems.forEach((item, index) => {
+    currentTabItems.forEach((item, index) => {
       result.push(item);
-      if ((index + 1) % 5 === 0 && index < filteredItems.length - 1) {
+      if ((index + 1) % 5 === 0 && index < currentTabItems.length - 1) {
         result.push({ id: `${AD_MARKER}_${index}`, __isAd: true } as any);
       }
     });
     return result;
-  }, [filteredItems]);
+  }, [currentTabItems]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <View style={styles.headerTitle}>
-          <View style={styles.logoBox}>
-            <Ionicons name="globe" size={20} color="white" />
-          </View>
-          <Text style={styles.headerText}>JAN SAMVAD</Text>
-        </View>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity onPress={() => navigation.navigate('Search')} style={styles.iconBtn}>
-            <Ionicons name="search" size={24} color={colors.Slate500} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={styles.iconBtn}>
-            <Ionicons name="notifications" size={24} color={colors.Slate500} />
-            {unreadCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+      <MainHeader />
 
       <View style={styles.tabsContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
           {tabs.map(tab => (
             <TouchableOpacity 
               key={tab} 
-              style={[styles.tab, selectedTab === tab && styles.tabActive]}
+              style={[styles.tab, activeTab === tab && styles.tabActive]}
               onPress={() => handleTabPress(tab)}
             >
-              <Text style={[styles.tabText, selectedTab === tab && styles.tabTextActive]}>{tab}</Text>
+              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {isLoading && feedItems.length === 0 ? (
+      {isLoading && currentTabItems.length === 0 ? (
         <View style={styles.loader}>
           <ActivityIndicator size="large" color={colors.PrimaryRed} />
         </View>
-      ) : filteredItems.length === 0 ? (
+      ) : currentTabItems.length === 0 ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text style={{ color: colors.Slate500, textAlign: 'center' }}>No content found for "{selectedTab}" yet.</Text>
+          <Text style={{ color: colors.Slate500, textAlign: 'center' }}>No content found for "{activeTab}" yet.</Text>
         </View>
       ) : (
         <FlatList
@@ -188,54 +168,37 @@ const FeedCard = ({ item, onClick, onShare }: { item: FeedItem, onClick: () => v
                <Text style={{ color: colors.PrimaryRed, fontWeight: 'bold' }}>Join Newsletter</Text>
              </View>
           </View>
-        ) : item.type === FeedItemType.VIDEO || item.type === FeedItemType.DEBATE ? (
+        ) : (
           <View>
-            <View style={{ width: '100%', aspectRatio: 16/9, borderRadius: 8, overflow: 'hidden' }}>
+            <View style={{ width: '100%', aspectRatio: 16/9, borderRadius: 8, overflow: 'hidden', marginBottom: 12 }}>
               <Image source={{ uri: item.thumbnail }} style={{ flex: 1 }} />
-            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' }}>
-                <View style={{ backgroundColor: 'rgba(255,255,255,0.9)', width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' }}>
-                  <Ionicons name="play" size={24} color={colors.PrimaryRed} style={{ marginLeft: 4 }} />
+              {item.type === FeedItemType.VIDEO || item.type === FeedItemType.DEBATE ? (
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' }}>
+                  <View style={{ backgroundColor: 'rgba(255,255,255,0.9)', width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' }}>
+                    <Ionicons name="play" size={24} color={colors.PrimaryRed} style={{ marginLeft: 4 }} />
+                  </View>
                 </View>
-              </View>
+              ) : null}
             </View>
+            
+            <View>
+              <View style={{ backgroundColor: colors.PrimaryRedAlpha10, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, marginBottom: 8 }}>
+                <Text style={{ color: colors.PrimaryRed, fontSize: 10, fontWeight: 'bold' }}>{item.category?.toUpperCase() || 'NEWS'}</Text>
+              </View>
+              <Text style={{ fontWeight: 'bold', fontSize: 18, color: colors.DarkText }} numberOfLines={3}>{item.title}</Text>
+            </View>
+            
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
-               <Image source={{ uri: item.authorImage }} style={{ width: 40, height: 40, borderRadius: 20 }} />
-               <View style={{ flex: 1, marginLeft: 12 }}>
-                 <Text style={{ fontWeight: 'bold', fontSize: 16 }} numberOfLines={1}>{item.title}</Text>
+               {item.authorImage ? (
+                 <Image source={{ uri: item.authorImage }} style={{ width: 28, height: 28, borderRadius: 14 }} />
+               ) : (
+                 <Ionicons name="person-circle" size={28} color={colors.Slate400} />
+               )}
+               <View style={{ flex: 1, marginLeft: 8 }}>
                  <Text style={{ color: colors.Slate500, fontSize: 12 }}>{item.authorName} • {item.timestamp}</Text>
                </View>
             </View>
-            <View style={styles.engagementBar}>
-              <View style={styles.engagementItem}>
-                <Ionicons name="arrow-up" size={16} color={colors.PrimaryRed} />
-                <Text style={styles.engagementCount}>{formatCount(upvotes)}</Text>
-                <Ionicons name="arrow-down" size={16} color={colors.Slate400} />
-                <Text style={[styles.engagementCount, { color: colors.Slate400 }]}>{formatCount(downvotes)}</Text>
-              </View>
-              <View style={styles.engagementItem}>
-                <Ionicons name="chatbubble-outline" size={15} color={colors.Slate500} />
-                <Text style={styles.engagementCount}>{formatCount(commentCount)}</Text>
-              </View>
-              <View style={styles.engagementItem}>
-                <Ionicons name="repeat-outline" size={16} color={colors.Slate500} />
-                <Text style={styles.engagementCount}>{formatCount(repostCount)}</Text>
-              </View>
-              <TouchableOpacity onPress={onShare} style={{ padding: 4 }}>
-                <Ionicons name="share-social-outline" size={18} color={colors.Slate500} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <View style={{ flex: 1 }}>
-                <View style={{ backgroundColor: colors.PrimaryRedAlpha10, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, marginBottom: 8 }}>
-                  <Text style={{ color: colors.PrimaryRed, fontSize: 10, fontWeight: 'bold' }}>{item.category?.toUpperCase() || 'NEWS'}</Text>
-                </View>
-                <Text style={{ fontWeight: 'bold', fontSize: 16 }} numberOfLines={4}>{item.title}</Text>
-              </View>
-              <Image source={{ uri: item.thumbnail }} style={{ width: 80, height: 80, borderRadius: 8, marginLeft: 16 }} />
-            </View>
+            
             <View style={styles.engagementBar}>
               <View style={styles.engagementItem}>
                 <Ionicons name="arrow-up" size={16} color={colors.PrimaryRed} />
@@ -255,7 +218,9 @@ const FeedCard = ({ item, onClick, onShare }: { item: FeedItem, onClick: () => v
               <TouchableOpacity onPress={onShare} style={{ padding: 4, marginRight: 8 }}>
                 <Ionicons name="share-social-outline" size={20} color={colors.Slate500} />
               </TouchableOpacity>
-              <Text style={{ color: colors.PrimaryRed, fontSize: 12, fontWeight: 'bold' }}>Read More</Text>
+              <View style={{ backgroundColor: colors.Slate100, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }}>
+                 <Text style={{ color: colors.PrimaryRed, fontSize: 12, fontWeight: 'bold' }}>Read More</Text>
+              </View>
             </View>
           </View>
         )}
@@ -313,60 +278,6 @@ const getStyles = (colors: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: colors.SurfaceWhite,
     paddingTop: Platform.OS === 'android' ? 24 : 0
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.SurfaceWhite
-  },
-  headerTitle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoBox: {
-    backgroundColor: colors.PrimaryRed,
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8
-  },
-  headerText: {
-    fontWeight: '900',
-    fontSize: 18,
-    color: colors.PrimaryRed,
-    letterSpacing: 1
-  },
-  headerIcons: {
-    flexDirection: 'row'
-  },
-  iconBtn: {
-    padding: 8,
-    marginLeft: 8,
-    position: 'relative'
-  },
-  badge: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.PrimaryRed,
-    borderWidth: 1.5,
-    borderColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 3,
-  },
-  badgeText: {
-    color: 'white',
-    fontSize: 9,
-    fontWeight: 'bold',
   },
   tabsContainer: {
     backgroundColor: colors.SurfaceWhite,

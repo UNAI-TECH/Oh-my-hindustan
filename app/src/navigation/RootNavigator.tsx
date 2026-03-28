@@ -25,6 +25,8 @@ import SettingsScreen from '../screens/Other/SettingsScreen';
 import PersonalDetailsScreen from '../screens/Other/PersonalDetailsScreen';
 import PrivacySecurityScreen from '../screens/Other/PrivacySecurityScreen';
 import SearchScreen from '../screens/Other/SearchScreen';
+import StoryFeedScreen from '../screens/Main/StoryFeedScreen';
+import StoryViewerScreen from '../screens/Main/StoryViewerScreen';
 
 // Creator Studio Screens
 import CreatorDashboardScreen from '../screens/Creator/CreatorDashboardScreen';
@@ -64,11 +66,13 @@ export default function RootNavigator() {
       {/* Main Tabs Equivalent Screens */}
       <Stack.Screen name="Home" component={HomeFeedScreen} />
       <Stack.Screen name="Explore" component={ExploreScreen} />
+      <Stack.Screen name="StoryFeed" component={StoryFeedScreen} />
       <Stack.Screen name="Library" component={LibraryScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
 
       {/* Details & Other Screens */}
       <Stack.Screen name="ArticleDetail" component={ArticleDetailScreen} options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="StoryViewer" component={StoryViewerScreen} options={{ animation: 'fade' }} />
       <Stack.Screen name="CreatorProfile" component={CreatorProfileScreen} />
       <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="InterestsSelection" component={InterestsSelectionScreen} />
