@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Platform, ActivityIndicator, ScrollView, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import AppBottomNavBar from '../../components/BottomNavBar';
@@ -10,7 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { supabase } from '../../lib/supabaseClient';
 
-type LibraryTab = 'liked' | 'commented' | 'reposts' | 'saved';
+type LibraryTab = 'liked' | 'commented' | 'saved';
 type FilterType = 'All' | 'Blogs' | 'Posts' | 'Videos' | 'News';
 
 export default function LibraryScreen() {
@@ -66,25 +66,21 @@ export default function LibraryScreen() {
     setLoading(false);
   };
 
-  const fetchReposts = async () => {
-    if (!userId) return;
-    setLoading(true);
-    const { data } = await supabase
-      .from('Comment')
-      .select('id, createdAt, Post:postId(id, title, category, thumbnail, createdAt)')
-      .eq('userId', userId)
-      .eq('content', '[SYSTEM_REPOST]')
-      .order('createdAt', { ascending: false });
-    setItems((data || []).map((r: any) => ({ ...r.Post, _type: 'post' })).filter(Boolean));
-    setLoading(false);
-  };
-
-  useEffect(() => {
+  const activeFetch = React.useCallback(() => {
     if (activeTab === 'saved') fetchSaved();
     else if (activeTab === 'liked') fetchLiked();
     else if (activeTab === 'commented') fetchCommented();
-    else if (activeTab === 'reposts') fetchReposts();
   }, [activeTab, userId]);
+
+  useEffect(() => {
+    activeFetch();
+  }, [activeFetch]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      activeFetch();
+    }, [activeFetch])
+  );
 
   // Handle local filtering
   const filteredItems = items.filter(item => {
@@ -110,14 +106,12 @@ export default function LibraryScreen() {
         <View style={styles.optionsTabletGrid}>
           <OptionCard icon="heart" label="Likes" bg="#FDF2F8" color="#EC4899" active={activeTab === 'liked'} onPress={() => setActiveTab('liked')} isTablet={isTablet} />
           <OptionCard icon="chatbubble-ellipses" label="Comments" bg="#F5F3FF" color="#8B5CF6" active={activeTab === 'commented'} onPress={() => setActiveTab('commented')} isTablet={isTablet} />
-          <OptionCard icon="repeat" label="Reposts" bg="#ECFEFF" color="#06B6D4" active={activeTab === 'reposts'} onPress={() => setActiveTab('reposts')} isTablet={isTablet} />
           <OptionCard icon="bookmark" label="Saved" bg="#FEF2F2" color="#EF4444" active={activeTab === 'saved'} onPress={() => setActiveTab('saved')} isTablet={isTablet} />
         </View>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionsScroll}>
           <OptionCard icon="heart" label="Likes" bg="#FDF2F8" color="#EC4899" active={activeTab === 'liked'} onPress={() => setActiveTab('liked')} />
           <OptionCard icon="chatbubble-ellipses" label="Comments" bg="#F5F3FF" color="#8B5CF6" active={activeTab === 'commented'} onPress={() => setActiveTab('commented')} />
-          <OptionCard icon="repeat" label="Reposts" bg="#ECFEFF" color="#06B6D4" active={activeTab === 'reposts'} onPress={() => setActiveTab('reposts')} />
           <OptionCard icon="bookmark" label="Saved" bg="#FEF2F2" color="#EF4444" active={activeTab === 'saved'} onPress={() => setActiveTab('saved')} />
         </ScrollView>
       )}

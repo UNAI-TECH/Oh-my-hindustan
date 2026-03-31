@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ScrollView, TouchableOpacity, Image, Share, ActivityIndicator, Platform, RefreshControl, Linking } from 'react-native';
+import React, { useState, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, ScrollView, TouchableOpacity, Image, Share, ActivityIndicator, Platform, RefreshControl, Linking, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAppTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import AppBottomNavBar from '../../components/BottomNavBar';
@@ -10,7 +10,10 @@ import { useFeed } from '../../context/FeedContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { FeedItemType, FeedItem } from '../../types';
 import { LinearGradient } from 'expo-linear-gradient';
-
+import { useInteraction } from '../../context/InteractionContext';
+import { supabase } from '../../lib/supabaseClient';
+import AdCard, { AdData } from '../../components/AdCard';
+import { useTranslation } from 'react-i18next';
 const AD_MARKER = '__AD_PLACEHOLDER__';
 const APP_DOWNLOAD_URL = 'https://play.google.com/store/apps/details?id=com.unai.antigravity';
 
@@ -18,16 +21,65 @@ export default function HomeFeedScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+  const { t } = useTranslation();
   const { feedItems, isLoading, isRefreshing, refreshFeed, loadMoreFeed, hasMore, sortBy, setSortBy } = useFeed();
   const { unreadCount } = useNotifications();
+  const { width } = useWindowDimensions();
+  const numColumns = width >= 768 ? 2 : 1;
+  const maxWidth = width >= 768 ? 1024 : '100%';
   
-  const [activeTab, setActiveTab] = useState('Trending');
-  const tabs = ['Trending', 'News', 'Blogs', 'Videos', 'For You'];
+  const [activeTab, setActiveTab] = useState(t('nav.home'));
+  const [activeAds, setActiveAds] = useState<AdData[]>([]);
+  const tabs = [t('nav.home'), t('common.soon'), 'News', 'Blogs', 'Videos'];
 
   React.useEffect(() => {
-    if (activeTab === 'Trending' && sortBy !== 'trending') setSortBy('trending');
+    if (activeTab === t('nav.home') && sortBy !== 'trending') setSortBy('trending');
     if (activeTab === 'For You' && sortBy !== 'latest') setSortBy('latest');
   }, [activeTab]);
+
+  React.useEffect(() => {
+    const fetchAds = async () => {
+      const { data } = await supabase.from('ads').select('*').eq('status', 'active');
+      if (data) setActiveAds(data as AdData[]);
+    };
+    fetchAds();
+    
+    const channel = supabase.channel('home-feed-ads')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ads', filter: 'status=eq.active' }, fetchAds)
+      .subscribe();
+      
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      // Optional: Refresh feed silently or update metrics when focused
+      refreshFeed();
+    }, [])
+  );
+
+  // 1. Define Viewability Configuration for high-performance impression tracking
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50 // Ad must be at least 50% visible to count
+  }).current;
+
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: any[] }) => {
+    viewableItems.forEach(async (item) => {
+      // Check if the item is an ad
+      if (item.item?.__isAd && item.isViewable) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          // Log impression via high-performance RPC (handles budget logic atomically)
+          await supabase.rpc('track_ad_impression', {
+            p_ad_id: item.item.id,
+            p_user_id: session?.user?.id || 'anonymous'
+          });
+        } catch (err) {
+          console.warn('Ad impression tracking failed:', err);
+        }
+      }
+    });
+  }).current;
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab);
@@ -53,16 +105,22 @@ export default function HomeFeedScreen() {
 
   // Interleave ad placeholders after every 5 real posts
   const feedWithAds = useMemo(() => {
-    if (currentTabItems.length < 5) return currentTabItems;
-    const result: (FeedItem | { id: string; __isAd: true })[] = [];
+    if (currentTabItems.length < 5 || activeAds.length === 0) return currentTabItems;
+    const result: (FeedItem | AdData)[] = [];
     currentTabItems.forEach((item, index) => {
       result.push(item);
       if ((index + 1) % 5 === 0 && index < currentTabItems.length - 1) {
-        result.push({ id: `${AD_MARKER}_${index}`, __isAd: true } as any);
+        // Deterministically pick an ad based on index to prevent flickering on re-renders
+        const adIndex = Math.floor((index / 5)) % activeAds.length;
+        const randomAd: AdData = {
+          ...activeAds[adIndex],
+          __isAd: true,
+        };
+        result.push(randomAd);
       }
     });
     return result;
-  }, [currentTabItems]);
+  }, [currentTabItems, activeAds]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -83,21 +141,26 @@ export default function HomeFeedScreen() {
       </View>
 
       {isLoading && currentTabItems.length === 0 ? (
-        <View style={styles.loader}>
-          <ActivityIndicator size="large" color={colors.PrimaryRed} />
-        </View>
+        <ScrollView style={{ padding: 16 }}>
+          {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
+        </ScrollView>
       ) : currentTabItems.length === 0 ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
           <Text style={{ color: colors.Slate500, textAlign: 'center' }}>No content found for "{activeTab}" yet.</Text>
         </View>
       ) : (
         <FlatList
+          key={numColumns}
           data={feedWithAds}
+          numColumns={numColumns}
           keyExtractor={(item, index) => `${(item as any).id}-${index}`}
-          contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+          contentContainerStyle={{ alignSelf: 'center', width: '100%', maxWidth, padding: 16, paddingBottom: 100 }}
+          columnWrapperStyle={numColumns > 1 ? { gap: 16 } : undefined}
           ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
           onEndReached={loadMoreFeed}
           onEndReachedThreshold={0.5}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
           ListFooterComponent={() => (
             isLoading && hasMore ? (
               <ActivityIndicator size="small" color={colors.PrimaryRed} style={{ marginVertical: 20 }} />
@@ -111,22 +174,28 @@ export default function HomeFeedScreen() {
               tintColor={colors.PrimaryRed}
             />
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             // Render ad placeholder
             if ((item as any).__isAd) {
-              return <AdPlaceholderCard />;
+              return (
+                <View style={{ flex: 1, maxWidth: numColumns > 1 ? '50%' : '100%' }}>
+                  <AdCard ad={item as AdData} />
+                </View>
+              );
             }
             const feedItem = item as FeedItem;
             return (
-              <FeedCard 
-                item={feedItem} 
-                onClick={() => {
-                  if (feedItem.type !== FeedItemType.PROMO) {
-                    navigation.navigate('ArticleDetail', { id: feedItem.id });
-                  }
-                }}
-                onShare={() => onShare(feedItem)}
-              />
+              <View style={{ flex: 1 }}>
+                <FeedCard 
+                  item={feedItem} 
+                  onClick={() => {
+                    if (feedItem.type !== FeedItemType.PROMO) {
+                      navigation.navigate('ArticleDetail', { id: feedItem.id });
+                    }
+                  }}
+                  onShare={() => onShare(feedItem)}
+                />
+              </View>
             );
           }}
         />
@@ -152,10 +221,13 @@ const formatCount = (n: number): string => {
 const FeedCard = ({ item, onClick, onShare }: { item: FeedItem, onClick: () => void, onShare: () => void }) => {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
-  const upvotes = item.upvoteCount || 0;
+  const { likes, toggleLike } = useInteraction();
+  
+  const isLiked = !!likes[item.id];
+  const upvotes = item.upvoteCount + (isLiked ? 1 : 0);
   const downvotes = item.downvoteCount || 0;
   const commentCount = item.comments || 0;
-  const repostCount = item.repostCount || 0;
+  const viewCount = item.viewCount || 0;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onClick} activeOpacity={0.8}>
@@ -200,19 +272,17 @@ const FeedCard = ({ item, onClick, onShare }: { item: FeedItem, onClick: () => v
             </View>
             
             <View style={styles.engagementBar}>
-              <View style={styles.engagementItem}>
-                <Ionicons name="arrow-up" size={16} color={colors.PrimaryRed} />
+              <TouchableOpacity onPress={() => toggleLike(item.id)} style={styles.engagementItem}>
+                <Ionicons name={isLiked ? "heart" : "heart-outline"} size={20} color={isLiked ? colors.PrimaryRed : colors.Slate500} />
                 <Text style={styles.engagementCount}>{formatCount(upvotes)}</Text>
-                <Ionicons name="arrow-down" size={16} color={colors.Slate400} />
-                <Text style={[styles.engagementCount, { color: colors.Slate400 }]}>{formatCount(downvotes)}</Text>
-              </View>
+              </TouchableOpacity>
               <View style={styles.engagementItem}>
-                <Ionicons name="chatbubble-outline" size={15} color={colors.Slate500} />
+                <Ionicons name="chatbubble-outline" size={18} color={colors.Slate500} />
                 <Text style={styles.engagementCount}>{formatCount(commentCount)}</Text>
               </View>
               <View style={styles.engagementItem}>
-                <Ionicons name="repeat-outline" size={16} color={colors.Slate500} />
-                <Text style={styles.engagementCount}>{formatCount(repostCount)}</Text>
+                <Ionicons name="eye-outline" size={16} color={colors.Slate500} />
+                <Text style={styles.engagementCount}>{formatCount(viewCount)}</Text>
               </View>
               <View style={{ flex: 1 }} />
               <TouchableOpacity onPress={onShare} style={{ padding: 4, marginRight: 8 }}>
@@ -272,6 +342,23 @@ const AdPlaceholderCard = () => {
     </View>
   </View>
 )};
+
+// Skeleton Loader Card
+const SkeletonCard = () => {
+  const { colors } = useAppTheme();
+  return (
+    <View style={{ backgroundColor: colors.SurfaceWhite, borderRadius: 12, padding: 16, marginBottom: 16, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }}>
+      <View style={{ width: '100%', aspectRatio: 16/9, backgroundColor: '#E2E8F0', borderRadius: 8, marginBottom: 12 }} />
+      <View style={{ width: 60, height: 16, backgroundColor: '#E2E8F0', borderRadius: 4, marginBottom: 8 }} />
+      <View style={{ width: '90%', height: 20, backgroundColor: '#E2E8F0', borderRadius: 4, marginBottom: 6 }} />
+      <View style={{ width: '70%', height: 20, backgroundColor: '#E2E8F0', borderRadius: 4, marginBottom: 16 }} />
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#E2E8F0' }} />
+        <View style={{ width: 120, height: 14, backgroundColor: '#E2E8F0', borderRadius: 4, marginLeft: 8 }} />
+      </View>
+    </View>
+  );
+};
 
 const getStyles = (colors: any) => StyleSheet.create({
   safeArea: {

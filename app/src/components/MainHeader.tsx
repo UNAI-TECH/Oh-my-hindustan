@@ -4,10 +4,12 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabaseClient';
+import { useTranslation } from 'react-i18next';
 
 export default function MainHeader() {
   const { colors, isDark } = useAppTheme();
   const navigation = useNavigation<any>();
+  const { t } = useTranslation();
   const [profilePic, setProfilePic] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,7 +26,7 @@ export default function MainHeader() {
   return (
     <View style={[styles.header, { backgroundColor: colors.SurfaceWhite, borderBottomColor: colors.Slate200 }]}>
       <View style={styles.headerLeft}>
-        <Text style={[styles.headerTitle, { color: colors.PrimaryRed }]}>JAN SAMVAD</Text>
+        <Text style={[styles.headerTitle, { color: colors.PrimaryRed }]}>{t('common.brand_name')}</Text>
       </View>
       
       <View style={styles.headerRight}>

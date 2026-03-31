@@ -98,7 +98,7 @@ export const AppApi = {
 
     let query = supabase
       .from('Post')
-      .select('id, title, content, type, thumbnail, category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, trending_score, author:User!authorId(id, username, avatarUrl), Vote:Vote(type), Comment:Comment(id, content)', { count: 'exact' });
+      .select('id, title, content, type, thumbnail, category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, trending_score, author:User!authorId(id, username, avatarUrl), Vote:Vote(type), Comment:Comment(id, content), PostView:PostView(id)', { count: 'exact' });
 
     if (sortBy === 'trending') {
       query = query.order('trending_score', { ascending: false });
@@ -117,6 +117,7 @@ export const AppApi = {
       const downvotes = votes.filter((v: any) => v.type === -1).length;
       const realComments = allComments.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length;
       const reposts = allComments.filter((c: any) => c.content === '[SYSTEM_REPOST]').length;
+      const viewCount = post.PostView ? post.PostView.length : 0;
 
       return {
         id: post.id,
@@ -131,6 +132,7 @@ export const AppApi = {
         downvoteCount: downvotes,
         commentCount: realComments,
         repostCount: reposts,
+        viewCount,
         hotScore: 0,
         category: post.category || 'General',
         createdAt: post.createdAt,
@@ -164,7 +166,7 @@ export const AppApi = {
   getPost: async (id: string) => {
     const { data: post, error } = await supabase
       .from('Post')
-      .select('id, title, content, type, thumbnail, category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, author:User!authorId(id, username, avatarUrl), Vote:Vote(type), Comment:Comment(id, content, userId, createdAt)')
+      .select('id, title, content, type, thumbnail, category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, author:User!authorId(id, username, avatarUrl), Vote:Vote(type), Comment:Comment(id, content, userId, createdAt), PostView:PostView(id)')
       .eq('id', id)
       .single();
 
@@ -176,6 +178,7 @@ export const AppApi = {
     const downvotes = votes.filter((v: any) => v.type === -1).length;
     const realComments = allComments.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length;
     const reposts = allComments.filter((c: any) => c.content === '[SYSTEM_REPOST]').length;
+    const viewCount = post.PostView ? post.PostView.length : 0;
 
     return {
       id: post.id,
@@ -191,6 +194,7 @@ export const AppApi = {
       downvoteCount: downvotes,
       commentCount: realComments,
       repostCount: reposts,
+      viewCount,
       hotScore: 0,
       category: post.category || 'General',
       subtitle: post.subtitle,
@@ -252,7 +256,6 @@ export const AppApi = {
     const user = session?.user;
     if (!user) throw new Error('Not authenticated');
 
-    // Check if vote exists
     const { data: existing } = await supabase
       .from('Vote')
       .select('id')
@@ -261,23 +264,45 @@ export const AppApi = {
       .maybeSingle();
 
     if (existing) {
-      const { error } = await supabase
-        .from('Vote')
-        .update({ type: voteType })
-        .eq('id', existing.id);
-      if (error) throw error;
+      await supabase.from('Vote').update({ type: voteType }).eq('id', existing.id);
     } else {
-      const now = new Date().toISOString();
-      const { error } = await supabase
-        .from('Vote')
-        .insert({
-          id: generateUUID(),
-          postId,
-          userId: user.id,
-          type: voteType,
-          createdAt: now,
-        });
-      if (error) throw error;
+      await supabase.from('Vote').insert({
+        id: generateUUID(),
+        postId,
+        userId: user.id,
+        type: voteType,
+      });
+    }
+  },
+
+  /**
+   * Vote on a comment
+   */
+  voteComment: async (commentId: string, voteType: 1 | -1) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) throw new Error('Not authenticated');
+
+    const { data: existing } = await supabase
+      .from('CommentVote')
+      .select('id, type')
+      .eq('userId', user.id)
+      .eq('commentId', commentId)
+      .maybeSingle();
+
+    if (existing) {
+      if (existing.type === voteType) {
+        await supabase.from('CommentVote').delete().eq('id', existing.id);
+      } else {
+        await supabase.from('CommentVote').update({ type: voteType }).eq('id', existing.id);
+      }
+    } else {
+      await supabase.from('CommentVote').insert({
+        id: generateUUID(),
+        commentId,
+        userId: user.id,
+        type: voteType,
+      });
     }
   },
 

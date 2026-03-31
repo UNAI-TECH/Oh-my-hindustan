@@ -9,23 +9,24 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import { CreatorApi } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const SIDEBAR_ITEMS = [
-  { label: 'Dashboard', icon: 'grid-outline', route: 'CreatorDashboard' },
-  { label: 'Analytics', icon: 'trending-up-outline', route: 'CreatorAnalytics' },
-  { label: 'Content', icon: 'document-text-outline', route: 'CreatorContent' },
-  { label: 'Comments', icon: 'chatbubble-outline', route: 'CreatorComments' },
-  { label: 'Subtitles', icon: 'language-outline', route: 'CreatorSubtitles' },
-  { label: 'Earn', icon: 'cash-outline', route: 'CreatorEarn' },
+const getSidebarItems = (t: any) => [
+  { label: t('creator_studio.overview'), icon: 'grid-outline', route: 'CreatorDashboard' },
+  { label: t('creator_studio.analytics'), icon: 'trending-up-outline', route: 'CreatorAnalytics' },
+  { label: t('creator_studio.content'), icon: 'document-text-outline', route: 'CreatorContent' },
+  { label: t('creator_studio.comments'), icon: 'chatbubble-outline', route: 'CreatorComments' },
+  { label: t('creator_studio.subtitles'), icon: 'language-outline', route: 'CreatorSubtitles' },
+  { label: t('creator_studio.earn'), icon: 'cash-outline', route: 'CreatorEarn' },
   { label: 'divider', icon: '', route: '' },
-  { label: 'Settings', icon: 'settings-outline', route: 'CreatorSettings' },
-  { label: 'Send Feedback', icon: 'paper-plane-outline', route: 'CreatorFeedback' },
-  { label: 'Logout', icon: 'log-out-outline', route: 'Logout' },
+  { label: t('creator_studio.settings'), icon: 'settings-outline', route: 'CreatorSettings' },
+  { label: t('creator_studio.feedback'), icon: 'paper-plane-outline', route: 'CreatorFeedback' },
+  { label: t('creator_studio.logout'), icon: 'log-out-outline', route: 'Logout' },
 ];
 
-const CREATE_OPTIONS = [
+const getCreateOptions = (t: any) => [
   { label: 'Blog', type: 'BLOG', icon: 'document-text', color: '#8B5CF6', desc: 'Write an article or story' },
   { label: 'News', type: 'NEWS', icon: 'newspaper', color: '#0EA5E9', desc: 'Share breaking news or updates' },
   { label: 'Video', type: 'VIDEO', icon: 'videocam', color: '#EF4444', desc: 'Upload a video report' },
@@ -36,6 +37,9 @@ export default function CreatorDashboardScreen() {
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { userProfile, logout } = useAuth();
+  const { t } = useTranslation();
+  const SIDEBAR_ITEMS = getSidebarItems(t);
+  const CREATE_OPTIONS = getCreateOptions(t);
 
   const [showSidebar, setShowSidebar] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);

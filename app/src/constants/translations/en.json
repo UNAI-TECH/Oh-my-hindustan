@@ -1,0 +1,58 @@
+{
+  "common": {
+    "brand_name": "JAN SAMVAD",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "search": "Search",
+    "apply": "Apply",
+    "close": "Close",
+    "soon": "Soon"
+  },
+  "nav": {
+    "home": "Home",
+    "explore": "Explore",
+    "studio": "Creative Studio",
+    "profile": "Profile",
+    "notifications": "Notifications"
+  },
+  "monetization": {
+    "title": "Monetization",
+    "subtitle": "Creator Earnings",
+    "total_earnings": "Total Earnings",
+    "available_balance": "Available Balance",
+    "ad_revenue": "Ad Revenue Sharing",
+    "sponsorships": "Sponsorship Matches",
+    "premium_content": "Premium Content",
+    "withdraw": "Withdraw Funds",
+    "status": "Monetization Status",
+    "active": "Active",
+    "pending": "Pending",
+    "eligible": "Eligible",
+    "ineligible": "Ineligible",
+    "how_it_works": "How it works",
+    "coming_soon_desc": "We're building a comprehensive monetization program for creators. Stay tuned for ad revenue sharing, sponsorships, and premium content features."
+  },
+  "ads": {
+    "sponsored": "Sponsored",
+    "learn_more": "Learn More"
+  },
+  "creator_studio": {
+    "welcome": "Welcome back",
+    "overview": "Creator Dashboard overview",
+    "quick_create": "Quick Create",
+    "recent_content": "Recent Content",
+    "analytics": "Analytics",
+    "content": "Content",
+    "comments": "Comments",
+    "subtitles": "Subtitles",
+    "earn": "Earn",
+    "settings": "Settings",
+    "feedback": "Send Feedback",
+    "logout": "Logout"
+  }
+}

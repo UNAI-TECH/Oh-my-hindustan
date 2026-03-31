@@ -23,13 +23,17 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.unai.antigravity",
-      "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"]
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-localization"
     ],
     "extra": {
       "eas": {

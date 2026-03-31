@@ -1,0 +1,58 @@
+{
+  "common": {
+    "brand_name": "जन संवाद (Jan Samvad)",
+    "loading": "लोड हो रहा है...",
+    "error": "त्रुटि",
+    "success": "सफलता",
+    "back": "पीछे",
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "confirm": "पुष्टि करें",
+    "search": "खोजें",
+    "apply": "लागू करें",
+    "close": "बंद करें",
+    "soon": "जल्द ही"
+  },
+  "nav": {
+    "home": "होम",
+    "explore": "एक्सप्लोर करें",
+    "studio": "क्रिएटिव स्टूडियो",
+    "profile": "प्रोफ़ाइल",
+    "notifications": "सूचनाएं"
+  },
+  "monetization": {
+    "title": "मुद्रीकरण",
+    "subtitle": "क्रिएटर की कमाई",
+    "total_earnings": "कुल कमाई",
+    "available_balance": "उपलब्ध शेष राशि",
+    "ad_revenue": "विज्ञापन राजस्व शेयरिंग",
+    "sponsorships": "प्रायोजन मैच",
+    "premium_content": "प्रीमियम सामग्री",
+    "withdraw": "धन निकासी",
+    "status": "मुद्रीकरण स्थिति",
+    "active": "सक्रिय",
+    "pending": "लंबित",
+    "eligible": "पात्र",
+    "ineligible": "अपात्र",
+    "how_it_works": "यह कैसे काम करता है",
+    "coming_soon_desc": "हम क्रिएटर्स के लिए एक व्यापक मुद्रीकरण कार्यक्रम बना रहे हैं। विज्ञापन राजस्व शेयरिंग, प्रायोजन और प्रीमियम सामग्री के लिए बने रहें।"
+  },
+  "ads": {
+    "sponsored": "प्रायोजित",
+    "learn_more": "और जानें"
+  },
+  "creator_studio": {
+    "welcome": "वापसी पर स्वागत है",
+    "overview": "क्रिएटर डैशबोर्ड का अवलोकन",
+    "quick_create": "त्वरित निर्माण",
+    "recent_content": "हालिया सामग्री",
+    "analytics": "एनालीटिक्स",
+    "content": "सामग्री",
+    "comments": "कमेंट",
+    "subtitles": "सबटाइटल्स",
+    "earn": "कामाएँ",
+    "settings": "सेटिंग्स",
+    "feedback": "फीडबैक भेजें",
+    "logout": "लॉग आउट"
+  }
+}

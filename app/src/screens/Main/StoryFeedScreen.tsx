@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
   View, Text, StyleSheet, FlatList, TouchableOpacity, 
-  Image, ActivityIndicator, SafeAreaView, ScrollView, Dimensions 
+  Image, ActivityIndicator, ScrollView, Dimensions, useWindowDimensions, Platform 
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAppTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabaseClient';
 import MainHeader from '../../components/MainHeader';
@@ -24,7 +25,10 @@ interface Story {
 }
 
 export default function StoryFeedScreen() {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
   const { colors } = useAppTheme();
+  const styles = getStyles(colors, isTablet, width);
   const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(true);
   const [stories, setStories] = useState<Story[]>([]);
@@ -42,6 +46,12 @@ export default function StoryFeedScreen() {
       
     return () => { supabase.removeChannel(channel); };
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchStories();
+    }, [])
+  );
 
   const fetchStories = async () => {
     try {
@@ -63,7 +73,7 @@ export default function StoryFeedScreen() {
       
       const creatorIds = follows.map(f => f.followingId);
       
-      // 2. Fetch active stories (RLS handles expiry limitation)
+      // 2. Fetch active stories (Strict 24-hour expiry check)
       const { data: activeStories, error } = await supabase
         .from('stories')
         .select(`
@@ -71,6 +81,7 @@ export default function StoryFeedScreen() {
           User:creator_id ( username, avatarUrl )
         `)
         .in('creator_id', creatorIds)
+        .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -105,7 +116,7 @@ export default function StoryFeedScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.SurfaceWhite }]}>
+    <SafeAreaView style={styles.safeArea}>
       <MainHeader />
       
       {loading ? (
@@ -113,25 +124,20 @@ export default function StoryFeedScreen() {
           <ActivityIndicator size="large" color={colors.PrimaryRed} />
         </View>
       ) : groupedStories.length === 0 ? (
-        <View style={styles.center}>
-          <Ionicons name="aperture-outline" size={64} color={colors.Slate400} />
-          <Text style={[styles.emptyTitle, { color: colors.DarkText }]}>No Stories Available</Text>
-          <Text style={[styles.emptySubtitle, { color: colors.Slate500 }]}>
-             Follow more creators to see their 24-hour updates here.
-          </Text>
+        <View style={styles.emptyContainer}>
+          <View style={styles.emptyContent}>
+            <Ionicons name="aperture-outline" size={isTablet ? 80 : 64} color={colors.Slate400} />
+            <Text style={[styles.emptyTitle, { color: colors.DarkText }]}>No Stories Available</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.Slate500 }]}>
+               Follow more creators to see their 24-hour updates here.
+            </Text>
+          </View>
         </View>
       ) : (
         <ScrollView style={styles.feedScroll} showsVerticalScrollIndicator={false}>
           {/* TOP HORIZONTAL STORIES */}
           <View style={styles.topSection}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-               {/* Current User Add Story Placeholder */}
-               <TouchableOpacity style={styles.storyCircleBox} onPress={() => alert('Use Creator Studio to upload a story.')}>
-                  <View style={[styles.storyCircle, { borderColor: colors.Slate200, borderWidth: 2 }]}>
-                     <Ionicons name="add" size={32} color={colors.Slate500} />
-                  </View>
-                  <Text style={[styles.storyName, { color: colors.DarkText }]} numberOfLines={1}>Your Story</Text>
-               </TouchableOpacity>
 
                {/* Followed Creators */}
                {groupedStories.map(group => (
@@ -192,110 +198,140 @@ export default function StoryFeedScreen() {
         </ScrollView>
       )}
 
-      <AppBottomNavBar currentRoute="StoryFeed" onNavigate={(r) => navigation.navigate(r)} />
+      <View style={styles.bottomNavContainer}>
+        <AppBottomNavBar currentRoute="StoryFeed" onNavigate={(r) => navigation.navigate(r)} />
+      </View>
     </SafeAreaView>
   );
 }
 
-const { width } = Dimensions.get('window');
-const cardWidth = (width - 48) / 2;
+const getStyles = (colors: any, isTablet: boolean, width: number) => {
+  const numColumns = isTablet ? 3 : 2;
+  const horizontalPadding = isTablet ? 40 : 16;
+  const gap = 16;
+  const cardWidth = (width - (horizontalPadding * 2) - (gap * (numColumns - 1))) / numColumns;
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  emptyTitle: { fontSize: 20, fontWeight: 'bold', marginTop: 16, marginBottom: 8 },
-  emptySubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
-  feedScroll: { flex: 1 },
-  topSection: {
-     paddingVertical: 16,
-     borderBottomWidth: 1,
-     borderBottomColor: '#f1f5f9',
-  },
-  horizontalScroll: {
-     paddingHorizontal: 16,
-     gap: 16,
-  },
-  storyCircleBox: {
-     alignItems: 'center',
-     width: 72,
-  },
-  storyCircle: {
-     width: 64,
-     height: 64,
-     borderRadius: 32,
-     borderWidth: 3,
-     padding: 2,
-     justifyContent: 'center',
-     alignItems: 'center',
-     marginBottom: 6,
-  },
-  storyAvatar: {
-     width: '100%',
-     height: '100%',
-     borderRadius: 30,
-     backgroundColor: '#e2e8f0',
-  },
-  storyName: {
-     fontSize: 11,
-     fontWeight: '500',
-  },
-  feedGrid: {
-     padding: 16,
-  },
-  sectionTitle: {
-     fontSize: 18,
-     fontWeight: 'bold',
-     marginBottom: 16,
-  },
-  gridContainer: {
-     flexDirection: 'row',
-     flexWrap: 'wrap',
-     justifyContent: 'space-between',
-     gap: 16,
-  },
-  storyCard: {
-     width: cardWidth,
-     aspectRatio: 0.65,
-     borderRadius: 16,
-     overflow: 'hidden',
-  },
-  storyCardImg: {
-     width: '100%',
-     height: '100%',
-     resizeMode: 'cover',
-  },
-  videoPlaceholder: {
-     flex: 1,
-     backgroundColor: '#000',
-  },
-  playIconOverlay: {
-     ...StyleSheet.absoluteFillObject,
-     justifyContent: 'center',
-     alignItems: 'center',
-     backgroundColor: 'rgba(0,0,0,0.2)'
-  },
-  storyCardOverlay: {
-     ...StyleSheet.absoluteFillObject,
-     padding: 12,
-     justifyContent: 'space-between',
-     backgroundColor: 'rgba(0,0,0,0.1)' // subtle dark gradient can be added here
-  },
-  storyCardHeader: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     gap: 8,
-  },
-  smallAvatar: {
-     width: 24,
-     height: 24,
-     borderRadius: 12,
-  },
-  storyCardName: {
-     color: '#fff',
-     fontSize: 12,
-     fontWeight: 'bold',
-     textShadowColor: 'rgba(0,0,0,0.5)',
-     textShadowOffset: { width: 0, height: 1 },
-     textShadowRadius: 2,
-  }
-});
+  return StyleSheet.create({
+    safeArea: { 
+      flex: 1, 
+      backgroundColor: colors.SurfaceWhite,
+      paddingTop: Platform.OS === 'android' ? 24 : 0
+    },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    emptyContainer: { 
+      flex: 1, 
+      justifyContent: 'center', 
+      alignItems: 'center',
+      backgroundColor: colors.SurfaceWhite
+    },
+    emptyContent: {
+      alignItems: 'center',
+      paddingHorizontal: 40,
+      marginBottom: 60, // visual center adjustment
+    },
+    emptyTitle: { fontSize: 20, fontWeight: 'bold', marginTop: 16, marginBottom: 8 },
+    emptySubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
+    feedScroll: { flex: 1 },
+    topSection: {
+       paddingVertical: isTablet ? 24 : 16,
+       borderBottomWidth: 1,
+       borderBottomColor: '#f1f5f9',
+    },
+    horizontalScroll: {
+       paddingHorizontal: horizontalPadding,
+       gap: isTablet ? 24 : 16,
+    },
+    storyCircleBox: {
+       alignItems: 'center',
+       width: isTablet ? 100 : 72,
+    },
+    storyCircle: {
+       width: isTablet ? 84 : 64,
+       height: isTablet ? 84 : 64,
+       borderRadius: isTablet ? 42 : 32,
+       borderWidth: 3,
+       padding: 3,
+       justifyContent: 'center',
+       alignItems: 'center',
+       marginBottom: 6,
+    },
+    storyAvatar: {
+       width: '100%',
+       height: '100%',
+       borderRadius: isTablet ? 38 : 30,
+       backgroundColor: '#e2e8f0',
+    },
+    storyName: {
+       fontSize: isTablet ? 13 : 11,
+       fontWeight: '600',
+       marginTop: 4,
+    },
+    feedGrid: {
+       padding: horizontalPadding,
+       paddingBottom: 120,
+    },
+    sectionTitle: {
+       fontSize: isTablet ? 22 : 18,
+       fontWeight: 'bold',
+       marginBottom: 20,
+    },
+    gridContainer: {
+       flexDirection: 'row',
+       flexWrap: 'wrap',
+       justifyContent: 'flex-start',
+       gap: gap,
+    },
+    storyCard: {
+       width: cardWidth,
+       aspectRatio: 0.7,
+       borderRadius: 20,
+       overflow: 'hidden',
+       marginBottom: gap,
+    },
+    storyCardImg: {
+       width: '100%',
+       height: '100%',
+       resizeMode: 'cover',
+    },
+    videoPlaceholder: {
+       flex: 1,
+       backgroundColor: '#000',
+    },
+    playIconOverlay: {
+       ...StyleSheet.absoluteFillObject,
+       justifyContent: 'center',
+       alignItems: 'center',
+       backgroundColor: 'rgba(0,0,0,0.2)'
+    },
+    storyCardOverlay: {
+       ...StyleSheet.absoluteFillObject,
+       padding: 12,
+       justifyContent: 'space-between',
+       backgroundColor: 'rgba(0,0,0,0.1)'
+    },
+    storyCardHeader: {
+       flexDirection: 'row',
+       alignItems: 'center',
+       gap: 8,
+    },
+    smallAvatar: {
+       width: isTablet ? 32 : 24,
+       height: isTablet ? 32 : 24,
+       borderRadius: isTablet ? 16 : 12,
+    },
+    storyCardName: {
+       color: '#fff',
+       fontSize: isTablet ? 14 : 12,
+       fontWeight: 'bold',
+       textShadowColor: 'rgba(0,0,0,0.5)',
+       textShadowOffset: { width: 0, height: 1 },
+       textShadowRadius: 2,
+    },
+    bottomNavContainer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0
+    }
+  });
+};

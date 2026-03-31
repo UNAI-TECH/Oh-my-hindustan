@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Modal, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
@@ -10,6 +10,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { AppApi } from '../../api/services';
 import { generateUUID } from '../../utils/uuid';
 import CustomModal from '../../components/CustomModal';
+import { useInteraction } from '../../context/InteractionContext';
 
 export default function CreatorProfileScreen() {
   const { colors } = useAppTheme();
@@ -23,9 +24,11 @@ export default function CreatorProfileScreen() {
   const [posts, setPosts] = useState<any[]>([]);
   const [followerCount, setFollowerCount] = useState(0);
   const [postCount, setPostCount] = useState(0);
-  const [isFollowed, setIsFollowed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [modalConfig, setModalConfig] = useState({ visible: false, title: '', message: '', isError: false });
+  
+  const { follows, toggleFollow } = useInteraction();
+  const isFollowed = !!follows[authorId];
 
 
   const fetchCreatorData = React.useCallback(async () => {
@@ -38,7 +41,7 @@ export default function CreatorProfileScreen() {
       // Fetch posts by this creator
       const { data: creatorPosts } = await supabase
         .from('Post')
-        .select('*, Vote(type), Comment(id, content)')
+        .select('*, Vote(type), Comment(id, content), PostView(id)')
         .eq('authorId', authorId)
         .order('createdAt', { ascending: false });
         
@@ -50,7 +53,7 @@ export default function CreatorProfileScreen() {
           upvotes: votes.filter((v: any) => v.type === 1).length,
           downvotes: votes.filter((v: any) => v.type === -1).length,
           realComments: allC.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length,
-          reposts: allC.filter((c: any) => c.content === '[SYSTEM_REPOST]').length,
+          viewCount: p.PostView ? p.PostView.length : 0,
         };
       });
       
@@ -60,12 +63,6 @@ export default function CreatorProfileScreen() {
       // Fetch follower count
       const { count } = await supabase.from('Follow').select('id', { count: 'exact', head: true }).eq('followingId', authorId);
       setFollowerCount(count || 0);
-
-      // Check if current user follows this creator
-      if (userProfile?.id) {
-        const { data: followData } = await supabase.from('Follow').select('id').eq('followerId', userProfile.id).eq('followingId', authorId).maybeSingle();
-        setIsFollowed(!!followData);
-      }
     } catch (e) {
       console.warn('Failed to fetch creator data:', e);
     } finally {
@@ -99,48 +96,20 @@ export default function CreatorProfileScreen() {
     };
   }, [authorId, fetchCreatorData]);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchCreatorData();
+    }, [fetchCreatorData])
+  );
+
   const handleFollow = async () => {
-    if (!userProfile?.id || !authorId) { setModalConfig({ visible: true, title: 'Login Required', message: 'Please login to follow creators', isError: true }); return; }
-    
-    // Save current state for rollback
-    const prevFollowed = isFollowed;
-    const prevFollowerCount = followerCount;
-
-    try {
-      // Optimistic Update
-      setIsFollowed(!isFollowed);
-      setFollowerCount(c => prevFollowed ? Math.max(0, c - 1) : c + 1);
-
-      if (prevFollowed) {
-        const { error } = await supabase.from('Follow').delete().eq('followerId', userProfile.id).eq('followingId', authorId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('Follow').insert({
-          id: generateUUID(),
-          followerId: userProfile.id,
-          followingId: authorId,
-        });
-        if (error) throw error;
-
-        // Notify creator (non-critical, don't wait for it if possible, but keep it for functionality)
-        supabase.from('Notification').insert({
-          id: generateUUID(),
-          userId: authorId,
-          type: 'FOLLOW',
-          title: 'New Follower',
-          message: `${userProfile.username || 'Someone'} started following you`,
-          targetId: userProfile.id,
-          createdAt: new Date().toISOString(),
-        }).then(({ error: nErr }) => {
-          if (nErr) console.warn('Follow notification error:', nErr.message);
-        });
-      }
-    } catch (e: any) {
-      // Rollback
-      setIsFollowed(prevFollowed);
-      setFollowerCount(prevFollowerCount);
-      setModalConfig({ visible: true, title: 'Follow Failed', message: e?.message || 'Could not follow creator', isError: true });
+    if (!userProfile?.id || !authorId) { 
+      setModalConfig({ visible: true, title: 'Login Required', message: 'Please login to follow creators', isError: true }); 
+      return; 
     }
+    
+    setFollowerCount(c => isFollowed ? Math.max(0, c - 1) : c + 1);
+    await toggleFollow(authorId);
   };
 
 
@@ -207,8 +176,8 @@ export default function CreatorProfileScreen() {
             <Text style={styles.statLabel}>Followers</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statNum}>{posts.reduce((sum, p: any) => sum + (p.upvotes || 0), 0)}</Text>
-            <Text style={styles.statLabel}>Likes</Text>
+            <Text style={styles.statNum}>{posts.reduce((sum, p: any) => sum + (p.viewCount || 0), 0)}</Text>
+            <Text style={styles.statLabel}>Total Views</Text>
           </View>
         </View>
 
@@ -258,8 +227,8 @@ export default function CreatorProfileScreen() {
                   <Ionicons name="arrow-down" size={16} color="gray" />
                   <Text style={{ color: 'gray', marginLeft: 4, marginRight: 16 }}>{item.downvotes || 0}</Text>
 
-                  <Ionicons name="repeat" size={16} color="gray" />
-                  <Text style={{ color: 'gray', marginLeft: 4, marginRight: 16 }}>{item.reposts || 0}</Text>
+                  <Ionicons name="eye-outline" size={16} color="gray" />
+                  <Text style={{ color: 'gray', marginLeft: 4, marginRight: 16 }}>{item.viewCount || 0}</Text>
 
                   <Ionicons name="chatbubble-outline" size={16} color="gray" />
                   <Text style={{ color: 'gray', marginLeft: 4 }}>{item.realComments || 0}</Text>

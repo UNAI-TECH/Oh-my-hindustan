@@ -9,12 +9,20 @@ import { FeedItemType } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { generateUUID } from '../../utils/uuid';
-import RenderHtml from 'react-native-render-html';
+import RenderHtml, { defaultHTMLElementModels, HTMLContentModel } from 'react-native-render-html';
 import { useWindowDimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
 import CustomModal from '../../components/CustomModal';
+import { useInteraction } from '../../context/InteractionContext';
+import { AppApi } from '../../api/services';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+
+const customHTMLElementModels = {
+  font: defaultHTMLElementModels.span.extend({
+    contentModel: HTMLContentModel.mixed
+  })
+};
 
 const formatVoteCount = (n: number): string => {
   if (n >= 10000) {
@@ -38,14 +46,15 @@ export default function ArticleDetailScreen() {
   const [downvotes, setDownvotes] = useState(0);
   const [myVote, setMyVote] = useState<1 | -1 | 0>(0);
   const [isSaved, setIsSaved] = useState(false);
-  const [isReposted, setIsReposted] = useState(false);
-  const [repostCount, setRepostCount] = useState(0);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [viewCount, setViewCount] = useState(0);
   const [commentsCount, setCommentsCount] = useState(0);
+  const { follows, toggleFollow } = useInteraction();
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyingToUsername, setReplyingToUsername] = useState<string | null>(null);
   const [postAuthorId, setPostAuthorId] = useState<string | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<any[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
@@ -59,9 +68,7 @@ export default function ArticleDetailScreen() {
     setDownvotes(0);
     setMyVote(0);
     setIsSaved(false);
-    setIsReposted(false);
-    setRepostCount(0);
-    setIsFollowing(false);
+    setViewCount(0);
     setCommentsCount(0);
     setComments([]);
     setPostAuthorId(null);
@@ -77,26 +84,20 @@ export default function ArticleDetailScreen() {
       const { count: downCount } = await supabase.from('Vote').select('id', { count: 'exact', head: true }).eq('postId', id).eq('type', -1);
       const { count: cCount } = await supabase.from('Comment').select('id', { count: 'exact', head: true }).eq('postId', id).neq('content', '[SYSTEM_REPOST]');
       const { count: rCount } = await supabase.from('Comment').select('id', { count: 'exact', head: true }).eq('postId', id).eq('content', '[SYSTEM_REPOST]');
+      const { count: vCount } = await supabase.from('PostView').select('id', { count: 'exact', head: true }).eq('postId', id);
       const { data: postData } = await supabase.from('Post').select('authorId').eq('id', id).single();
       if (postData?.authorId) setPostAuthorId(postData.authorId);
 
       setUpvotes(upCount || 0);
       setDownvotes(downCount || 0);
       setCommentsCount(cCount || 0);
-      setRepostCount(rCount || 0);
+      setViewCount(vCount || 0);
 
       if (userProfile?.id) {
         const { data: myVoteData } = await supabase.from('Vote').select('type').eq('postId', id).eq('userId', userProfile.id).maybeSingle();
-        const { data: savedData } = await supabase.from('Save').select('id').eq('postId', id).eq('userId', userProfile.id).maybeSingle();
-        const { data: repostData } = await supabase.from('Comment').select('id').eq('postId', id).eq('userId', userProfile.id).eq('content', '[SYSTEM_REPOST]').maybeSingle();
         setMyVote(myVoteData?.type || 0);
+        const { data: savedData } = await supabase.from('Save').select('id').eq('postId', id).eq('userId', userProfile.id).maybeSingle();
         setIsSaved(!!savedData);
-        setIsReposted(!!repostData);
-        
-        if (postData?.authorId) {
-          const { data: followData } = await supabase.from('Follow').select('id').eq('followerId', userProfile.id).eq('followingId', postData.authorId).maybeSingle();
-          setIsFollowing(!!followData);
-        }
       }
     } catch (e: any) {
       console.warn('Fetch interactions error:', e?.message);
@@ -108,6 +109,26 @@ export default function ArticleDetailScreen() {
   }, [fetchInteractions]);
 
   useEffect(() => {
+    const logView = async () => {
+      if (!id || !userProfile?.id) return;
+      try {
+        // Prevent duplicate views client-side check and execute
+        const { data } = await supabase.from('PostView').select('id').eq('postId', id).eq('userId', userProfile.id).limit(1);
+        if (!data || data.length === 0) {
+          await supabase.from('PostView').insert({
+            id: generateUUID(),
+            postId: id,
+            userId: userProfile.id
+          });
+        }
+      } catch (e) {
+        console.warn('PostView log error');
+      }
+    };
+    logView();
+  }, [id, userProfile?.id]);
+
+  useEffect(() => {
     if (!id) return;
     const channel = supabase
       .channel(`interactions_${id}`)
@@ -117,6 +138,9 @@ export default function ArticleDetailScreen() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'Comment', filter: `postId=eq.${id}` }, () => {
         fetchInteractions();
         setRefreshSyncTrigger(prev => prev + 1);
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'PostView', filter: `postId=eq.${id}` }, () => {
+        fetchInteractions();
       })
       .subscribe();
 
@@ -224,62 +248,14 @@ export default function ArticleDetailScreen() {
     }
   };
 
-  const handleRepost = async () => {
-    if (!userProfile?.id) { setModalConfig({ visible: true, title: 'Login Required', message: 'Please login to repost', isError: true }); return; }
-    const prevReposted = isReposted;
-    const prevCount = repostCount;
-    
-    try {
-      // Optimistic
-      setIsReposted(!isReposted);
-      setRepostCount(c => prevReposted ? Math.max(0, c - 1) : c + 1);
-      
-      if (prevReposted) {
-        const { error } = await supabase.from('Comment').delete().eq('userId', userProfile.id).eq('postId', id).eq('content', '[SYSTEM_REPOST]');
-        if (error) throw error;
-      } else {
-        const now = new Date().toISOString();
-        const { error } = await supabase.from('Comment').insert({
-          id: generateUUID(),
-          userId: userProfile.id,
-          postId: id,
-          content: '[SYSTEM_REPOST]',
-          createdAt: now,
-          updatedAt: now,
-        });
-        if (error) throw error;
-        createNotification('REPOST', 'New Repost', `${userProfile.username || 'Someone'} reposted your content`);
-      }
-    } catch (e: any) {
-      setIsReposted(prevReposted);
-      setRepostCount(prevCount);
-      setModalConfig({ visible: true, title: 'Repost Failed', message: e?.message || 'Could not repost', isError: true });
-    }
-  };
+
 
   const handleFollow = async () => {
-    if (!userProfile?.id || !postAuthorId) { setModalConfig({ visible: true, title: 'Login Required', message: 'Please login to follow creators', isError: true }); return; }
-    const prevFollowing = isFollowing;
-    try {
-      // Optimistic
-      setIsFollowing(!isFollowing);
-      
-      if (prevFollowing) {
-        const { error } = await supabase.from('Follow').delete().eq('followerId', userProfile.id).eq('followingId', postAuthorId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('Follow').insert({
-          id: generateUUID(),
-          followerId: userProfile.id,
-          followingId: postAuthorId,
-        });
-        if (error) throw error;
-        createNotification('FOLLOW', 'New Follower', `${userProfile.username || 'Someone'} started following you`);
-      }
-    } catch (e: any) {
-      setIsFollowing(prevFollowing);
-      setModalConfig({ visible: true, title: 'Follow Failed', message: e?.message || 'Could not follow creator', isError: true });
+    if (!userProfile?.id || !postAuthorId) { 
+      setModalConfig({ visible: true, title: 'Login Required', message: 'Please login to follow creators', isError: true }); 
+      return; 
     }
+    await toggleFollow(postAuthorId);
   };
 
   const fetchComments = async () => {
@@ -305,7 +281,19 @@ export default function ArticleDetailScreen() {
 
   const openCommentSheet = () => {
     setShowComments(true);
+    setReplyingToId(null);
+    setReplyingToUsername(null);
     fetchComments();
+  };
+
+  const handleCommentVote = async (commentId: string, type: 1 | -1) => {
+    if (!userProfile?.id) { setModalConfig({ visible: true, title: 'Login Required', message: 'Please login to vote on comments', isError: true }); return; }
+    try {
+      await AppApi.voteComment(commentId, type);
+      fetchComments(); // Instead of building optimistic map, we just wait for real-time or refetch
+    } catch (e: any) {
+      console.warn('Comment vote failed', e);
+    }
   };
 
   const submitComment = async () => {
@@ -324,17 +312,23 @@ export default function ArticleDetailScreen() {
         content: commentContent,
         postId: id,
         userId: userProfile.id,
+        parentId: replyingToId,
         createdAt: new Date().toISOString(),
         User: {
           id: userProfile.id,
           username: userProfile.username,
           avatarUrl: userProfile.avatarUrl
-        }
+        },
+        upvotes: 0,
+        downvotes: 0,
+        creatorLiked: false
       };
       
       setComments(prev => [optimisticComment, ...prev]);
       setCommentsCount(c => c + 1);
       setNewComment('');
+      setReplyingToId(null);
+      setReplyingToUsername(null);
       
       const now = new Date().toISOString();
       const { error } = await supabase
@@ -344,6 +338,7 @@ export default function ArticleDetailScreen() {
           postId: id,
           userId: userProfile.id,
           content: commentContent,
+          parentId: replyingToId,
           createdAt: now,
           updatedAt: now,
         });
@@ -435,14 +430,18 @@ export default function ArticleDetailScreen() {
     } catch (e) {}
   }, [selectedArticle?.title, id]);
 
-  const netVotes = upvotes - downvotes;
-
-  const htmlTagsStyles = {
+  // Memoize HTML styles to prevent re-renders
+  const htmlTagsStyles = React.useMemo(() => ({
+    body: {
+      color: colors.DarkText,
+      fontSize: 16,
+      lineHeight: 24,
+    },
     p: {
       color: colors.DarkText,
       fontSize: 16,
       lineHeight: 28,
-      marginBottom: 24,
+      marginBottom: 20,
     },
     b: { fontWeight: 'bold' as const },
     strong: { fontWeight: 'bold' as const },
@@ -451,15 +450,58 @@ export default function ArticleDetailScreen() {
     u: { textDecorationLine: 'underline' as const },
     blockquote: {
       borderLeftWidth: 4,
-      borderLeftColor: colors.PrimaryRed,
-      backgroundColor: colors.PrimaryRedAlpha5,
-      padding: 16,
+      borderLeftColor: '#e5e7eb',
+      backgroundColor: '#f9fafb',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
       fontStyle: 'italic' as const,
       marginVertical: 16,
+      borderRadius: 4,
     },
-    ul: { marginVertical: 16 },
-    ol: { marginVertical: 16 },
-  };
+    ul: { marginVertical: 12, paddingLeft: 10 },
+    ol: { marginVertical: 12, paddingLeft: 10 },
+    li: { marginBottom: 8 }
+  }), [colors.DarkText]); // Only depend on the specific color used
+
+  const renderers = React.useMemo(() => ({
+    font: (props: any) => {
+      const { tnode } = props;
+      const attributes = tnode.attributes;
+      const fontSizeMap: Record<string, number> = {
+        '1': 10, '2': 13, '3': 16, '4': 18, '5': 24, '6': 32, '7': 48
+      };
+      
+      const customStyle: any = {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+      };
+      
+      if (attributes.size && fontSizeMap[attributes.size]) {
+        customStyle.fontSize = fontSizeMap[attributes.size];
+        customStyle.lineHeight = fontSizeMap[attributes.size] * 1.4;
+      }
+      if (attributes.color) {
+        customStyle.color = attributes.color;
+      }
+      if (attributes.face) {
+        if (attributes.face.includes('Georgia')) customStyle.fontFamily = Platform.OS === 'ios' ? 'Georgia' : 'serif';
+        else if (attributes.face.includes('Courier')) customStyle.fontFamily = Platform.OS === 'ios' ? 'Courier' : 'monospace';
+        else if (attributes.face.includes('Times')) customStyle.fontFamily = Platform.OS === 'ios' ? 'Times New Roman' : 'serif';
+        else if (attributes.face.includes('Arial')) customStyle.fontFamily = Platform.OS === 'ios' ? 'Arial' : 'sans-serif';
+      }
+
+      return (
+        <Text style={customStyle}>
+          {props.children}
+        </Text>
+      );
+    }
+  }), []); 
+
+  const baseStyle = React.useMemo(() => ({
+    color: colors.DarkText,
+    fontSize: 16
+  }), [colors.DarkText]);
 
   // Early returns — AFTER all hooks
   if (isLoading && !selectedArticle) {
@@ -470,6 +512,7 @@ export default function ArticleDetailScreen() {
   }
 
   const { title, category, authorName, authorImage, subtitle, thumbnail, type, content, excerpt, quote } = selectedArticle;
+  const isFollowing = postAuthorId ? !!follows[postAuthorId] : false;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -537,11 +580,16 @@ export default function ArticleDetailScreen() {
           </View>
         )}
 
-        <View style={{ padding: 24 }}>
+        <View style={{ padding: 24, minHeight: 100 }}>
           <RenderHtml
             contentWidth={width - 48}
-            source={{ html: selectedArticle.content || selectedArticle.excerpt || "Content not available." }}
+            source={{ html: selectedArticle.content || selectedArticle.excerpt || "" }}
             tagsStyles={htmlTagsStyles}
+            renderers={renderers}
+            customHTMLElementModels={customHTMLElementModels}
+            baseStyle={baseStyle}
+            enableExperimentalBRCollapsing={true}
+            enableExperimentalGhostLinesPrevention={true}
           />
         </View>
 
@@ -619,10 +667,10 @@ export default function ArticleDetailScreen() {
           
           <View style={styles.divider} />
 
-          <TouchableOpacity style={styles.commentControl} onPress={handleRepost}>
-            <Ionicons name="repeat" size={20} color={isReposted ? colors.PrimaryRed : "gray"} />
-            <Text style={{ marginLeft: 6, fontWeight: 'bold', color: isReposted ? colors.PrimaryRed : 'gray' }}>{repostCount}</Text>
-          </TouchableOpacity>
+          <View style={styles.commentControl}>
+            <Ionicons name="eye-outline" size={20} color="gray" />
+            <Text style={{ marginLeft: 6, fontWeight: 'bold', color: 'gray' }}>{formatVoteCount(viewCount)}</Text>
+          </View>
           
           <View style={styles.divider} />
           
@@ -653,26 +701,60 @@ export default function ArticleDetailScreen() {
                 <Text style={{ color: colors.Slate400, textAlign: 'center', marginVertical: 32 }}>No comments yet. Be the first!</Text>
               ) : (
                 <FlatList
-                  data={comments}
-                  keyExtractor={(item, index) => `${item.id}-${index}`}
+                  data={comments.filter(c => !c.parentId)}
+                  keyExtractor={(item) => item.id}
                   style={{ maxHeight: 300 }}
-                  renderItem={({ item }) => (
-                    <View style={styles.commentItem}>
-                      <Image
-                        source={{ uri: item.User?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.User?.username || 'U')}&background=E53935&color=fff` }}
-                        style={styles.commentAvatar}
-                      />
-                      <View style={{ flex: 1, marginLeft: 10 }}>
-                        <Text style={{ fontWeight: 'bold', fontSize: 13 }}>@{item.User?.username || 'User'}</Text>
-                        <Text style={{ fontSize: 14, color: colors.DarkText, marginTop: 2 }}>{item.content}</Text>
-                        <Text style={{ fontSize: 11, color: colors.Slate400, marginTop: 4 }}>
-                          {new Date(item.createdAt).toLocaleDateString()}
-                        </Text>
+                  renderItem={({ item }) => {
+                    const itemReplies = comments.filter(r => r.parentId === item.id);
+                    
+                    const renderComment = (c: any, isReply = false) => (
+                      <View key={c.id} style={[styles.commentItem, isReply && { marginLeft: 32, borderBottomWidth: 0, paddingVertical: 8 }]}>
+                        <Image
+                          source={{ uri: c.User?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.User?.username || 'U')}&background=E53935&color=fff` }}
+                          style={styles.commentAvatar}
+                        />
+                        <View style={{ flex: 1, marginLeft: 10 }}>
+                          <Text style={{ fontWeight: 'bold', fontSize: 13 }}>@{c.User?.username || 'User'}</Text>
+                          <Text style={{ fontSize: 14, color: colors.DarkText, marginTop: 2 }}>{c.content}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 16 }}>
+                            <Text style={{ fontSize: 11, color: colors.Slate400 }}>{new Date(c.createdAt).toLocaleDateString()}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                              {!isReply && (
+                                <TouchableOpacity onPress={() => { setReplyingToId(c.id); setReplyingToUsername(c.User?.username); }}>
+                                  <Text style={{ fontSize: 11, fontWeight: 'bold', color: 'gray' }}>Reply</Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          </View>
+                        </View>
+                        {c.creatorLiked && (
+                          <View style={{ position: 'absolute', right: 0, bottom: 4 }}>
+                            <Ionicons name="heart" size={16} color="red" />
+                            <Image source={{ uri: selectedArticle?.authorImage || `https://ui-avatars.com/api/?name=C&background=E53935&color=fff` }} style={{ width: 12, height: 12, borderRadius: 6, position: 'absolute', bottom: -2, right: -4, borderWidth: 1, borderColor: 'white' }} />
+                          </View>
+                        )}
                       </View>
-                    </View>
-                  )}
+                    );
+
+                    return (
+                      <View>
+                        {renderComment(item)}
+                        {itemReplies.map(reply => renderComment(reply, true))}
+                      </View>
+                    );
+                  }}
                 />
               )}
+
+              {replyingToId && (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, backgroundColor: '#F1F5F9', borderRadius: 8, marginTop: 10 }}>
+                  <Text style={{ fontSize: 12, color: 'gray' }}>Replying to @{replyingToUsername}</Text>
+                  <TouchableOpacity onPress={() => { setReplyingToId(null); setReplyingToUsername(null); }}>
+                    <Ionicons name="close-circle" size={16} color="gray" />
+                  </TouchableOpacity>
+                </View>
+              )}
+
 
               <View style={styles.commentInputRow}>
                 <TextInput

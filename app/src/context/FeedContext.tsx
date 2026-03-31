@@ -75,7 +75,7 @@ const toFeedItem = (post: any): FeedItem => {
     upvoteCount: post.upvoteCount || 0,
     downvoteCount: post.downvoteCount || 0,
     comments: post.commentCount || 0,
-    repostCount: post.repostCount || 0,
+    viewCount: post.viewCount || 0,
     excerpt: post.content?.substring(0, 150) || null,
     content: post.content,
     videoDuration: post.video_duration || null,

@@ -64,7 +64,11 @@ export default function NotificationScreen() {
         markAsRead(item.id);
       }
       if (item.targetId) {
-        navigation.navigate('ArticleDetail', { id: item.targetId });
+        if (item.type === 'STORY') {
+          navigation.navigate('StoryFeed');
+        } else {
+          navigation.navigate('ArticleDetail', { id: item.targetId });
+        }
       }
     }
   };

@@ -23,7 +23,7 @@ export interface FeedItem {
   upvoteCount?: number;
   downvoteCount?: number;
   comments?: number | null;
-  repostCount?: number;
+  viewCount?: number;
   category?: string | null;
   excerpt?: string | null;
   videoDuration?: string | null;
