@@ -13,7 +13,9 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.unai.antigravity",
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "adaptiveIcon": {
@@ -23,6 +25,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.unai.antigravity",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE"
@@ -33,7 +36,15 @@
     },
     "plugins": [
       "expo-web-browser",
-      "expo-localization"
+      "expo-localization",
+      "expo-notifications",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-5668057018566639~5886610512",
+          "iosAppId": "ca-app-pub-5668057018566639~5886610512"
+        }
+      ]
     ],
     "extra": {
       "eas": {

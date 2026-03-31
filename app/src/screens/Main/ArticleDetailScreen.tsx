@@ -15,6 +15,7 @@ import { WebView } from 'react-native-webview';
 import CustomModal from '../../components/CustomModal';
 import { useInteraction } from '../../context/InteractionContext';
 import { AppApi } from '../../api/services';
+import AdBanner from '../../components/AdBanner';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -553,6 +554,9 @@ export default function ArticleDetailScreen() {
           </View>
         </View>
 
+        {/* Ad Placement 1: Between creator profile and image */}
+        <AdBanner />
+
         {thumbnail && (
           <View style={{ width: '100%', aspectRatio: 16/9 }}>
             {type === FeedItemType.VIDEO && selectedArticle.videoUrl ? (
@@ -592,6 +596,9 @@ export default function ArticleDetailScreen() {
             enableExperimentalGhostLinesPrevention={true}
           />
         </View>
+
+        {/* Ad Placement 2: Above Related Posts */}
+        <AdBanner />
 
         {/* Related Posts Section */}
         {relatedPosts.length > 0 && (

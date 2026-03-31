@@ -1,9 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppApi } from '../api/services';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabaseClient';
+import { NavigationService } from '../utils/navigation';
 
 export interface NotificationItem {
   id: string;
@@ -57,18 +61,6 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   
   const { isAuthenticated, userProfile } = useAuth();
 
-  // 1. Initial Load of Preferences
-  useEffect(() => {
-    AsyncStorage.getItem(NOTIF_ENABLED_KEY).then(val => {
-      if (val !== null) setNotificationsEnabledState(val === 'true');
-    });
-  }, []);
-
-  const setNotificationsEnabled = useCallback(async (enabled: boolean) => {
-    setNotificationsEnabledState(enabled);
-    AsyncStorage.setItem(NOTIF_ENABLED_KEY, String(enabled));
-  }, []);
-
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated) return;
     setIsLoading(true);
@@ -76,7 +68,6 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       const response = await AppApi.getNotifications(1, 100);
       const rawNotifs = response.data || [];
       
-      // Initial mapping with fallback avatars
       const mapped = rawNotifs.map((n: any) => ({
         id: n.id,
         title: n.title || 'Notification',
@@ -89,7 +80,6 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         createdAt: n.createdAt,
       }));
 
-      // Enhanced mapping: Fetch real avatars from User table
       const usernames = Array.from(new Set(mapped.map(m => m.title.split(' ')[0]).filter(Boolean)));
       if (usernames.length > 0) {
         const { data: userData } = await supabase
@@ -115,6 +105,96 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
     }
   }, [isAuthenticated]);
+
+  const registerForPushNotificationsAsync = async () => {
+    if (!Device.isDevice) {
+      console.log('Must use physical device for Push Notifications');
+      return null;
+    }
+
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== 'granted') {
+      console.log('Failed to get push token for push notification!');
+      return null;
+    }
+
+    try {
+      const token = (await Notifications.getDevicePushTokenAsync()).data;
+      console.log('Native Push Token:', token);
+      return token;
+    } catch (e) {
+      console.error('Error getting push token:', e);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    AsyncStorage.getItem(NOTIF_ENABLED_KEY).then(val => {
+      const enabledByCache = val !== null ? val === 'true' : true;
+      setNotificationsEnabledState(enabledByCache);
+      
+      if (enabledByCache && isAuthenticated) {
+        registerForPushNotificationsAsync().then(token => {
+          if (token) AppApi.registerDevice(token, Device.modelName || 'Mobile Device', Platform.OS);
+        });
+      }
+    });
+
+    const handleNotificationResponse = (response: Notifications.NotificationResponse) => {
+      console.log('[NOTIFY] Handling notification response:', response);
+      // Always navigate to the general Notifications page as specifically requested
+      NavigationService.navigate('Notifications');
+    };
+
+    // Check for initial notification (cold start)
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (response) {
+        handleNotificationResponse(response);
+      }
+    });
+
+    const notificationListener = Notifications.addNotificationReceivedListener(notification => {
+      fetchNotifications();
+    });
+
+    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+      handleNotificationResponse(response);
+    });
+
+    return () => {
+      notificationListener.remove();
+      responseListener.remove();
+    };
+  }, [isAuthenticated, fetchNotifications]);
+
+  const setNotificationsEnabled = useCallback(async (enabled: boolean) => {
+    setNotificationsEnabledState(enabled);
+    await AsyncStorage.setItem(NOTIF_ENABLED_KEY, String(enabled));
+    
+    if (enabled && isAuthenticated) {
+      const token = await registerForPushNotificationsAsync();
+      if (token) await AppApi.registerDevice(token, Device.modelName || 'Mobile Device', Platform.OS);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated && userProfile?.id) {
+      fetchNotifications();
+      const subscription = AppApi.subscribeToNotifications(userProfile.id, () => {
+        fetchNotifications();
+      });
+      return () => {
+        supabase.removeChannel(subscription);
+      };
+    } else {
+      setNotifications([]);
+    }
+  }, [isAuthenticated, userProfile?.id, fetchNotifications]);
 
   const markAsRead = useCallback(async (id: string) => {
     try {
@@ -144,20 +224,6 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
-
-  useEffect(() => {
-    if (isAuthenticated && userProfile?.id) {
-      fetchNotifications();
-      const subscription = AppApi.subscribeToNotifications(userProfile.id, () => {
-        fetchNotifications();
-      });
-      return () => {
-        supabase.removeChannel(subscription);
-      };
-    } else {
-      setNotifications([]);
-    }
-  }, [isAuthenticated, userProfile?.id, fetchNotifications]);
 
   return (
     <NotificationContext.Provider value={{

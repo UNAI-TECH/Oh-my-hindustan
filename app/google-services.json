@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "996423021460",
+    "project_id": "omh-app-718a1",
+    "storage_bucket": "omh-app-718a1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:996423021460:android:324fc757f76f9d7ddbd581",
+        "android_client_info": {
+          "package_name": "com.unai.antigravity"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB1MTlvS0Y8e96HU1X9doJr54AWugLaR_Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

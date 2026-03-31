@@ -16,8 +16,8 @@ export default function MainHeader() {
     const fetchUser = async () => {
        const { data: { session } } = await supabase.auth.getSession();
        if (session?.user?.id) {
-          const { data } = await supabase.from('User').select('profileImage').eq('id', session.user.id).single();
-          if (data?.profileImage) setProfilePic(data.profileImage);
+          const { data } = await supabase.from('User').select('avatarUrl').eq('id', session.user.id).single();
+          if (data?.avatarUrl) setProfilePic(data.avatarUrl);
        }
     };
     fetchUser();
