@@ -32,12 +32,12 @@ interface Story {
   created_at: string;
   allow_comments?: boolean;
   allow_sharing?: boolean;
-}
-
-interface CreatorGroup {
-  creator_id: string;
-  User: { username: string; avatarUrl: string };
-  stories: Story[];
+  background_color?: string;
+  text_content?: string;
+  User?: {
+    username: string;
+    avatarUrl: string;
+  }
 }
 
 export default function StoryViewerScreen() {
@@ -45,10 +45,12 @@ export default function StoryViewerScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
 
-  const { creators, initialCreatorId, initialStoryIndex } = route.params || { creators: [], initialCreatorId: '', initialStoryIndex: 0 };
+  // Fetch storyId from route
+  const { storyId } = route.params || { storyId: '' };
 
-  const [creatorIndex, setCreatorIndex] = useState(0);
-  const [storyIndex, setStoryIndex] = useState(0);
+  const [currentStory, setCurrentStory] = useState<Story | null>(null);
+  const [loadingStory, setLoadingStory] = useState(true);
+
   const [isPaused, setIsPaused] = useState(false);
   const [message, setMessage] = useState('');
   const [showViewersSheet, setShowViewersSheet] = useState(false);
@@ -59,14 +61,39 @@ export default function StoryViewerScreen() {
   const [isLiked, setIsLiked] = useState(false);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<string>('');
+  
   const progressAnim = useRef(new Animated.Value(0)).current;
   const videoRef = useRef<any>(null);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
-  // Initialize derivations before useEffect hooks
-  const currentGroup: CreatorGroup = creators[creatorIndex];
-  const currentStory: Story | undefined = currentGroup?.stories[storyIndex];
+  // FETCH STORY
+  useEffect(() => {
+    const fetchStory = async () => {
+      if (!storyId) return;
+      try {
+        setLoadingStory(true);
+        const { data, error } = await supabase
+          .from('stories')
+          .select('*, User:creator_id(username, avatarUrl)')
+          .eq('id', storyId)
+          .single();
+
+        if (error || !data) {
+          console.log("Story fetch error", error);
+          setLoadingStory(false);
+          return;
+        }
+
+        setCurrentStory(data);
+      } catch (err) {
+        console.log("Story fetch catch error", err);
+      } finally {
+        setLoadingStory(false);
+      }
+    };
+    fetchStory();
+  }, [storyId]);
 
   useEffect(() => {
     const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -77,39 +104,47 @@ export default function StoryViewerScreen() {
   }, []);
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) setCurrentUserId(session.user.id);
+    });
+  }, []);
+
+  useEffect(() => {
     const checkLiked = async () => {
       if (currentStory && currentUserId) {
-        setIsLiked(false); // Reset optimistic state while fetching
+        setIsLiked(false);
         const { data, error } = await supabase.from('story_likes')
           .select('id')
           .eq('story_id', currentStory.id)
           .eq('user_id', currentUserId);
         
-        if (error) {
-          console.warn('Error fetching like status:', error.message);
-        }
+        if (error) console.warn('Error fetching like status:', error.message);
         setIsLiked(data && data.length > 0);
       }
     };
     checkLiked();
   }, [currentStory?.id, currentUserId]);
 
+  // View Logging
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) setCurrentUserId(session.user.id);
-    });
-  }, []);
-
-  // Initialize indices based on params
-  useEffect(() => {
-    if (creators && creators.length > 0) {
-      const cIndex = creators.findIndex((c: any) => c.creator_id === initialCreatorId);
-      if (cIndex !== -1) {
-        setCreatorIndex(cIndex);
-        setStoryIndex(initialStoryIndex || 0);
+    const logView = async () => {
+      if (currentStory && currentUserId) {
+        const { data } = await supabase.from('story_views')
+          .select('id')
+          .eq('story_id', currentStory.id)
+          .eq('user_id', currentUserId)
+          .limit(1);
+          
+        if (!data || data.length === 0) {
+          supabase.from('story_views').insert({
+            story_id: currentStory.id,
+            user_id: currentUserId
+          }).then();
+        }
       }
-    }
-  }, []);
+    };
+    logView();
+  }, [currentStory?.id, currentUserId]);
 
   // Progress Bar Animation
   useEffect(() => {
@@ -120,7 +155,6 @@ export default function StoryViewerScreen() {
     const duration = isVideo ? VIDEO_STORY_DURATION : IMAGE_STORY_DURATION;
     const isReady = isVideo ? isVideoLoaded : true;
 
-    // Reset video state when story changes
     if (!isVideo) {
       setIsVideoLoaded(false);
       setIsVideoPlaying(false);
@@ -132,14 +166,14 @@ export default function StoryViewerScreen() {
         duration: duration,
         useNativeDriver: false,
       }).start(({ finished }) => {
-        if (finished) goToNextStory();
+        if (finished) navigation.goBack();
       });
     } else {
       progressAnim.stopAnimation();
     }
-  }, [creatorIndex, storyIndex, isPaused, currentStory, isVideoLoaded]);
+  }, [isPaused, currentStory, isVideoLoaded]);
 
-  // Control video playback based on pause state (only when expo-av is available)
+  // Video Control
   useEffect(() => {
     if (ExpoVideo && currentStory?.type === 'video' && videoRef.current) {
       if (isPaused) {
@@ -150,98 +184,33 @@ export default function StoryViewerScreen() {
     }
   }, [isPaused, currentStory, isVideoLoaded]);
 
-  // Log View safely
-  useEffect(() => {
-    const logView = async () => {
-      if (currentStory && currentUserId) {
-        const { data, error } = await supabase.from('story_views')
-          .select('id')
-          .eq('story_id', currentStory.id)
-          .eq('user_id', currentUserId)
-          .limit(1);
-          
-        if (!data || data.length === 0) {
-          // If 0, insert
-          supabase.from('story_views').insert({
-            story_id: currentStory.id,
-            user_id: currentUserId
-          }).then();
-        }
-      }
-    };
-    logView();
-  }, [currentStory?.id, currentUserId]);
-
-  const goToNextStory = () => {
-    if (!currentGroup) return;
-    if (storyIndex < currentGroup.stories.length - 1) {
-      setStoryIndex(storyIndex + 1);
-    } else {
-      goToNextCreator();
-    }
-  };
-
-  const goToPrevStory = () => {
-    if (!currentGroup) return;
-    if (storyIndex > 0) {
-      setStoryIndex(storyIndex - 1);
-    } else {
-      goToPrevCreator();
-    }
-  };
-
-  const goToNextCreator = () => {
-    if (creatorIndex < creators.length - 1) {
-      setCreatorIndex(creatorIndex + 1);
-      setStoryIndex(0);
-    } else {
-      navigation.goBack(); // All stories watched
-    }
-  };
-
-  const goToPrevCreator = () => {
-    if (creatorIndex > 0) {
-      setCreatorIndex(creatorIndex - 1);
-      setStoryIndex(creators[creatorIndex - 1].stories.length - 1);
-    } else {
-      navigation.goBack(); // Exit at start
-    }
-  };
-
   const likeStory = async () => {
     if (!currentStory || !currentUserId) return;
-    
-    // Optimistic toggle
     const newIsLiked = !isLiked;
     setIsLiked(newIsLiked);
 
     if (newIsLiked) {
-      const { error } = await supabase.from('story_likes').insert({
+      await supabase.from('story_likes').insert({
         story_id: currentStory.id,
         user_id: currentUserId
       });
-      if (error) console.warn('Error liking story:', error.message);
     } else {
-      const { error } = await supabase.from('story_likes')
+      await supabase.from('story_likes')
         .delete()
         .eq('story_id', currentStory.id)
         .eq('user_id', currentUserId);
-      if (error) console.warn('Error unliking story:', error.message);
     }
   };
 
   const sendMessage = async () => {
-    if (!currentStory || !message.trim()) return;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user?.id) {
-      await supabase.from('story_messages').insert({
-        story_id: currentStory.id,
-        sender_id: session.user.id,
-        creator_id: currentStory.creator_id,
-        message: message.trim(),
-      });
-      setMessage('');
-    }
+    if (!currentStory || !message.trim() || !currentUserId) return;
+    await supabase.from('story_messages').insert({
+      story_id: currentStory.id,
+      sender_id: currentUserId,
+      creator_id: currentStory.creator_id,
+      message: message.trim(),
+    });
+    setMessage('');
   };
 
   const shareStory = async () => {
@@ -249,13 +218,8 @@ export default function StoryViewerScreen() {
     try {
       await Share.share({ message: `Check out this story: ${currentStory.media_url}` });
       if (currentUserId) {
-        // Prevent duplicate shares
         const { data } = await supabase.from('story_shares')
-          .select('id')
-          .eq('story_id', currentStory.id)
-          .eq('user_id', currentUserId)
-          .limit(1);
-          
+          .select('id').eq('story_id', currentStory.id).eq('user_id', currentUserId).limit(1);
         if (!data || data.length === 0) {
           await supabase.from('story_shares').insert({
             story_id: currentStory.id,
@@ -284,17 +248,17 @@ export default function StoryViewerScreen() {
 
   const sendComment = async () => {
     if (!currentStory || !commentText.trim() || !currentUserId) return;
+    const textToSend = commentText.trim();
+    setCommentText('');
     
+    // Optimistic UI updates
     const newComment = {
       id: Math.random().toString(),
-      comment: commentText.trim(),
+      comment: textToSend,
       created_at: new Date().toISOString(),
       User: { username: 'You', avatarUrl: '' }
     };
     setComments([newComment, ...comments]);
-    
-    const textToSend = commentText.trim();
-    setCommentText('');
     
     await supabase.from('story_comments').insert({
       story_id: currentStory.id,
@@ -329,44 +293,36 @@ export default function StoryViewerScreen() {
     } catch { return '1h'; }
   };
 
-  // Pan Responder for swipes (Next/Prev Creator) and holds (Pause)
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        setIsPaused(true);
-      },
-      onPanResponderRelease: (evt, gestureState) => {
+      onPanResponderGrant: () => setIsPaused(true),
+      onPanResponderRelease: (evt, { dy }) => {
         setIsPaused(false);
-        const { dx, dy } = gestureState;
-        // Check for Tap vs Swipe
-        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
-          // Tap
-          const touchX = evt.nativeEvent.pageX;
-          if (touchX < width * 0.3) {
-            goToPrevStory();
-          } else {
-            goToNextStory();
-          }
-        } else if (dy < -50 && currentUserId === currentStory.creator_id) {
-          // Swipe up -> Open viewers list if creator
+        if (dy < -50 && currentStory && currentUserId === currentStory.creator_id) {
           openViewersSheet();
-        } else if (dx > 50) {
-          // Swipe right -> Prev Creator
-          goToPrevCreator();
-        } else if (dx < -50) {
-          // Swipe left -> Next Creator
-          goToNextCreator();
+        } else if (Math.abs(dy) > 100) {
+           navigation.goBack();
         }
       },
       onPanResponderTerminate: () => setIsPaused(false),
     })
   ).current;
 
-  if (!currentGroup || !currentStory) {
+  // SAFE LOADING STATE
+  if (loadingStory) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Story no longer available.</Text>
+        <ActivityIndicator size="large" color="#fff" />
+      </View>
+    );
+  }
+
+  // SAFE DATA CHECK
+  if (!currentStory || !currentStory.media_url) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Story is unavailable or expired.</Text>
         <Ionicons name="close" size={40} color="#fff" onPress={() => navigation.goBack()} style={{ marginTop: 20 }} />
       </View>
     );
@@ -376,11 +332,11 @@ export default function StoryViewerScreen() {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
       <SafeAreaView style={styles.container}>
         <View style={styles.storyContainer} {...panResponder.panHandlers}>
-        {/* MEDIA */}
+        
+        {/* MEDIA RENDER */}
         {currentStory.type === 'video' ? (
           <View style={styles.videoPlaceholder}>
             {ExpoVideo ? (
-              // Native video player (available after rebuild with expo-av)
               <ExpoVideo
                 ref={videoRef}
                 source={{ uri: currentStory.media_url }}
@@ -394,16 +350,15 @@ export default function StoryViewerScreen() {
                 }}
                 onPlaybackStatusUpdate={(status: any) => {
                   if (status.didJustFinish) {
-                    goToNextStory();
+                    navigation.goBack();
                   }
                 }}
                 onError={(err: any) => {
-                  console.warn('Story video error:', err);
-                  setIsVideoLoaded(true);
+                  console.log('Story video error:', err);
+                  setIsVideoLoaded(true); // Don't block loading
                 }}
               />
             ) : (
-              // WebView fallback for current builds without expo-av
               <WebView
                 source={{ html: `
                   <html>
@@ -428,9 +383,7 @@ export default function StoryViewerScreen() {
                 javaScriptEnabled={true}
                 domStorageEnabled={true}
                 onMessage={(event: any) => {
-                  if (event.nativeEvent.data === 'videoEnded') {
-                    goToNextStory();
-                  }
+                  if (event.nativeEvent.data === 'videoEnded') navigation.goBack();
                 }}
                 onLoad={() => {
                   setIsVideoLoaded(true);
@@ -445,36 +398,40 @@ export default function StoryViewerScreen() {
               </View>
             )}
           </View>
-        ) : (
+        ) : currentStory.type === 'image' ? (
           <Image source={{ uri: currentStory.media_url }} style={styles.media} resizeMode="contain" />
+        ) : currentStory.type === 'text' ? (
+          <View style={[styles.media, { backgroundColor: currentStory.background_color || '#111', justifyContent: 'center', alignItems: 'center'}]}>
+             <Text style={{color: '#fff', fontSize: 24, textAlign: 'center', marginHorizontal: 20}}>{currentStory.text_content}</Text>
+          </View>
+        ) : (
+           <View style={[styles.media, { backgroundColor: '#111' }]} />
         )}
 
         <View style={styles.gradientOverlay} />
 
-        {/* PROGRESS BARS */}
+        {/* SINGLE PROGRESS BAR */}
         <View style={[styles.progressContainer, { top: insets.top + (Platform.OS === 'ios' ? 0 : 4) }]}>
-          {currentGroup.stories.map((s, idx) => (
-            <View key={s.id} style={styles.progressBarBg}>
-              <Animated.View style={[styles.progressBarFg, {
-                width: idx === storyIndex ? progressAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0%', '100%']
-                }) : idx < storyIndex ? '100%' : '0%'
-              }]} />
-            </View>
-          ))}
+          <View style={styles.progressBarBg}>
+            <Animated.View style={[styles.progressBarFg, {
+              width: progressAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0%', '100%']
+              })
+            }]} />
+          </View>
         </View>
 
         {/* HEADER */}
         <View style={[styles.header, { top: insets.top + (Platform.OS === 'ios' ? 12 : 16) }]}>
           <View style={styles.headerLeft}>
-            {currentGroup.User.avatarUrl ? (
-              <Image source={{ uri: currentGroup.User.avatarUrl }} style={styles.avatar} />
-            ) : (
-              <View style={[styles.avatar, { backgroundColor: '#cbd5e1' }]} />
-            )}
-            <Text style={styles.username}>{currentGroup.User.username}</Text>
-            <Text style={styles.timeAgo}>{getTimeAgo(currentStory.created_at)}</Text>
+             {currentStory.User?.avatarUrl ? (
+                <Image source={{ uri: currentStory.User.avatarUrl }} style={styles.avatar} />
+             ) : (
+                <View style={[styles.avatar, { backgroundColor: '#cbd5e1' }]} />
+             )}
+             <Text style={styles.username}>{currentStory.User?.username || 'Creator'}</Text>
+             <Text style={styles.timeAgo}>{getTimeAgo(currentStory.created_at)}</Text>
           </View>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeBtn}>
             <Ionicons name="close" size={28} color="#fff" />
@@ -579,7 +536,7 @@ export default function StoryViewerScreen() {
                 ListEmptyComponent={<Text style={{ textAlign: 'center', color: '#666', marginTop: 20 }}>No comments yet</Text>}
                 renderItem={({ item }) => (
                   <View style={{ flexDirection: 'row', marginBottom: 16, paddingHorizontal: 20 }}>
-                    {item.User?.avatarUrl ? (
+                     {item.User?.avatarUrl ? (
                       <Image source={{ uri: item.User.avatarUrl }} style={{ width: 36, height: 36, borderRadius: 18, marginRight: 12 }} />
                     ) : (
                       <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#ddd', marginRight: 12 }} />
@@ -653,12 +610,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0, left: 0, right: 0,
     height: 120,
-    backgroundColor: 'rgba(0,0,0,0.3)', // subtle dark top
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   progressContainer: {
     flexDirection: 'row',
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 12 : 24, // fallback if insets fail
+    top: Platform.OS === 'ios' ? 12 : 24,
     left: 8,
     right: 8,
     gap: 4,
@@ -677,7 +634,7 @@ const styles = StyleSheet.create({
   },
   header: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 24 : 36, // fallback if insets fail
+    top: Platform.OS === 'ios' ? 24 : 36,
     left: 12,
     right: 12,
     flexDirection: 'row',

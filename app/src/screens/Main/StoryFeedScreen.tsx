@@ -82,6 +82,7 @@ export default function StoryFeedScreen() {
           User:creator_id ( username, channel_name, avatarUrl )
         `)
         .in('creator_id', creatorIds)
+        .eq('is_active', true)
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false });
 
@@ -107,13 +108,24 @@ export default function StoryFeedScreen() {
     }
   };
 
-  const openStoryViewer = (creatorId: string, initialIndex: number = 0) => {
-     // Navigate to StoryViewer
-     navigation.navigate('StoryViewer', { 
-         creators: groupedStories, 
-         initialCreatorId: creatorId,
-         initialStoryIndex: initialIndex
-     });
+  const openStoryViewer = (story: Story) => {
+    // 1. Validate data before navigating (CRITICAL FIX)
+    if (!story || !story.id || !story.media_url || !story.type) {
+      console.log("Invalid story data:", story);
+      return;
+    }
+    
+    // Instead of passing a full massive object that could crash the navigation bridge,
+    // we only pass the storyId and let the Viewer securely fetch it.
+    navigation.navigate('StoryViewer', { storyId: story.id });
+  };
+
+  const openStoryViewerForCreator = (creatorId: string) => {
+     // If clicking top circle, open the first valid story for that creator
+     const group = groupedStories.find(g => g.creator_id === creatorId);
+     if (group && group.stories.length > 0) {
+        openStoryViewer(group.stories[0]);
+     }
   };
 
   return (
@@ -145,7 +157,7 @@ export default function StoryFeedScreen() {
                   <TouchableOpacity 
                      key={group.creator_id} 
                      style={styles.storyCircleBox}
-                     onPress={() => openStoryViewer(group.creator_id)}
+                     onPress={() => openStoryViewerForCreator(group.creator_id)}
                   >
                      <View style={[styles.storyCircle, { borderColor: colors.PrimaryRed }]}>
                         {group.User?.avatarUrl ? (
@@ -170,7 +182,7 @@ export default function StoryFeedScreen() {
                   <TouchableOpacity 
                      key={story.id} 
                      style={[styles.storyCard, { backgroundColor: colors.Slate100 }]}
-                     onPress={() => openStoryViewer(story.creator_id)}
+                     onPress={() => openStoryViewer(story)}
                   >
                      {story.type === 'video' ? (
                         <View style={styles.videoPlaceholder}>
