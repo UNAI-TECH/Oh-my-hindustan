@@ -40,9 +40,9 @@ export default function SearchScreen() {
       try {
         const { data, error } = await supabase
           .from('User')
-          .select('id, username, "avatarUrl", bio, role')
+          .select('id, username, channel_name, "avatarUrl", bio, role')
           .eq('role', 'ANALYST')
-          .ilike('username', `%${q}%`)
+          .or(`username.ilike.%${q}%,channel_name.ilike.%${q}%`)
           .limit(10);
         if (error) console.warn('Creator search error:', error);
         setCreators(data || []);
@@ -118,23 +118,27 @@ export default function SearchScreen() {
         {showCreators && creators.length > 0 && (
           <View style={{ marginBottom: 20 }}>
             <Text style={styles.sectionTitle}>Creators</Text>
-            {creators.map((creator, idx) => {
-              const avatarUri = creator.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.username || 'C')}&background=E53935&color=fff&size=200`;
+            {creators.map((creator: any, idx) => {
+              const nameDisplay = creator.channel_name || creator.username || 'creator';
+              const avatarUri = creator.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nameDisplay)}&background=E53935&color=fff&size=200`;
               return (
                 <TouchableOpacity 
                   key={`creator-${creator.id}-${idx}`}
                   style={styles.creatorCard}
-                  onPress={() => navigation.navigate('CreatorProfile', { authorId: creator.id, authorName: creator.username })}
+                  onPress={() => navigation.navigate('CreatorProfile', { authorId: creator.id, authorName: nameDisplay })}
                 >
                   <Image source={{ uri: avatarUri }} style={styles.creatorAvatar} />
                   <View style={{ flex: 1, marginLeft: 14 }}>
-                    <Text style={styles.creatorName}>@{creator.username || 'creator'}</Text>
+                    <Text style={styles.creatorName}>{nameDisplay}</Text>
+                    {creator.username && (
+                      <Text style={{ fontSize: 12, color: colors.Slate400, marginTop: 2 }}>@{creator.username}</Text>
+                    )}
                     <Text style={styles.creatorBio} numberOfLines={1}>{creator.bio || 'Content Creator'}</Text>
                   </View>
                   <View style={styles.creatorBadge}>
                     <Ionicons name="person" size={12} color={colors.PrimaryRed} />
                     <Text style={{ fontSize: 11, color: colors.PrimaryRed, fontWeight: '600', marginLeft: 4 }}>
-                      {creator.role === 'ANALYST' ? 'Creator' : 'Creator'}
+                      Creator
                     </Text>
                   </View>
                 </TouchableOpacity>

@@ -33,8 +33,8 @@ export default function HomeFeedScreen() {
   const tabs = [t('nav.home'), t('common.soon'), 'News', 'Blogs', 'Videos'];
 
   React.useEffect(() => {
-    if (activeTab === t('nav.home') && sortBy !== 'trending') setSortBy('trending');
-    if (activeTab === 'For You' && sortBy !== 'latest') setSortBy('latest');
+    // Home tab always uses 'latest' so newest posts appear first
+    if (activeTab === t('nav.home') && sortBy !== 'latest') setSortBy('latest');
   }, [activeTab]);
 
   React.useEffect(() => {
@@ -154,9 +154,9 @@ export default function HomeFeedScreen() {
           data={feedWithAds}
           numColumns={numColumns}
           keyExtractor={(item, index) => `${(item as any).id}-${index}`}
-          contentContainerStyle={{ alignSelf: 'center', width: '100%', maxWidth, padding: 16, paddingBottom: 100 }}
-          columnWrapperStyle={numColumns > 1 ? { gap: 16 } : undefined}
-          ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+          contentContainerStyle={{ alignSelf: 'center', width: '100%', maxWidth, paddingHorizontal: 16, paddingBottom: 100 }}
+          columnWrapperStyle={numColumns > 1 ? { gap: 12 } : undefined}
+          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           onEndReached={loadMoreFeed}
           onEndReachedThreshold={0.5}
           onViewableItemsChanged={onViewableItemsChanged}
@@ -185,7 +185,7 @@ export default function HomeFeedScreen() {
             }
             const feedItem = item as FeedItem;
             return (
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, maxWidth: numColumns > 1 ? '50%' : '100%' }}>
                 <FeedCard 
                   item={feedItem} 
                   onClick={() => {

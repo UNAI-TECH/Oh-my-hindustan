@@ -98,8 +98,10 @@ export const AppApi = {
 
     let query = supabase
       .from('Post')
-      .select('id, title, content, type, thumbnail, category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, trending_score, author:User!authorId(id, username, avatarUrl), Vote:Vote(type), Comment:Comment(id, content), PostView:PostView(id)', { count: 'exact' });
+      .select('id, title, content, type, thumbnail, category, custom_category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, trending_score, author:User!authorId(id, username, avatarUrl), Vote:Vote(type), Comment:Comment(id, content), PostView:PostView(id)', { count: 'exact' })
+      .or('is_active.eq.true,is_active.is.null');
 
+    // Filter out inactive content is crucial for public views
     if (sortBy === 'trending') {
       query = query.order('trending_score', { ascending: false });
     } else {
@@ -119,6 +121,11 @@ export const AppApi = {
       const reposts = allComments.filter((c: any) => c.content === '[SYSTEM_REPOST]').length;
       const viewCount = post.PostView ? post.PostView.length : 0;
 
+      // Handle custom category display name
+      const displayCategory = post.category === 'custom' && post.custom_category 
+        ? post.custom_category 
+        : (post.category || 'General');
+
       return {
         id: post.id,
         title: post.title,
@@ -134,7 +141,7 @@ export const AppApi = {
         repostCount: reposts,
         viewCount,
         hotScore: 0,
-        category: post.category || 'General',
+        category: displayCategory,
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
         content: post.content,
@@ -149,8 +156,8 @@ export const AppApi = {
         } : null,
         community: {
           id: post.category || 'general',
-          name: post.category || 'Oh My Hindustan',
-          slug: (post.category || 'general').toLowerCase().replace(/\s+/g, '-'),
+          name: displayCategory,
+          slug: displayCategory.toLowerCase().replace(/\s+/g, '-'),
         },
       };
     });
@@ -166,8 +173,9 @@ export const AppApi = {
   getPost: async (id: string) => {
     const { data: post, error } = await supabase
       .from('Post')
-      .select('id, title, content, type, thumbnail, category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, author:User!authorId(id, username, avatarUrl), Vote:Vote(type), Comment:Comment(id, content, userId, createdAt), PostView:PostView(id)')
+      .select('id, title, content, type, thumbnail, category, custom_category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, author:User!authorId(id, username, avatarUrl), Vote:Vote(type), Comment:Comment(id, content, userId, createdAt), PostView:PostView(id)')
       .eq('id', id)
+      .or('is_active.eq.true,is_active.is.null')
       .single();
 
     if (error) throw error;
@@ -179,6 +187,10 @@ export const AppApi = {
     const realComments = allComments.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length;
     const reposts = allComments.filter((c: any) => c.content === '[SYSTEM_REPOST]').length;
     const viewCount = post.PostView ? post.PostView.length : 0;
+
+    const displayCategory = post.category === 'custom' && post.custom_category 
+      ? post.custom_category 
+      : (post.category || 'General');
 
     return {
       id: post.id,
@@ -196,7 +208,7 @@ export const AppApi = {
       repostCount: reposts,
       viewCount,
       hotScore: 0,
-      category: post.category || 'General',
+      category: displayCategory,
       subtitle: post.subtitle,
       videoDuration: post.videoDuration,
       videoUrl: post.videoUrl || null,
@@ -209,8 +221,8 @@ export const AppApi = {
       } : null,
       community: {
         id: post.category || 'general',
-        name: post.category || 'Oh My Hindustan',
-        slug: (post.category || 'general').toLowerCase().replace(/\s+/g, '-'),
+        name: displayCategory,
+        slug: displayCategory.toLowerCase().replace(/\s+/g, '-'),
       },
     };
   },

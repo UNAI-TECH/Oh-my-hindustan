@@ -1,14 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, Image, Dimensions, TouchableWithoutFeedback,
-  Animated, SafeAreaView, PanResponder, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Share, Modal, FlatList, Keyboard
+  Animated, SafeAreaView, PanResponder, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Share, Modal, FlatList, Keyboard, ActivityIndicator
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabaseClient';
+import { WebView } from 'react-native-webview';
+
+// Try to load expo-av, but don't crash if it's not available in current build
+let ExpoVideo: any = null;
+let ExpoResizeMode: any = null;
+try {
+  const av = require('expo-av');
+  ExpoVideo = av.Video;
+  ExpoResizeMode = av.ResizeMode;
+} catch (e) {
+  // expo-av not available in this build — will use WebView fallback
+}
 
 const { width, height } = Dimensions.get('window');
-const STORY_DURATION = 5000; // 5 seconds per image
+const IMAGE_STORY_DURATION = 5000; // 5 seconds per image
+const VIDEO_STORY_DURATION = 30000; // 30 seconds max for video stories
 
 interface Story {
   id: string;
@@ -27,6 +41,7 @@ interface CreatorGroup {
 }
 
 export default function StoryViewerScreen() {
+  const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
 
@@ -45,6 +60,9 @@ export default function StoryViewerScreen() {
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const progressAnim = useRef(new Animated.Value(0)).current;
+  const videoRef = useRef<any>(null);
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
   // Initialize derivations before useEffect hooks
   const currentGroup: CreatorGroup = creators[creatorIndex];
@@ -98,18 +116,39 @@ export default function StoryViewerScreen() {
     if (!currentStory) return;
     progressAnim.setValue(0);
 
-    if (!isPaused) {
+    const isVideo = currentStory.type === 'video';
+    const duration = isVideo ? VIDEO_STORY_DURATION : IMAGE_STORY_DURATION;
+    const isReady = isVideo ? isVideoLoaded : true;
+
+    // Reset video state when story changes
+    if (!isVideo) {
+      setIsVideoLoaded(false);
+      setIsVideoPlaying(false);
+    }
+
+    if (!isPaused && isReady) {
       Animated.timing(progressAnim, {
         toValue: 1,
-        duration: STORY_DURATION,
-        useNativeDriver: false, // width animations can't use native driver
+        duration: duration,
+        useNativeDriver: false,
       }).start(({ finished }) => {
         if (finished) goToNextStory();
       });
     } else {
       progressAnim.stopAnimation();
     }
-  }, [creatorIndex, storyIndex, isPaused, currentStory]);
+  }, [creatorIndex, storyIndex, isPaused, currentStory, isVideoLoaded]);
+
+  // Control video playback based on pause state (only when expo-av is available)
+  useEffect(() => {
+    if (ExpoVideo && currentStory?.type === 'video' && videoRef.current) {
+      if (isPaused) {
+        videoRef.current.pauseAsync().catch(() => {});
+      } else {
+        videoRef.current.playAsync().catch(() => {});
+      }
+    }
+  }, [isPaused, currentStory, isVideoLoaded]);
 
   // Log View safely
   useEffect(() => {
@@ -340,11 +379,71 @@ export default function StoryViewerScreen() {
         {/* MEDIA */}
         {currentStory.type === 'video' ? (
           <View style={styles.videoPlaceholder}>
-            <Image source={{ uri: currentStory.media_url }} style={styles.media} blurRadius={10} resizeMode="contain" />
-            <View style={styles.playOverlay}>
-              <Ionicons name="play-circle-outline" size={64} color="#fff" />
-              <Text style={{ color: '#fff', marginTop: 8 }}>Video Story</Text>
-            </View>
+            {ExpoVideo ? (
+              // Native video player (available after rebuild with expo-av)
+              <ExpoVideo
+                ref={videoRef}
+                source={{ uri: currentStory.media_url }}
+                style={styles.media}
+                resizeMode={ExpoResizeMode?.CONTAIN || 'contain'}
+                shouldPlay={!isPaused}
+                isLooping={false}
+                onLoad={() => {
+                  setIsVideoLoaded(true);
+                  setIsVideoPlaying(true);
+                }}
+                onPlaybackStatusUpdate={(status: any) => {
+                  if (status.didJustFinish) {
+                    goToNextStory();
+                  }
+                }}
+                onError={(err: any) => {
+                  console.warn('Story video error:', err);
+                  setIsVideoLoaded(true);
+                }}
+              />
+            ) : (
+              // WebView fallback for current builds without expo-av
+              <WebView
+                source={{ html: `
+                  <html>
+                    <body style="margin:0;padding:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh;overflow:hidden">
+                      <video id="vid" src="${currentStory.media_url}" autoplay playsinline muted
+                        style="width:100%;height:100%;object-fit:contain"
+                      ></video>
+                      <script>
+                        const vid = document.getElementById('vid');
+                        vid.onended = () => { window.ReactNativeWebView.postMessage('videoEnded'); };
+                        window.addEventListener('message', (e) => {
+                          if (e.data === 'pause') vid.pause();
+                          if (e.data === 'play') vid.play();
+                        });
+                      </script>
+                    </body>
+                  </html>
+                ` }}
+                style={styles.media}
+                allowsInlineMediaPlayback={true}
+                mediaPlaybackRequiresUserAction={false}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+                onMessage={(event: any) => {
+                  if (event.nativeEvent.data === 'videoEnded') {
+                    goToNextStory();
+                  }
+                }}
+                onLoad={() => {
+                  setIsVideoLoaded(true);
+                  setIsVideoPlaying(true);
+                }}
+              />
+            )}
+            {!isVideoLoaded && (
+              <View style={styles.playOverlay}>
+                <ActivityIndicator size="large" color="#fff" />
+                <Text style={{ color: '#fff', marginTop: 12, fontSize: 14 }}>Loading video...</Text>
+              </View>
+            )}
           </View>
         ) : (
           <Image source={{ uri: currentStory.media_url }} style={styles.media} resizeMode="contain" />
@@ -353,7 +452,7 @@ export default function StoryViewerScreen() {
         <View style={styles.gradientOverlay} />
 
         {/* PROGRESS BARS */}
-        <View style={styles.progressContainer}>
+        <View style={[styles.progressContainer, { top: insets.top + (Platform.OS === 'ios' ? 0 : 4) }]}>
           {currentGroup.stories.map((s, idx) => (
             <View key={s.id} style={styles.progressBarBg}>
               <Animated.View style={[styles.progressBarFg, {
@@ -367,7 +466,7 @@ export default function StoryViewerScreen() {
         </View>
 
         {/* HEADER */}
-        <View style={styles.header}>
+        <View style={[styles.header, { top: insets.top + (Platform.OS === 'ios' ? 12 : 16) }]}>
           <View style={styles.headerLeft}>
             {currentGroup.User.avatarUrl ? (
               <Image source={{ uri: currentGroup.User.avatarUrl }} style={styles.avatar} />
@@ -559,10 +658,11 @@ const styles = StyleSheet.create({
   progressContainer: {
     flexDirection: 'row',
     position: 'absolute',
-    top: 12,
+    top: Platform.OS === 'ios' ? 12 : 24, // fallback if insets fail
     left: 8,
     right: 8,
     gap: 4,
+    zIndex: 10,
   },
   progressBarBg: {
     flex: 1,
@@ -577,7 +677,7 @@ const styles = StyleSheet.create({
   },
   header: {
     position: 'absolute',
-    top: 24,
+    top: Platform.OS === 'ios' ? 24 : 36, // fallback if insets fail
     left: 12,
     right: 12,
     flexDirection: 'row',

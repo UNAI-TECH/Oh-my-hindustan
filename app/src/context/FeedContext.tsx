@@ -65,7 +65,7 @@ const toFeedItem = (post: any): FeedItem => {
     type: mapPostType(post.type),
     title: post.title,
     subtitle: post.subtitle || "Oh My Hindustan",
-    authorName: post.author?.username || "Creator",
+    authorName: post.author?.channel_name || post.author?.username || "Creator",
     authorImage: post.author?.avatarUrl || "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&q=80&w=800",
     authorId: post.authorId || post.author?.id || null,
     thumbnail: post.thumbnail || post.mediaUrl || null,
@@ -93,7 +93,7 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
-  const [sortBy, setSortByState] = useState<'latest' | 'trending'>('trending');
+  const [sortBy, setSortByState] = useState<'latest' | 'trending'>('latest');
   const [error, setError] = useState<string | null>(null);
   const { userProfile } = useAuth();
 
@@ -231,11 +231,11 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
             // Get author name for the notification
             const { data: authorData } = await supabase
               .from('User')
-              .select('username')
+              .select('username, channel_name')
               .eq('id', authorId)
               .maybeSingle();
 
-            const authorName = authorData?.username || 'A creator you follow';
+            const authorName = authorData?.channel_name || authorData?.username || 'A creator you follow';
             const { generateUUID } = await import('../utils/uuid');
 
             await supabase.from('Notification').insert({
@@ -254,9 +254,27 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
+    const userChannel = supabase.channel('feed-user-updates')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'User' }, (payload) => {
+        if (!payload.new) return;
+        const updatedUser = payload.new as any;
+        setFeedItems(prev => prev.map(item => {
+          if (item.authorId === updatedUser.id) {
+            return {
+              ...item,
+              authorName: updatedUser.channel_name || updatedUser.username || item.authorName,
+              authorImage: updatedUser.avatarUrl || item.authorImage
+            };
+          }
+          return item;
+        }));
+      })
+      .subscribe();
+
     return () => {
       if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(subscription);
+      supabase.removeChannel(userChannel);
     };
   }, [page, userProfile?.id]);
 

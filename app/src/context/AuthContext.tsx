@@ -554,13 +554,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const cleanUsername = username.toLowerCase().replace(/[^a-z0-9_]/g, '');
       if (cleanUsername.length < 3) return { available: false, suggestions: [] };
 
-      const { data, error } = await supabase
+      // 1. Check existing users
+      const { data: userData, error: userError } = await supabase
         .from('User')
         .select('username')
-        .eq('username', cleanUsername);
+        .eq('username', cleanUsername)
+        .limit(1);
 
-      if (error) throw error;
-      const isAvailable = !data || data.length === 0;
+      // 2. Check pending creator requests
+      const { data: creatorData, error: creatorError } = await supabase
+        .from('creator_requests')
+        .select('username')
+        .eq('username', cleanUsername)
+        .limit(1);
+
+      if (userError || creatorError) throw userError || creatorError;
+      
+      const isAvailable = (!userData || userData.length === 0) && (!creatorData || creatorData.length === 0);
 
       if (isAvailable) return { available: true, suggestions: [] };
 

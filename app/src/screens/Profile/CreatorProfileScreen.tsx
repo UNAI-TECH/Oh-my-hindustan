@@ -43,13 +43,19 @@ export default function CreatorProfileScreen() {
         .from('Post')
         .select('*, Vote(type), Comment(id, content), PostView(id)')
         .eq('authorId', authorId)
+        .or('is_active.eq.true,is_active.is.null')
         .order('createdAt', { ascending: false });
         
       const mappedPosts = (creatorPosts || []).map((p: any) => {
         const votes = p.Vote || [];
         const allC = p.Comment || [];
+        const displayCategory = p.category === 'custom' && p.custom_category 
+          ? p.custom_category 
+          : (p.category || 'General');
+
         return {
           ...p,
+          category: displayCategory,
           upvotes: votes.filter((v: any) => v.type === 1).length,
           downvotes: votes.filter((v: any) => v.type === -1).length,
           realComments: allC.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length,
@@ -88,6 +94,7 @@ export default function CreatorProfileScreen() {
       .channel(`creator_profile_${authorId}_interactions`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'Vote' }, handleChanges)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'Comment' }, handleChanges)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'User', filter: `id=eq.${authorId}` }, handleChanges)
       .subscribe();
 
     return () => {
@@ -112,8 +119,8 @@ export default function CreatorProfileScreen() {
     await toggleFollow(authorId);
   };
 
-
-  const displayName = creator?.username || paramAuthorName || 'Creator';
+  const displayName = creator?.channel_name || creator?.username || paramAuthorName || 'Creator';
+  const usernameHandle = creator?.username || '';
   const avatarUrl = creator?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E53935&color=fff&size=200`;
   const bio = creator?.bio || 'Content Creator';
   const coverUrl = creator?.coverUrl || null;
@@ -134,7 +141,7 @@ export default function CreatorProfileScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Creator</Text>
+        <Text style={styles.headerTitle}>{displayName}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -161,8 +168,11 @@ export default function CreatorProfileScreen() {
         )}
 
         <View style={{ alignItems: 'center', paddingTop: 12 }}>
-          <Text style={{ fontWeight: 'bold', fontSize: 24 }}>@{displayName}</Text>
-          <Text style={{ color: colors.Slate500, fontSize: 14, marginTop: 4, textAlign: 'center', paddingHorizontal: 32 }}>{bio}</Text>
+          <Text style={{ fontWeight: 'bold', fontSize: 24, color: '#000' }}>{displayName}</Text>
+          {usernameHandle ? (
+            <Text style={{ fontSize: 16, color: colors.Slate500, marginTop: 4, fontWeight: '600' }}>@{usernameHandle}</Text>
+          ) : null}
+          <Text style={{ color: colors.Slate500, fontSize: 14, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>{bio}</Text>
         </View>
 
         {/* Stats */}

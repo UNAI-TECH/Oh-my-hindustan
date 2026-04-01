@@ -21,6 +21,7 @@ interface Story {
   User?: {
     username: string;
     avatarUrl: string;
+    channel_name?: string;
   };
 }
 
@@ -78,7 +79,7 @@ export default function StoryFeedScreen() {
         .from('stories')
         .select(`
           *,
-          User:creator_id ( username, avatarUrl )
+          User:creator_id ( username, channel_name, avatarUrl )
         `)
         .in('creator_id', creatorIds)
         .gt('expires_at', new Date().toISOString())
@@ -154,7 +155,7 @@ export default function StoryFeedScreen() {
                         )}
                      </View>
                      <Text style={[styles.storyName, { color: colors.DarkText }]} numberOfLines={1}>
-                        {group.User?.username || 'Creator'}
+                        {group.User?.channel_name || group.User?.username || 'Creator'}
                      </Text>
                   </TouchableOpacity>
                ))}
@@ -188,7 +189,9 @@ export default function StoryFeedScreen() {
                            ) : (
                               <View style={[styles.smallAvatar, { backgroundColor: colors.Slate400 }]} />
                            )}
-                           <Text style={styles.storyCardName} numberOfLines={1}>{story.User?.username}</Text>
+                           <Text style={styles.storyCardName} numberOfLines={1}>
+                              {story.User?.channel_name || story.User?.username}
+                           </Text>
                         </View>
                      </View>
                   </TouchableOpacity>
