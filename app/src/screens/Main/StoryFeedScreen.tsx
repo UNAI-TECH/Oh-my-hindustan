@@ -10,6 +10,36 @@ import { supabase } from '../../lib/supabaseClient';
 import MainHeader from '../../components/MainHeader';
 import AppBottomNavBar from '../../components/BottomNavBar';
 import { Ionicons } from '@expo/vector-icons';
+import { WebView } from 'react-native-webview';
+
+// Safely generate a video thumbnail using WebView to avoid native ExoPlayer crashes entirely
+function VideoThumbnail({ uri }: { uri: string }) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+        <style>
+          * { margin:0; padding:0; box-sizing:border-box; background:#000; }
+          html, body { width:100%; height:100%; overflow:hidden; }
+          video { width:100%; height:100vh; object-fit:cover; display:block; }
+        </style>
+      </head>
+      <body>
+        <video id="v" src="${uri.replace(/"/g, '&quot;')}" playsinline muted preload="metadata"></video>
+        <script>
+          const v = document.getElementById('v');
+          v.addEventListener('loadeddata', () => { v.currentTime = 0.1; });
+        </script>
+      </body>
+    </html>
+  `;
+  return (
+    <View style={StyleSheet.absoluteFillObject}>
+      <WebView source={{ html }} style={StyleSheet.absoluteFillObject} scrollEnabled={false} pointerEvents="none" />
+    </View>
+  );
+}
 
 interface Story {
   id: string;
@@ -186,7 +216,7 @@ export default function StoryFeedScreen() {
                   >
                      {story.type === 'video' ? (
                         <View style={styles.videoPlaceholder}>
-                           <Image source={{ uri: story.media_url }} style={styles.storyCardImg} />
+                           <VideoThumbnail uri={story.media_url} />
                            <View style={styles.playIconOverlay}>
                               <Ionicons name="play" size={24} color="#fff" />
                            </View>

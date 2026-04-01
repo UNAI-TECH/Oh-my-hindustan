@@ -38,12 +38,14 @@ function WebViewVideoPlayer({
   onEnded,
   onLoaded,
   onError,
+  onProgress,
 }: {
   uri: string;
   paused: boolean;
   onEnded: () => void;
   onLoaded: () => void;
   onError: (msg: string) => void;
+  onProgress: (progress: number) => void;
 }) {
   const webRef = useRef<any>(null);
 
@@ -78,6 +80,11 @@ function WebViewVideoPlayer({
           var v = document.getElementById('sv');
           v.addEventListener('ended', function(){ window.ReactNativeWebView.postMessage('ended'); });
           v.addEventListener('canplay', function(){ window.ReactNativeWebView.postMessage('loaded'); });
+          v.addEventListener('timeupdate', function(){
+            if (v.duration > 0) {
+               window.ReactNativeWebView.postMessage('progress:' + (v.currentTime / v.duration));
+            }
+          });
           v.addEventListener('error', function(e){
             var msg = v.error ? v.error.message : 'unknown';
             window.ReactNativeWebView.postMessage('error:' + msg);
@@ -102,6 +109,7 @@ function WebViewVideoPlayer({
         const data = evt.nativeEvent.data;
         if (data === 'ended') onEnded();
         else if (data === 'loaded') onLoaded();
+        else if (data.startsWith('progress:')) onProgress(Number(data.replace('progress:', '')));
         else if (data.startsWith('error:')) onError(data.replace('error:', ''));
       }}
     />
@@ -260,19 +268,21 @@ export default function StoryViewerScreen() {
   // ── Progress bar ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!currentStory || !mediaReady) return;
-    progressAnim.setValue(0);
-    const isVideo = currentStory.type === 'video';
-    const isVideoReady = isVideo ? videoLoaded : true;
-    if (!isPaused && isVideoReady) {
+    
+    // Video progress is handled by onProgress callback from WebViewVideoPlayer
+    if (currentStory.type === 'video') return; 
+
+    // Handle image and text durations
+    if (!isPaused) {
       Animated.timing(progressAnim, {
         toValue: 1,
-        duration: isVideo ? VIDEO_STORY_DURATION : IMAGE_STORY_DURATION,
+        duration: IMAGE_STORY_DURATION,
         useNativeDriver: false,
       }).start(({ finished }) => { if (finished) navigation.goBack(); });
     } else {
       progressAnim.stopAnimation();
     }
-  }, [isPaused, currentStory, mediaReady, videoLoaded]);
+  }, [isPaused, currentStory, mediaReady]);
 
   // ── Pan responder ─────────────────────────────────────────────────────────
   const panResponder = useRef(
@@ -430,6 +440,7 @@ export default function StoryViewerScreen() {
                 paused={isPaused}
                 onEnded={() => navigation.goBack()}
                 onLoaded={() => setVideoLoaded(true)}
+                onProgress={(p) => progressAnim.setValue(p)}
                 onError={(msg) => {
                   console.log('[StoryViewer] WebView video error:', msg);
                   setMediaError(`Playback error: ${msg}`);
