@@ -41,7 +41,7 @@ export default function SearchScreen() {
         const { data, error } = await supabase
           .from('User')
           .select('id, username, channel_name, "avatarUrl", bio, role')
-          .eq('role', 'ANALYST')
+          .in('role', ['ANALYST', 'CREATOR'])
           .or(`username.ilike.%${q}%,channel_name.ilike.%${q}%`)
           .limit(10);
         if (error) console.warn('Creator search error:', error);
