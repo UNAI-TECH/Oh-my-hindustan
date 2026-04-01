@@ -560,7 +560,7 @@ export default function ArticleDetailScreen() {
         {thumbnail && (
           <View style={{ width: '100%', aspectRatio: 16/9 }}>
             {type === FeedItemType.VIDEO && selectedArticle.videoUrl ? (
-            <View style={{ flex: 1, backgroundColor: 'black', borderBottomLeftRadius: 24, borderBottomRightRadius: 24, height: 250 }}>
+            <View style={{ flex: 1, backgroundColor: 'black', height: 250 }}>
               <WebView
                 source={{ uri: selectedArticle.videoUrl }}
                 style={{ flex: 1 }}
@@ -571,7 +571,7 @@ export default function ArticleDetailScreen() {
               />
             </View>            ) : (
               <>
-                <Image source={{ uri: thumbnail }} style={{ flex: 1, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 }} />
+                <Image source={{ uri: thumbnail }} style={{ flex: 1 }} />
                 {type === FeedItemType.VIDEO && (
                   <View style={styles.playOverlay}>
                     <View style={styles.playButton}>

@@ -8,17 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabaseClient';
 import { WebView } from 'react-native-webview';
-
-// Try to load expo-av, but don't crash if it's not available in current build
-let ExpoVideo: any = null;
-let ExpoResizeMode: any = null;
-try {
-  const av = require('expo-av');
-  ExpoVideo = av.Video;
-  ExpoResizeMode = av.ResizeMode;
-} catch (e) {
-  // expo-av not available in this build — will use WebView fallback
-}
+import { Video as ExpoVideo, ResizeMode as ExpoResizeMode } from 'expo-av';
 
 const { width, height } = Dimensions.get('window');
 const IMAGE_STORY_DURATION = 5000; // 5 seconds per image
@@ -334,14 +324,14 @@ export default function StoryViewerScreen() {
         <View style={styles.storyContainer} {...panResponder.panHandlers}>
         
         {/* MEDIA RENDER */}
-        {currentStory.type === 'video' ? (
+        {(currentStory.type === 'video' && !currentStory.media_url.match(/\\.(jpe?g|png|gif|webp)(\\?.*)?$/i)) ? (
           <View style={styles.videoPlaceholder}>
             {ExpoVideo ? (
               <ExpoVideo
                 ref={videoRef}
                 source={{ uri: currentStory.media_url }}
                 style={styles.media}
-                resizeMode={ExpoResizeMode?.CONTAIN || 'contain'}
+                resizeMode={ExpoResizeMode.CONTAIN}
                 shouldPlay={!isPaused}
                 isLooping={false}
                 onLoad={() => {
@@ -398,7 +388,7 @@ export default function StoryViewerScreen() {
               </View>
             )}
           </View>
-        ) : currentStory.type === 'image' ? (
+        ) : (currentStory.type === 'image' || currentStory.media_url.match(/\\.(jpe?g|png|gif|webp)(\\?.*)?$/i)) ? (
           <Image source={{ uri: currentStory.media_url }} style={styles.media} resizeMode="contain" />
         ) : currentStory.type === 'text' ? (
           <View style={[styles.media, { backgroundColor: currentStory.background_color || '#111', justifyContent: 'center', alignItems: 'center'}]}>
