@@ -149,7 +149,7 @@ export default function CreatorProfileScreen() {
         {/* Cover Banner + Avatar */}
         {coverUrl ? (
           <View style={{ width: '100%', paddingBottom: 60 }}>
-            <Image source={{ uri: coverUrl }} style={{ width: '100%', height: 160 }} />
+            <Image source={{ uri: coverUrl }} style={{ width: '100%', height: 160, backgroundColor: '#1e293b' }} resizeMode="contain" />
             <View style={{ position: 'absolute', bottom: 0, width: '100%', alignItems: 'center' }}>
               <Image source={{ uri: avatarUrl }} style={styles.avatar} />
             </View>

@@ -575,7 +575,7 @@ export default function StoryViewerScreen() {
         {/* Comments Modal */}
         <Modal visible={showCommentModal} animationType="slide" transparent>
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-            <View style={styles.sheetOverlay}>
+            <View style={[styles.sheetOverlay, keyboardOffset > 0 && { paddingBottom: keyboardOffset }]}>
               <TouchableOpacity style={{ flex: 1 }} onPress={() => { setShowCommentModal(false); setIsPaused(false); }} />
               <View style={[styles.sheetContent, { height: height * 0.7, paddingBottom: 0, paddingHorizontal: 0 }]}>
                 <View style={[styles.sheetHeader, { paddingHorizontal: 20 }]}>

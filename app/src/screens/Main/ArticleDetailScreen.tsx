@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Share, ActivityIndicator, Platform, Modal, TextInput, FlatList, KeyboardAvoidingView, Alert, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Share, ActivityIndicator, Platform, Modal, TextInput, FlatList, KeyboardAvoidingView, Alert, Dimensions, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../context/ThemeContext';
@@ -62,6 +62,15 @@ export default function ArticleDetailScreen() {
   const scrollViewRef = React.useRef<ScrollView>(null);
   const [modalConfig, setModalConfig] = useState({ visible: false, title: '', message: '', isError: false });
   const [refreshSyncTrigger, setRefreshSyncTrigger] = useState(0);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const s1 = Keyboard.addListener(showEvt, (e) => setKeyboardOffset(e.endCoordinates.height));
+    const s2 = Keyboard.addListener(hideEvt, () => setKeyboardOffset(0));
+    return () => { s1.remove(); s2.remove(); };
+  }, []);
   
   // Reset all state when navigating to a different post
   useEffect(() => {
@@ -697,7 +706,7 @@ export default function ArticleDetailScreen() {
       {/* Comments Modal */}
       <Modal visible={showComments} animationType="slide" transparent>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowComments(false)}>
+          <TouchableOpacity style={[styles.modalOverlay, keyboardOffset > 0 && { paddingBottom: keyboardOffset }]} activeOpacity={1} onPress={() => setShowComments(false)}>
             <View style={styles.commentsSheet} onStartShouldSetResponder={() => true}>
               <View style={styles.sheetHandle} />
               <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 16 }}>Comments ({commentsCount})</Text>
