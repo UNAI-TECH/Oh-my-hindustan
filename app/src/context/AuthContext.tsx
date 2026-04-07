@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/supabaseClient';
+import { Platform } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -201,7 +202,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
     try {
       let loginEmail = identifier.trim().toLowerCase();
-      
+
       // If identifier contains '@', it's already an email
       if (!loginEmail.includes('@')) {
         // First try looking up by phone number
@@ -210,7 +211,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .select('email')
           .eq('phone', identifier.trim())
           .maybeSingle();
-          
+
         if (phoneData && phoneData.email) {
           loginEmail = phoneData.email;
           console.warn('[AUTH] Found email for phone:', loginEmail);
@@ -221,7 +222,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .select('email')
             .eq('username', loginEmail)
             .maybeSingle();
-            
+
           if (usernameData && usernameData.email) {
             loginEmail = usernameData.email;
             console.warn('[AUTH] Found email for username:', loginEmail);
@@ -330,7 +331,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (authData.user) {
         console.warn('[AUTH] Auth user created:', authData.user.id);
-        
+
         // Wait for any DB triggers to finish
         await new Promise(resolve => setTimeout(resolve, 2500));
 
@@ -381,7 +382,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Wait a bit then fetch the profile
         await new Promise(resolve => setTimeout(resolve, 500));
         const profile = await fetchProfile(authData.user.id);
-        
+
         if (profile) {
           console.warn('[AUTH] ✅ Registration complete, onboarding_complete:', profile.onboarding_complete);
           setAuthState(profile, true);
@@ -417,12 +418,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         token,
         type: 'signup'
       });
-      
+
       if (verifyError) {
         setError(verifyError.message);
         return false;
       }
-      
+
       if (data.session || data.user) {
         await new Promise(resolve => setTimeout(resolve, 1500));
         const profile = await fetchProfile(data.user!.id);
@@ -432,115 +433,263 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       return false;
     } catch (e: any) {
-       setError('OTP Verification failed. Please try again.');
-       return false;
+      setError('OTP Verification failed. Please try again.');
+      return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ─── Google OAuth Sign-In ───
+  // ─── Google OAuth Sign-In (Production-Grade) ───
   const signInWithGoogle = async () => {
+    // Double-tap prevention
+    if (isHandlingOAuthRef.current) {
+      console.warn('[GOOGLE AUTH] Already in progress, ignoring');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
-    isHandlingOAuthRef.current = true; // Prevent onAuthStateChange from interfering
+    isHandlingOAuthRef.current = true;
+
+    // Deep link listener subscription (cleaned up in finally)
+    let linkSubscription: { remove: () => void } | null = null;
 
     try {
-      const internalRedirectUrl = AuthSession.makeRedirectUri({
-        scheme: 'app',
+      // ── Step 1: Build redirect URI ──
+      // AuthSession is the most robust way to build the URI across Expo Go, Dev Client, and Production
+      const redirectUrl = AuthSession.makeRedirectUri({
+        scheme: 'antigravity',
         path: 'auth/callback',
       });
 
-      // Pass the app's redirect URL to the Vercel proxy so it knows where to redirect
-      // The proxy will read ?appRedirect= and use it to construct the deep link
-      const proxyBase = 'https://redirecting-pink.vercel.app/';
-      const redirectTo = proxyBase + '?appRedirect=' + encodeURIComponent(internalRedirectUrl);
+      console.warn('[GOOGLE AUTH] ── Starting OAuth Flow ──');
+      console.warn('[GOOGLE AUTH] Redirect URL:', redirectUrl);
+      console.warn('[GOOGLE AUTH] Platform:', Platform.OS);
 
-      console.warn('[GOOGLE AUTH] Internal redirect URL:', internalRedirectUrl);
-      console.warn('[GOOGLE AUTH] Vercel proxy with appRedirect:', redirectTo);
+      // ── Step 2: Set up deep link listener BEFORE opening browser ──
+      // This catches the redirect even when Chrome Custom Tab misses it
+      // (Chrome can't intercept custom scheme redirects like antigravity://)
+      let deepLinkResolve: ((url: string) => void) | null = null;
+      const deepLinkPromise = new Promise<string>((resolve) => {
+        deepLinkResolve = resolve;
+      });
 
+      const Linking = require('expo-linking');
+      linkSubscription = Linking.addEventListener('url', (event: { url: string }) => {
+        console.warn('[GOOGLE AUTH] 📥 Deep link received:', event.url.substring(0, 120));
+        if (
+          event.url.includes('auth/callback') ||
+          event.url.includes('access_token') ||
+          event.url.includes('refresh_token') ||
+          event.url.includes('code=')
+        ) {
+          deepLinkResolve?.(event.url);
+        }
+      });
+
+      // Also check initial URL just in case it arrived right before we listened
+      const initialUrl = await Linking.getInitialURL();
+      if (initialUrl && (initialUrl.includes('access_token') || initialUrl.includes('code='))) {
+         console.warn('[GOOGLE AUTH] Initial URL contained tokens, using it:', initialUrl.substring(0, 120));
+         deepLinkResolve?.(initialUrl);
+      }
+
+
+      // ── Step 3: Request OAuth URL from Supabase ──
       const { data, error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo,
+          redirectTo: redirectUrl,
           skipBrowserRedirect: true,
         },
       });
 
-      if (authError) throw authError;
-      if (!data?.url) throw new Error('No OAuth URL received from Supabase');
+      if (authError) {
+        console.error('[GOOGLE AUTH] Supabase error:', authError.message);
+        throw new Error(`Failed to start Google sign-in: ${authError.message}`);
+      }
+      if (!data?.url) {
+        throw new Error('No authentication URL received. Please try again.');
+      }
 
-      console.warn('[GOOGLE AUTH] Opening browser with OAuth URL');
+      console.warn('[GOOGLE AUTH] Opening browser...');
 
+      // ── Step 4: Open browser for OAuth ──
       const result = await WebBrowser.openAuthSessionAsync(
         data.url,
-        internalRedirectUrl,
+        redirectUrl,
         { showInRecents: true }
       );
 
-      console.warn('[GOOGLE AUTH] Browser result type:', result.type);
+      console.warn('[GOOGLE AUTH] Browser result:', result.type);
+
+      // ── Step 5: Determine the auth callback URL ──
+      let urlToProcess: string | null = null;
 
       if (result.type === 'success' && result.url) {
-        console.warn('[GOOGLE AUTH] Success URL received:', result.url.substring(0, 80) + '...');
+        // Best case: Custom Tab intercepted the redirect
+        urlToProcess = result.url;
+        console.warn('[GOOGLE AUTH] ✅ URL from browser');
 
-        // Parse tokens from the deep link URL
-        const { accessToken, refreshToken } = getTokensFromUrl(result.url);
+      } else if (result.type === 'dismiss' || result.type === 'cancel') {
+        // Custom Tab didn't intercept — check deep link fallback
+        console.warn('[GOOGLE AUTH] Browser dismissed or cancelled, waiting for deep link fallback (5s)...');
 
-        if (accessToken && refreshToken) {
-          console.warn('[GOOGLE AUTH] Tokens extracted, setting session...');
+        // Wait up to 5 seconds for the deep link to arrive via Android Intent
+        // Sometimes the OS is slow to deliver the intent after closing the browser
+        const raceResult = await Promise.race([
+          deepLinkPromise.then((url) => ({ source: 'deeplink' as const, url })),
+          new Promise<{ source: 'timeout' }>((r) =>
+            setTimeout(() => r({ source: 'timeout' }), 5000)
+          ),
+        ]);
 
-          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-
-          if (sessionError) throw sessionError;
-
-          if (sessionData.user) {
-            console.warn('[GOOGLE AUTH] Session set for:', sessionData.user.email);
-            // Wait for the database trigger to create the User row
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            const profile = await fetchProfile(sessionData.user.id);
-            setAuthState(profile || { id: sessionData.user.id, onboarding_complete: false }, true);
-            setLoginSuccess(true);
-            console.warn('[GOOGLE AUTH] ✅ Auth complete! needsOnboarding:', checkOnboardingStatus(profile));
-          }
-
-          WebBrowser.dismissBrowser();
+        if (raceResult.source === 'deeplink') {
+          urlToProcess = raceResult.url;
+          console.warn('[GOOGLE AUTH] ✅ URL from deep link fallback');
         } else {
-          console.warn('[GOOGLE AUTH] ❌ No tokens found in URL');
-          setError('Authentication failed — no tokens received. Please try again.');
+          // No callback received at all — user genuinely cancelled
+          console.warn('[GOOGLE AUTH] No callback received (timeout) — user cancelled');
+          // In some Android versions, if the browser is closed manually, it's a true cancel.
+          // Don't show a blocking error pop-up for manual cancellations to avoid annoying the user.
+          return; // Silent return
         }
-      } else if (result.type === 'cancel' || result.type === 'dismiss') {
-        console.warn('[GOOGLE AUTH] User cancelled/dismissed');
-        setError('Google sign-in was cancelled');
       }
+
+      if (!urlToProcess) {
+        console.warn('[GOOGLE AUTH] No URL to process');
+        return;
+      }
+
+      console.warn('[GOOGLE AUTH] Processing callback URL (first 120 chars):', urlToProcess.substring(0, 120));
+
+      // ── Step 6: Extract tokens or exchange code ──
+      await processAuthCallbackUrl(urlToProcess);
+
     } catch (e: any) {
-      console.error('[GOOGLE AUTH] Error:', e);
-      setError(e.message || 'Google Sign-In failed. Please try again.');
+      console.error('[GOOGLE AUTH] Error:', e?.message || e);
+      const msg = e?.message || '';
+      if (msg.includes('network') || msg.includes('Network') || msg.includes('AbortError')) {
+        setError('Network error during sign-in. Please check your connection.');
+      } else if (msg.includes('cancel') || msg.includes('dismiss')) {
+        return; // Silent
+      } else {
+        setError(msg || 'Google Sign-In failed. Please try again.');
+      }
     } finally {
+      // Clean up deep link listener
+      if (linkSubscription) {
+        try { linkSubscription.remove(); } catch (_) {}
+      }
       setIsLoading(false);
-      // Re-enable onAuthStateChange listener after a short delay
-      setTimeout(() => {
-        isHandlingOAuthRef.current = false;
-      }, 2000);
+      setTimeout(() => { isHandlingOAuthRef.current = false; }, 1500);
     }
   };
 
-  const getTokensFromUrl = (url: string) => {
-    try {
-      // Tokens can be in either hash fragment (#) or query string (?)
-      const hashPart = url.includes('#') ? url.split('#')[1] : '';
-      const queryPart = url.includes('?') ? url.split('?')[1] : '';
-      const dataString = hashPart || queryPart || '';
+  /**
+   * Processes an OAuth callback URL — handles both implicit flow (tokens in hash)
+   * and PKCE flow (authorization code in query params).
+   */
+  const processAuthCallbackUrl = async (url: string) => {
+    // ── Try implicit flow: tokens in URL fragment ──
+    const { accessToken, refreshToken } = extractTokensFromUrl(url);
 
-      if (!dataString) return { accessToken: null, refreshToken: null };
+    if (accessToken && refreshToken) {
+      console.warn('[GOOGLE AUTH] Setting session from tokens...');
+
+      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+
+      if (sessionError) throw new Error('Failed to set session: ' + sessionError.message);
+      if (!sessionData?.user) throw new Error('No user data received from session.');
+
+      // Verify session was persisted
+      const { data: verifyData } = await supabase.auth.getSession();
+      if (!verifyData?.session) throw new Error('Session failed to persist.');
+
+      console.warn('[GOOGLE AUTH] ✅ Session verified for:', sessionData.user.email);
+      await new Promise((r) => setTimeout(r, 2000)); // Wait for DB trigger
+      const profile = await fetchProfile(sessionData.user.id);
+      setAuthState(
+        profile || { id: sessionData.user.id, email: sessionData.user.email, onboarding_complete: false },
+        true
+      );
+      setLoginSuccess(true);
+      console.warn('[GOOGLE AUTH] ✅ Auth complete!');
+      try { WebBrowser.dismissBrowser(); } catch (_) {}
+      return;
+    }
+
+    // ── Try PKCE flow: authorization code in query params ──
+    const codeMatch = url.match(/[?&#]code=([^&#]+)/);
+    if (codeMatch) {
+      console.warn('[GOOGLE AUTH] Exchanging authorization code...');
+
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.exchangeCodeForSession(url);
+
+      if (sessionError) throw new Error('Code exchange failed: ' + sessionError.message);
+
+      if (sessionData?.session?.user) {
+        console.warn('[GOOGLE AUTH] ✅ Code exchange successful:', sessionData.session.user.email);
+        await new Promise((r) => setTimeout(r, 2000));
+        const profile = await fetchProfile(sessionData.session.user.id);
+        setAuthState(
+          profile || {
+            id: sessionData.session.user.id,
+            email: sessionData.session.user.email,
+            onboarding_complete: false,
+          },
+          true
+        );
+        setLoginSuccess(true);
+        try { WebBrowser.dismissBrowser(); } catch (_) {}
+        return;
+      }
+    }
+
+    // ── Neither tokens nor code found ──
+    console.error('[GOOGLE AUTH] ❌ No credentials in URL:', url);
+    throw new Error('Authentication failed — no credentials received. Please try again.');
+  };
+
+  /**
+   * Extracts access_token and refresh_token from a callback URL.
+   * Handles both hash fragments (#access_token=...) and query strings (?access_token=...).
+   */
+  const extractTokensFromUrl = (url: string): { accessToken: string | null; refreshToken: string | null } => {
+    try {
+      // Try hash fragment first (Supabase implicit flow default)
+      let dataString = '';
+
+      if (url.includes('#')) {
+        dataString = url.split('#')[1] || '';
+      }
+
+      // Fallback to query string
+      if (!dataString && url.includes('?')) {
+        const queryPart = url.split('?').slice(1).join('?');
+        dataString = queryPart;
+      }
+
+      if (!dataString) {
+        console.warn('[GOOGLE AUTH] No hash or query params in URL');
+        return { accessToken: null, refreshToken: null };
+      }
 
       const params = new URLSearchParams(dataString);
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
 
       console.warn('[GOOGLE AUTH] Token extraction → access:', !!accessToken, '| refresh:', !!refreshToken);
+
+      if (accessToken && !refreshToken) {
+        console.warn('[GOOGLE AUTH] ⚠️ Access token found but no refresh token — session may not persist');
+      }
+
       return { accessToken, refreshToken };
     } catch (e) {
       console.error('[GOOGLE AUTH] Token parsing error:', e);
@@ -569,7 +718,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .limit(1);
 
       if (userError || creatorError) throw userError || creatorError;
-      
+
       const isAvailable = (!userData || userData.length === 0) && (!creatorData || creatorData.length === 0);
 
       if (isAvailable) return { available: true, suggestions: [] };
