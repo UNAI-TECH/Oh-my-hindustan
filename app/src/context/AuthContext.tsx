@@ -613,8 +613,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.warn('[GOOGLE AUTH] ✅ Session verified for:', sessionData.user.email);
       await new Promise((r) => setTimeout(r, 2000)); // Wait for DB trigger
       const profile = await fetchProfile(sessionData.user.id);
+      
+      // Check if user is newly created (within last 60 seconds)
+      const isNewUser = sessionData.user.created_at ? (new Date().getTime() - new Date(sessionData.user.created_at).getTime() < 60000) : false;
+      console.warn('[GOOGLE AUTH] isNewUser (Implicit):', isNewUser);
+
       setAuthState(
-        profile || { id: sessionData.user.id, email: sessionData.user.email, onboarding_complete: false },
+        profile ? { ...profile, onboarding_complete: isNewUser ? false : profile.onboarding_complete } : 
+        { id: sessionData.user.id, email: sessionData.user.email, onboarding_complete: false },
         true
       );
       setLoginSuccess(true);
@@ -637,8 +643,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.warn('[GOOGLE AUTH] ✅ Code exchange successful:', sessionData.session.user.email);
         await new Promise((r) => setTimeout(r, 2000));
         const profile = await fetchProfile(sessionData.session.user.id);
+        
+        // Check if user is newly created (within last 60 seconds)
+        const isNewUser = sessionData.session.user.created_at ? (new Date().getTime() - new Date(sessionData.session.user.created_at).getTime() < 60000) : false;
+        console.warn('[GOOGLE AUTH] isNewUser (PKCE):', isNewUser);
+
         setAuthState(
-          profile || {
+          profile ? { ...profile, onboarding_complete: isNewUser ? false : profile.onboarding_complete } : 
+          {
             id: sessionData.session.user.id,
             email: sessionData.session.user.email,
             onboarding_complete: false,

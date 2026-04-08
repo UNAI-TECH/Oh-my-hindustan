@@ -15,7 +15,9 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.unai.antigravity",
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -41,7 +43,10 @@
               "pathPrefix": "/callback"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -71,5 +76,8 @@
     "updates": {
       "url": "https://u.expo.dev/7dd2dbb8-a8a7-4daa-a4c8-ad2d45ce1201"
     }
+  },
+  "cli": {
+    "appVersionSource": "remote"
   }
 }

@@ -5,12 +5,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabaseClient';
 import { useTranslation } from 'react-i18next';
+import { useFonts, PTSans_700Bold } from '@expo-google-fonts/pt-sans';
 
 export default function MainHeader() {
   const { colors, isDark } = useAppTheme();
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
   const [profilePic, setProfilePic] = useState<string | null>(null);
+
+  const [fontsLoaded] = useFonts({
+    PTSans_700Bold,
+  });
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -26,7 +31,9 @@ export default function MainHeader() {
   return (
     <View style={[styles.header, { backgroundColor: colors.SurfaceWhite, borderBottomColor: colors.Slate200 }]}>
       <View style={styles.headerLeft}>
-        <Text style={[styles.headerTitle, { color: colors.PrimaryRed }]}>{t('common.brand_name')}</Text>
+        <Text style={[styles.headerTitle, { color: colors.PrimaryRed }]}>
+          {fontsLoaded ? 'OMH' : 'OMH'}
+        </Text>
       </View>
       
       <View style={styles.headerRight}>
@@ -68,9 +75,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    letterSpacing: -0.5,
+    fontSize: 24, // Slightly larger explicitly for the OMH acronym
+    fontFamily: 'PTSans_700Bold',
+    letterSpacing: 0.5,
   },
   headerRight: {
     flexDirection: 'row',
