@@ -37,9 +37,15 @@ const NOTIF_ENABLED_KEY = 'omh_notifications_enabled';
 
 const formatTimeAgo = (isoString: string): string => {
   try {
-    const date = new Date(isoString);
+    // Normalize: if the timestamp has no timezone info (no Z or +/-), treat it as UTC
+    let normalized = isoString;
+    if (normalized && !normalized.endsWith('Z') && !normalized.match(/[+-]\d{2}:\d{2}$/)) {
+      normalized += 'Z';
+    }
+    const date = new Date(normalized);
     if (isNaN(date.getTime())) return "Just now";
     const diff = Date.now() - date.getTime();
+    if (diff < 0) return "Just now";
     const minutes = Math.floor(diff / (60 * 1000));
     if (minutes < 1) return "Just now";
     if (minutes < 60) return `${minutes}m ago`;

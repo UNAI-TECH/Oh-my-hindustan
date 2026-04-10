@@ -17,6 +17,11 @@ export interface FeedItem {
   authorName?: string | null;
   authorImage?: string | null;
   authorId?: string | null;
+  authorNameCustom?: string | null;
+  authorPosition?: string | null;
+  author_name?: string | null;
+  author_position?: string | null;
+  hashtags?: string[] | null;
   thumbnail?: string | null;
   timestamp?: string | null;
   votes?: number | null;

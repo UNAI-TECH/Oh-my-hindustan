@@ -364,8 +364,12 @@ export default function StoryViewerScreen() {
 
   const getTimeAgo = (dateStr: string) => {
     try {
-      const ms = Date.now() - new Date(dateStr).getTime();
+      let ts = dateStr;
+      if (ts && !ts.endsWith('Z') && !ts.match(/[+-]\d{2}:\d{2}$/)) ts += 'Z';
+      const ms = Date.now() - new Date(ts).getTime();
+      if (ms < 0) return 'now';
       const mins = Math.floor(ms / 60000);
+      if (mins < 1) return 'now';
       if (mins < 60) return `${mins}m`;
       return `${Math.floor(mins / 60)}h`;
     } catch { return '?'; }

@@ -28,13 +28,16 @@ export default function HomeFeedScreen() {
   const numColumns = width >= 768 ? 2 : 1;
   const maxWidth = width >= 768 ? 1024 : '100%';
   
-  const [activeTab, setActiveTab] = useState(t('nav.home'));
+  const [activeTab, setActiveTab] = useState('For you');
   const [activeAds, setActiveAds] = useState<AdData[]>([]);
-  const tabs = [t('nav.home'), t('common.soon'), 'News', 'Blogs', 'Videos'];
+  const tabs = ['For you', 'Trending', 'Headlines', 'Articles', 'Videos'];
 
   React.useEffect(() => {
-    // Home tab always uses 'latest' so newest posts appear first
-    if (activeTab === t('nav.home') && sortBy !== 'latest') setSortBy('latest');
+    if (activeTab === 'For you' && sortBy !== 'latest') {
+      setSortBy('latest');
+    } else if (activeTab === 'Trending' && sortBy !== 'trending') {
+      setSortBy('trending');
+    }
   }, [activeTab]);
 
   React.useEffect(() => {
@@ -96,9 +99,8 @@ export default function HomeFeedScreen() {
   };
 
   const currentTabItems = useMemo(() => {
-    if (activeTab === 'Trending' || activeTab === 'For You') return feedItems;
-    if (activeTab === 'News') return feedItems.filter(it => [FeedItemType.NEWS, FeedItemType.UPDATE, FeedItemType.POLICY_TYPE, FeedItemType.PROMO].includes(it.type));
-    if (activeTab === 'Blogs') return feedItems.filter(it => [FeedItemType.BLOG, FeedItemType.FORUM, FeedItemType.PROMO].includes(it.type));
+    if (activeTab === 'Trending' || activeTab === 'For you') return feedItems;
+    if (activeTab === 'Articles') return feedItems.filter(it => [FeedItemType.NEWS, FeedItemType.UPDATE, FeedItemType.POLICY_TYPE, FeedItemType.PROMO].includes(it.type));
     if (activeTab === 'Videos') return feedItems.filter(it => [FeedItemType.VIDEO, FeedItemType.DEBATE, FeedItemType.PROMO].includes(it.type));
     return feedItems;
   }, [feedItems, activeTab]);
@@ -134,7 +136,17 @@ export default function HomeFeedScreen() {
               style={[styles.tab, activeTab === tab && styles.tabActive]}
               onPress={() => handleTabPress(tab)}
             >
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {tab === 'Trending' && (
+                  <Ionicons 
+                    name="flame" 
+                    size={14} 
+                    color={activeTab === 'Trending' ? colors.PrimaryRed : colors.Slate500} 
+                    style={{ marginRight: 4 }} 
+                  />
+                )}
+                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+              </View>
             </TouchableOpacity>
           ))}
         </ScrollView>

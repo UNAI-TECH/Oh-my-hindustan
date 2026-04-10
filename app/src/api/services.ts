@@ -98,7 +98,7 @@ export const AppApi = {
 
     let query = supabase
       .from('Post')
-      .select('id, title, content, type, thumbnail, category, custom_category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, trending_score, author:User!authorId(id, username, avatarUrl), Vote:Vote(type), Comment:Comment(id, content), PostView:PostView(id)', { count: 'exact' })
+      .select('id, title, content, type, thumbnail, category, custom_category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, trending_score, author_name, author_position, hashtags, author:User!authorId(id, username, avatarUrl, channel_name), Vote:Vote(type), Comment:Comment(id, content), PostView:PostView(id)', { count: 'exact' })
       .or('is_active.eq.true,is_active.is.null');
 
     // Filter out inactive content is crucial for public views
@@ -149,10 +149,14 @@ export const AppApi = {
         videoDuration: post.videoDuration,
         videoUrl: post.videoUrl || null,
         isTrending: post.isTrending,
+        author_name: post.author_name || null,
+        author_position: post.author_position || null,
+        hashtags: post.hashtags || null,
         author: post.author ? {
           id: (Array.isArray(post.author) ? post.author[0]?.id : (post.author as any).id),
           username: (Array.isArray(post.author) ? post.author[0]?.username : (post.author as any).username) || 'Creator',
           avatarUrl: (Array.isArray(post.author) ? post.author[0]?.avatarUrl : (post.author as any).avatarUrl),
+          channel_name: (Array.isArray(post.author) ? post.author[0]?.channel_name : (post.author as any).channel_name),
         } : null,
         community: {
           id: post.category || 'general',
@@ -173,7 +177,7 @@ export const AppApi = {
   getPost: async (id: string) => {
     const { data: post, error } = await supabase
       .from('Post')
-      .select('id, title, content, type, thumbnail, category, custom_category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, author:User!authorId(id, username, avatarUrl), Vote:Vote(type), Comment:Comment(id, content, userId, createdAt), PostView:PostView(id)')
+      .select('id, title, content, type, thumbnail, category, custom_category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, author_name, author_position, hashtags, author:User!authorId(id, username, avatarUrl, channel_name), Vote:Vote(type), Comment:Comment(id, content, userId, createdAt), PostView:PostView(id)')
       .eq('id', id)
       .or('is_active.eq.true,is_active.is.null')
       .single();
@@ -214,10 +218,14 @@ export const AppApi = {
       videoUrl: post.videoUrl || null,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
+      author_name: post.author_name || null,
+      author_position: post.author_position || null,
+      hashtags: post.hashtags || null,
       author: post.author ? {
         id: (Array.isArray(post.author) ? post.author[0]?.id : (post.author as any).id),
         username: (Array.isArray(post.author) ? post.author[0]?.username : (post.author as any).username) || 'Creator',
         avatarUrl: (Array.isArray(post.author) ? post.author[0]?.avatarUrl : (post.author as any).avatarUrl),
+        channel_name: (Array.isArray(post.author) ? post.author[0]?.channel_name : (post.author as any).channel_name),
       } : null,
       community: {
         id: post.category || 'general',

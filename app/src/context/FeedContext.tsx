@@ -25,12 +25,19 @@ interface FeedContextProps {
 
 const formatTimeAgo = (isoString: string): string => {
   try {
-    const date = new Date(isoString);
+    // Normalize: if the timestamp has no timezone info (no Z or +/-), treat it as UTC
+    let normalized = isoString;
+    if (normalized && !normalized.endsWith('Z') && !normalized.match(/[+-]\d{2}:\d{2}$/)) {
+      normalized += 'Z';
+    }
+    const date = new Date(normalized);
     if (isNaN(date.getTime())) return "Just now";
     
-    const diff = new Date().getTime() - date.getTime();
+    const diff = Date.now() - date.getTime();
+    if (diff < 0) return "Just now";
     const minutes = Math.floor(diff / (60 * 1000));
     
+    if (minutes < 1) return "Just now";
     if (minutes < 60) return `${minutes}m ago`;
     const hours = Math.floor(minutes / 60);
     if (hours < 24) return `${hours}h ago`;
@@ -81,6 +88,9 @@ const toFeedItem = (post: any): FeedItem => {
     videoDuration: post.video_duration || null,
     videoUrl: post.videoUrl || post.video_url || null,
     isTrending: post.is_trending || false,
+    authorNameCustom: post.author_name || null,
+    authorPosition: post.author_position || null,
+    hashtags: Array.isArray(post.hashtags) ? post.hashtags : (post.hashtags ? [post.hashtags] : null),
   };
 };
 

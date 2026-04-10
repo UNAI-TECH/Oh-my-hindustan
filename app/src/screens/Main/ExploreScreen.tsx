@@ -65,8 +65,8 @@ export default function ExploreScreen() {
     let items = feedItems.filter(item => item.type !== FeedItemType.PROMO);
 
     // Filter by type
-    if (selectedFilter === 'News') items = items.filter(it => it.type === FeedItemType.NEWS || it.type === FeedItemType.UPDATE);
-    if (selectedFilter === 'Blogs') items = items.filter(it => it.type === FeedItemType.BLOG || it.type === FeedItemType.FORUM);
+    if (selectedFilter === 'Articles') items = items.filter(it => it.type === FeedItemType.NEWS || it.type === FeedItemType.UPDATE);
+    if (selectedFilter === 'Headlines') items = items.filter(it => it.type === FeedItemType.BLOG || it.type === FeedItemType.FORUM);
     if (selectedFilter === 'Videos') items = items.filter(it => it.type === FeedItemType.VIDEO || it.type === FeedItemType.DEBATE);
     if (selectedFilter === 'Trending') items = items.filter(it => it.isTrending);
 
@@ -98,7 +98,7 @@ export default function ExploreScreen() {
 
   const renderContentItem = ({ item, index }: { item: FeedItem; index: number }) => {
     const isVideo = item.type === FeedItemType.VIDEO || item.type === FeedItemType.DEBATE;
-    
+
     return (
       <TouchableOpacity
         style={styles.contentCard}
@@ -163,7 +163,7 @@ export default function ExploreScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <MainHeader />
-      
+
       {/* Followed Creators Row */}
       {followedCreators.length > 0 && (
         <View style={styles.creatorsSection}>
@@ -233,7 +233,7 @@ export default function ExploreScreen() {
 
 const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FAFAFA', paddingTop: Platform.OS === 'android' ? 24 : 0 },
-  
+
   // JAN SAMVAD Header
   header: {
     flexDirection: 'row',
@@ -289,7 +289,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     fontSize: 9,
     fontWeight: 'bold' as const,
   },
-  
+
   // Creators Row
   creatorsSection: {
     backgroundColor: '#FFFFFF',

@@ -521,7 +521,7 @@ export default function ArticleDetailScreen() {
     return <View style={styles.center}><Text>Content not found</Text></View>;
   }
 
-  const { title, category, authorName, authorImage, subtitle, thumbnail, type, content, excerpt, quote } = selectedArticle;
+  const { title, category, authorName, authorImage, subtitle, thumbnail, type, content, excerpt, quote, authorNameCustom, authorPosition, hashtags } = selectedArticle;
   const isFollowing = postAuthorId ? !!follows[postAuthorId] : false;
 
   return (
@@ -546,6 +546,20 @@ export default function ArticleDetailScreen() {
             <Text style={styles.categoryText}>{category || 'POLICY ANALYSIS'}</Text>
           </View>
           <Text style={styles.title}>{title}</Text>
+          {(authorNameCustom || authorPosition || selectedArticle.author_name || selectedArticle.author_position) && (
+            <View style={{ marginBottom: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+              {(authorNameCustom || selectedArticle.author_name) && (
+                <Text style={{ fontSize: 18, fontWeight: '900', color: colors.DarkText, marginBottom: 4 }}>
+                  {authorNameCustom || selectedArticle.author_name}
+                </Text>
+              )}
+              {(authorPosition || selectedArticle.author_position) && (
+                <Text style={{ fontSize: 13, color: colors.Slate500, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  {authorPosition || selectedArticle.author_position}
+                </Text>
+              )}
+            </View>
+          )}
           <View style={styles.authorRow}>
             <Image source={{ uri: authorImage || `https://ui-avatars.com/api/?name=C&background=E53935&color=fff` }} style={styles.authorImage} />
             <TouchableOpacity style={{ flex: 1, marginLeft: 12 }} onPress={() => navigation.navigate('CreatorProfile', { authorId: postAuthorId, authorName })}>
@@ -605,6 +619,24 @@ export default function ArticleDetailScreen() {
             enableExperimentalGhostLinesPrevention={true}
           />
         </View>
+        
+        {((hashtags && hashtags.length > 0) || (selectedArticle.hashtags && selectedArticle.hashtags.length > 0)) && (
+          <View style={{ paddingHorizontal: 24, paddingBottom: 32, marginTop: -8 }}>
+            <View style={{ height: 1, backgroundColor: '#F1F5F9', marginBottom: 16 }} />
+            <Text style={{ color: colors.Slate400, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
+              Post Hashtags
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              {(hashtags || selectedArticle.hashtags).map((tag: string, idx: number) => (
+                <View key={idx} style={{ backgroundColor: '#Fef2f2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#fee2e2' }}>
+                  <Text style={{ color: colors.PrimaryRed, fontSize: 14, fontWeight: '700' }}>
+                    #{tag}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Ad Placement 2: Above Related Posts */}
         <AdBanner />
@@ -619,8 +651,12 @@ export default function ArticleDetailScreen() {
                 const postAuthorName = authorObj?.username || 'Creator';
                 const timeAgo = (() => {
                   try {
-                    const diff = Date.now() - new Date(post.createdAt).getTime();
+                    let ts = post.createdAt;
+                    if (ts && !ts.endsWith('Z') && !ts.match(/[+-]\d{2}:\d{2}$/)) ts += 'Z';
+                    const diff = Date.now() - new Date(ts).getTime();
+                    if (diff < 0) return 'Just now';
                     const mins = Math.floor(diff / 60000);
+                    if (mins < 1) return 'Just now';
                     if (mins < 60) return `${mins}m ago`;
                     const hrs = Math.floor(mins / 60);
                     if (hrs < 24) return `${hrs}h ago`;

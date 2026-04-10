@@ -11,8 +11,15 @@ import { CreatorApi } from '../../api/services';
 
 const formatTimeAgo = (iso: string) => {
   try {
-    const diff = Date.now() - new Date(iso).getTime();
+    // Normalize: if the timestamp has no timezone info (no Z or +/-), treat it as UTC
+    let normalized = iso;
+    if (normalized && !normalized.endsWith('Z') && !normalized.match(/[+-]\d{2}:\d{2}$/)) {
+      normalized += 'Z';
+    }
+    const diff = Date.now() - new Date(normalized).getTime();
+    if (diff < 0) return 'Just now';
     const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
     if (mins < 60) return `${mins}m ago`;
     const hours = Math.floor(mins / 60);
     if (hours < 24) return `${hours}h ago`;
