@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Share, ActivityIndicator, Platform, Modal, TextInput, FlatList, KeyboardAvoidingView, Alert, Dimensions, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -16,6 +16,7 @@ import CustomModal from '../../components/CustomModal';
 import { useInteraction } from '../../context/InteractionContext';
 import { AppApi } from '../../api/services';
 import AdBanner from '../../components/AdBanner';
+import AdEnabledVideoPlayer from '../../components/AdEnabledVideoPlayer';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -59,10 +60,13 @@ export default function ArticleDetailScreen() {
   const [postAuthorId, setPostAuthorId] = useState<string | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<any[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
-  const scrollViewRef = React.useRef<ScrollView>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
   const [modalConfig, setModalConfig] = useState({ visible: false, title: '', message: '', isError: false });
   const [refreshSyncTrigger, setRefreshSyncTrigger] = useState(0);
+  const [isReady, setIsReady] = useState(false);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+
+  // Mid-roll functionality is now handled entirely within AdEnabledVideoPlayer.
 
   useEffect(() => {
     const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -83,8 +87,11 @@ export default function ArticleDetailScreen() {
     setComments([]);
     setPostAuthorId(null);
     setRelatedPosts([]);
+    setIsReady(false);
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
     if (id) fetchArticle(id);
+    const timer = setTimeout(() => setIsReady(true), 150);
+    return () => clearTimeout(timer);
   }, [id]);
 
   const fetchInteractions = useCallback(async () => {
@@ -581,19 +588,19 @@ export default function ArticleDetailScreen() {
         <AdBanner />
 
         {thumbnail && (
-          <View style={{ width: '100%', aspectRatio: 16/9 }}>
-            {type === FeedItemType.VIDEO && selectedArticle.videoUrl ? (
-            <View style={{ flex: 1, backgroundColor: 'black', height: 250 }}>
-              <WebView
-                source={{ uri: selectedArticle.videoUrl }}
-                style={{ flex: 1 }}
-                allowsFullscreenVideo={true}
-                javaScriptEnabled={true}
-                domStorageEnabled={true}
-                originWhitelist={['*']}
+          <View>
+            {type === FeedItemType.VIDEO && selectedArticle.videoUrl && isReady ? (
+            <View style={{ width: '100%', backgroundColor: 'black' }}>
+              <AdEnabledVideoPlayer
+                postId={id}
+                videoUrl={selectedArticle.videoUrl}
+                adsEnabled={selectedArticle.ads_enabled}
+                adBreaks={selectedArticle.ad_breaks}
+                userId={userProfile?.id}
               />
-            </View>            ) : (
-              <>
+            </View>
+            ) : (
+              <View style={{ width: '100%', aspectRatio: 16/9 }}>
                 <Image source={{ uri: thumbnail }} style={{ flex: 1 }} />
                 {type === FeedItemType.VIDEO && (
                   <View style={styles.playOverlay}>
@@ -602,10 +609,12 @@ export default function ArticleDetailScreen() {
                     </View>
                   </View>
                 )}
-              </>
+              </View>
             )}
           </View>
         )}
+
+        {/* Mid-Roll Ad Overlay is handled by AdEnabledVideoPlayer */}
 
         <View style={{ padding: 24, minHeight: 100 }}>
           <RenderHtml

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { AppApi } from '../api/services';
 import { FeedItem, FeedItemType } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -88,6 +88,8 @@ const toFeedItem = (post: any): FeedItem => {
     videoDuration: post.video_duration || null,
     videoUrl: post.videoUrl || post.video_url || null,
     isTrending: post.is_trending || false,
+    ads_enabled: post.ads_enabled || false,
+    ad_breaks: Array.isArray(post.ad_breaks) ? post.ad_breaks : null,
     authorNameCustom: post.author_name || null,
     authorPosition: post.author_position || null,
     hashtags: Array.isArray(post.hashtags) ? post.hashtags : (post.hashtags ? [post.hashtags] : null),
@@ -106,6 +108,7 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   const [sortBy, setSortByState] = useState<'latest' | 'trending'>('latest');
   const [error, setError] = useState<string | null>(null);
   const { userProfile } = useAuth();
+  const isFetchingRef = useRef(false);
 
   const saveToCache = async (data: FeedItem[]) => {
     try {
@@ -133,7 +136,9 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const fetchHomeFeed = async (showLoading = true, reset = false) => {
-    if (showLoading && feedItems.length === 0) setIsLoading(true);
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    if (showLoading) setIsLoading(true);
     const targetPage = reset ? 1 : page;
     
     try {
@@ -158,20 +163,34 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
         });
       });
       
-      setHasMore(posts.length === 15);
+      // FIX: use posts.length < limit to determine if there are more pages
+      // This avoids the stale closure on feedItems.length
+      const noMore = posts.length < 15;
+      setHasMore(!noMore);
       setError(null);
-      if (reset) await saveToCache(mapped.slice(0, 50));
+      if (reset) {
+        if (reset) setPage(1);
+        await saveToCache(mapped.slice(0, 50));
+      }
     } catch (e: any) {
-      console.error('Feed fetch error:', e);
-      setError(e.message || 'Failed to load feed. Please check your connection.');
+      // FIX: Handle PGRST103 (offset beyond available rows) gracefully
+      if (e?.code === 'PGRST103') {
+        setHasMore(false); // No more data — stop pagination
+        // Don't set error — this isn't a real error, just end of data
+      } else {
+        console.error('Feed fetch error:', e);
+        setError(e.message || 'Failed to load feed. Please check your connection.');
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
+      isFetchingRef.current = false;
     }
   };
 
   const loadMoreFeed = async () => {
-    if (isLoading || !hasMore) return;
+    if (isLoading || !hasMore || isFetchingRef.current) return;
+    // Only increment page when we actually have more data
     setPage(prev => prev + 1);
   };
 
@@ -194,6 +213,10 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
       const localItem = feedItems.find(it => it.id === id);
       if (localItem) {
         setSelectedArticle(localItem);
+        // Stale-while-revalidate: Fetch fresh data silently for flags like ads_enabled
+        AppApi.getPost(id).then(freshResponse => {
+           if (freshResponse) setSelectedArticle(toFeedItem(freshResponse));
+        }).catch(() => {});
       } else {
         const response = await AppApi.getPost(id);
         if (response) {

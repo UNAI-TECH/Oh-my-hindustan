@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 
 // Required for Expo AuthSession to intercept the redirect
 WebBrowser.maybeCompleteAuthSession();
@@ -22,6 +23,7 @@ interface AuthContextProps {
   login: (identifier: string, pass: string) => Promise<void>;
   register: (email: string, name: string, pass: string, mobile: string) => Promise<boolean | void>;
   verifySignupOtp: (email: string, token: string) => Promise<boolean>;
+  signInWithGoogleNative: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   checkUsernameAvailability: (username: string) => Promise<{ available: boolean; suggestions: string[] }>;
   updateOnboardingProfile: (data: { username?: string; language?: string; topics?: string[]; avatarUrl?: string }) => Promise<void>;
@@ -71,6 +73,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return null;
     }
   };
+
+  useEffect(() => {
+    // ─── Native Google Sign-In Configuration ───
+    // This allows the "Choose an account" screen to show "OMH" instead of the Supabase URL.
+    // Replace the webClientId with your actual ID from Google Cloud Console.
+    GoogleSignin.configure({
+      webClientId: '71358147237-gvakjq7v747jacqmsr5f5vk53ha83ode.apps.googleusercontent.com', 
+      offlineAccess: true,
+    });
+  }, []);
 
   // ─── Fetch profile from User table ───
   const fetchProfile = async (userId: string, skipRetries = false) => {
@@ -440,7 +452,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ─── Google OAuth Sign-In (Production-Grade) ───
+  // ─── Native Google Sign-In (Fixes Branding Issue) ───
+  const signInWithGoogleNative = async () => {
+    if (isHandlingOAuthRef.current) return;
+    setIsLoading(true);
+    setError(null);
+    isHandlingOAuthRef.current = true;
+
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken;
+
+      if (!idToken) {
+        throw new Error('Google Sign-In failed: No ID token received');
+      }
+
+      console.warn('[GOOGLE AUTH] Native token received, signing in to Supabase...');
+      const { data, error: authError } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+
+      if (authError) throw authError;
+
+      if (data.session) {
+        const profile = await fetchProfile(data.session.user.id);
+        setAuthState(profile || { id: data.session.user.id, email: data.session.user.email!, onboarding_complete: false }, true);
+      }
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        console.warn('[GOOGLE AUTH] User cancelled native sign-in');
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        console.warn('[GOOGLE AUTH] Sign-in already in progress');
+      } else {
+        console.error('[GOOGLE AUTH] Native Error:', error);
+        setError(error.message || 'Google Sign-In failed. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => { isHandlingOAuthRef.current = false; }, 1000);
+    }
+  };
+
+  // ─── Google OAuth Sign-In (Fallback/Web-based) ───
   const signInWithGoogle = async () => {
     // Double-tap prevention
     if (isHandlingOAuthRef.current) {
@@ -900,7 +955,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider value={{
       isLoading, error, loginSuccess, signupSuccess, updateProfileSuccess,
       isAuthenticated, needsOnboarding, userProfile,
-      login, register, verifySignupOtp, signInWithGoogle, checkUsernameAvailability,
+      login, register, verifySignupOtp, signInWithGoogleNative, signInWithGoogle, checkUsernameAvailability,
       updateOnboardingProfile, uploadProfileImage, updateProfile, clearState, logout
     }}>
       {!initializing && children}

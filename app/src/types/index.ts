@@ -36,6 +36,8 @@ export interface FeedItem {
   content?: string | null;
   quote?: string | null;
   isTrending?: boolean;
+  ads_enabled?: boolean;
+  ad_breaks?: { type: string; time: number }[] | null;
 }
 
 // Retrofit API Interfaces ported to TypeScript

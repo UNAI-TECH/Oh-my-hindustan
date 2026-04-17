@@ -20,7 +20,7 @@ export default function LoginScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
-  const { login, signInWithGoogle, isLoading, error, loginSuccess, isAuthenticated, needsOnboarding, clearState } = useAuth();
+  const { login, signInWithGoogle, signInWithGoogleNative, isLoading, error, loginSuccess, isAuthenticated, needsOnboarding, clearState } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
@@ -51,7 +51,8 @@ export default function LoginScreen() {
 
   const handleGoogleSignIn = async () => {
     setLocalError(null);
-    await signInWithGoogle();
+    // Prioritize Native Sign-In for better branding ("OMH")
+    await signInWithGoogleNative();
   };
 
   const displayError = localError || error;
