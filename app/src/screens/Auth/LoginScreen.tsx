@@ -51,8 +51,8 @@ export default function LoginScreen() {
 
   const handleGoogleSignIn = async () => {
     setLocalError(null);
-    // Prioritize Native Sign-In for better branding ("OMH")
-    await signInWithGoogleNative();
+    // Switched to Web OAuth to completely bypass the native DEVELOPER_ERROR
+    await signInWithGoogle();
   };
 
   const displayError = localError || error;
