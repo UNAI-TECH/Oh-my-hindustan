@@ -51,10 +51,10 @@ export default function ProfileScreen() {
   };
 
   const displayName = userProfile?.username || userProfile?.email?.split('@')[0] || 'User';
-  const avatarUrl = userProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E53935&color=fff&size=200`;
+  const avatarUrl = userProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D4191F&color=fff&size=200`;
   const email = userProfile?.email || '';
   const phone = userProfile?.phone || '';
-  const bio = userProfile?.bio || 'Citizen of Oh My Hindustan';
+  const bio = userProfile?.bio || 'Member of PostsApp';
   const role = userProfile?.role || 'CITIZEN';
   const language = userProfile?.preferred_language || 'English';
   const topics = userProfile?.selected_topics || [];
@@ -80,7 +80,7 @@ export default function ProfileScreen() {
         {/* Cover + Avatar */}
         <View style={{ width: '100%', paddingBottom: 80 }}>
           <LinearGradient
-            colors={[colors.DeepCrimson, colors.WarmOrange]}
+            colors={[colors.DeepCrimson, colors.PrimaryRed]}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={{ width: '100%', height: 160 }}
           />

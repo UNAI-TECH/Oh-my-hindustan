@@ -143,7 +143,7 @@ export default function TopicSelectionScreen() {
           disabled={!isEnabled || isLoading}
         >
           <LinearGradient
-            colors={isEnabled ? ['#E53935', '#FB8C00'] : ['#CBD5E1', '#CBD5E1']}
+            colors={isEnabled ? [colors.PrimaryRed, colors.DeepCrimson] : ['#CBD5E1', '#CBD5E1']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradientButton}

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 
@@ -8,13 +8,14 @@ export default function SplashScreen() {
   const { isAuthenticated, needsOnboarding } = useAuth();
 
   useEffect(() => {
-    // Instantly navigate to the respective screen without the animation delay
     if (isAuthenticated) {
       if (needsOnboarding) {
         navigation.reset({ index: 0, routes: [{ name: 'UsernameSetup' }] });
       } else {
         navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
       }
+    } else if (Platform.OS === 'web') {
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } else {
       navigation.replace('Login');
     }

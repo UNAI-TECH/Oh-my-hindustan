@@ -73,7 +73,7 @@ export default function ProfileImageUploadScreen() {
     navigation.navigate('TopicSelection');
   };
 
-  const avatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E53935&color=fff&size=200`;
+  const avatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D4191F&color=fff&size=200`;
 
   return (
     <View style={styles.container}>
@@ -134,7 +134,7 @@ export default function ProfileImageUploadScreen() {
           disabled={uploading || isLoading}
         >
           <LinearGradient
-            colors={imageUri ? ['#E53935', '#FB8C00'] : ['#E53935', '#FB8C00']}
+            colors={[colors.PrimaryRed, colors.DeepCrimson]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradientButton}

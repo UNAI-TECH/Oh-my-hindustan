@@ -308,7 +308,7 @@ export default function AdEnabledVideoPlayer({
 
         {isLoading && (
           <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#E53935" />
+            <ActivityIndicator size="large" color="#D4191F" />
           </View>
         )}
 
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   adInfoCTA: {
-    backgroundColor: '#E53935',
+    backgroundColor: '#D4191F',
     paddingVertical: 11,
     borderRadius: 8,
     alignItems: 'center',

@@ -11,8 +11,9 @@ import { CreatorApi } from '../../api/services';
 import CustomModal from '../../components/CustomModal';
 
 const CATEGORIES = [
-  'Politics', 'Economy', 'Digital India', 'Policy', 'Viksit Bharat',
-  'Sports', 'Entertainment', 'Technology', 'Health', 'Education', 'General'
+  'Business', 'Economy', 'Policy', 'Sports', 'Culture', 'Science & Tech', 'World',
+  'Politics', 'Digital India', 'Viksit Bharat', 'Entertainment', 'Technology',
+  'Health', 'Education', 'General'
 ];
 
 export default function ContentEditorScreen() {

@@ -27,12 +27,12 @@ export const sendCreatorCredentials = async (req: Request, res: Response) => {
     });
 
     const mailOptions = {
-      from: `"Oh My Hindusthan Admin" <${user}>`,
+      from: `"PostsApp Admin" <${user}>`,
       to: toEmail,
       subject: 'Your Creator Account Login Credentials',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-          <h2 style="color: #E31E24;">Welcome to Oh My Hindusthan</h2>
+          <h2 style="color: #D4191F;">Welcome to PostsApp</h2>
           <p>Your account has been approved. Use the following credentials to sign in and access the Creator Studio.</p>
           <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
             <p style="margin: 0 0 10px 0;"><strong>Email:</strong> ${toEmail}</p>

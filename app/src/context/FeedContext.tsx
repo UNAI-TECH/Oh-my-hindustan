@@ -71,7 +71,7 @@ const toFeedItem = (post: any): FeedItem => {
     id: post.id,
     type: mapPostType(post.type),
     title: post.title,
-    subtitle: post.subtitle || "Oh My Hindustan",
+    subtitle: post.subtitle || "PostsApp",
     authorName: post.author?.channel_name || post.author?.username || "Creator",
     authorImage: post.author?.avatarUrl || "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&q=80&w=800",
     authorId: post.authorId || post.author?.id || null,

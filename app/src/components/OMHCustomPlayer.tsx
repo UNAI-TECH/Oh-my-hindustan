@@ -314,7 +314,7 @@ v.addEventListener('error',function(){window.ReactNativeWebView.postMessage(JSON
 
       {isLoading && (
         <View style={styles.centerOverlay}>
-          <ActivityIndicator size="large" color="#E53935" />
+          <ActivityIndicator size="large" color="#D4191F" />
         </View>
       )}
 
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   },
   progressFg: {
     height: '100%',
-    backgroundColor: '#E53935',
+    backgroundColor: '#D4191F',
     borderRadius: 1.5,
   },
   seekThumb: {
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
     width: 13,
     height: 13,
     borderRadius: 6.5,
-    backgroundColor: '#E53935',
+    backgroundColor: '#D4191F',
     marginLeft: -6.5,
     borderWidth: 2,
     borderColor: '#fff',

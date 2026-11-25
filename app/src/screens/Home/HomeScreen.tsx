@@ -12,7 +12,7 @@ export default function HomeScreen() {
         <Text style={[styles.title, { marginBottom: 0, marginRight: 8 }]}>Home</Text>
         <Ionicons name="home" size={28} color="black" />
       </View>
-      <Text style={styles.subtitle}>Welcome to Oh My Hindustan Forum!</Text>
+      <Text style={styles.subtitle}>Welcome to PostsApp!</Text>
 
       <TouchableOpacity 
         style={styles.button}
@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   button: {
-    backgroundColor: '#E53935',
+    backgroundColor: '#D4191F',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,

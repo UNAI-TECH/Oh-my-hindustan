@@ -64,7 +64,7 @@ export default function PrivacySecurityScreen() {
         
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Data Safety & Usage</Text>
-          <Text style={styles.sectionDesc}>Manage how your data is used to improve Jan Samvad.</Text>
+          <Text style={styles.sectionDesc}>Manage how your data is used to improve PostsApp.</Text>
         </View>
 
         <View style={styles.card}>

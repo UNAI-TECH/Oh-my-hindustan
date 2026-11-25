@@ -48,7 +48,7 @@ app.get('/health', (req, res) => {
 
 // Root route
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to Oh My Hindustan API' });
+  res.json({ message: 'Welcome to PostsApp API' });
 });
 
 // Basic error handler

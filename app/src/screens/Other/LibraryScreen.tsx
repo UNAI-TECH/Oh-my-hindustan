@@ -14,7 +14,7 @@ type LibraryTab = 'saved' | 'liked' | 'commented';
 type FilterType = 'All' | 'Blogs' | 'Posts' | 'Videos' | 'News';
 
 const TAB_CONFIG: { key: LibraryTab; icon: string; label: string; color: string; bg: string }[] = [
-  { key: 'saved', icon: 'bookmark', label: 'Saved', color: '#EF4444', bg: '#FEF2F2' },
+  { key: 'saved', icon: 'bookmark', label: 'Saved', color: '#D4191F', bg: '#FEF2F2' },
   { key: 'liked', icon: 'heart', label: 'Liked', color: '#EC4899', bg: '#FDF2F8' },
   { key: 'commented', icon: 'chatbubble-ellipses', label: 'Comments', color: '#8B5CF6', bg: '#F5F3FF' },
 ];

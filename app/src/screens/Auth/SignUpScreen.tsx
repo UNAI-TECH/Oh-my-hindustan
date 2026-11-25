@@ -88,8 +88,8 @@ export default function SignUpScreen() {
           <Ionicons name="people" size={40} color={colors.PrimaryRed} />
         </View>
 
-        <Text style={styles.title}>Join the National Dialogue</Text>
-        <Text style={styles.subtitle}>Become a verified participant in Jan Samvad.</Text>
+        <Text style={styles.title}>Join PostsApp</Text>
+        <Text style={styles.subtitle}>Become a verified participant on PostsApp.</Text>
 
         <View style={styles.inputContainer}>
           <TextInput
@@ -174,7 +174,7 @@ export default function SignUpScreen() {
           disabled={isLoading}
         >
           <LinearGradient
-            colors={['#E53935', '#FB8C00']}
+            colors={[colors.PrimaryRed, colors.DeepCrimson]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradientButton}
@@ -253,6 +253,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   inputContainer: {
     width: '100%',
+    maxWidth: 440,
     gap: 16,
   },
   input: {
@@ -297,6 +298,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   buttonContainer: {
     width: '100%',
+    maxWidth: 440,
     height: 56,
     marginTop: 32,
     borderRadius: 16,
@@ -316,6 +318,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
+    maxWidth: 440,
     marginTop: 28,
     marginBottom: 20,
     paddingHorizontal: 8,
@@ -335,6 +338,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
+    maxWidth: 440,
     height: 56,
     borderRadius: 16,
     borderWidth: 1,
@@ -362,7 +366,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     fontSize: 14,
   },
   loginText: {
-    color: '#E53935',
+    color: colors.PrimaryRed,
     fontWeight: 'bold',
     fontSize: 14,
   },

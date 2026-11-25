@@ -179,7 +179,7 @@ export default function UsernameSetupScreen() {
           disabled={!isAvailable || isLoading}
         >
           <LinearGradient
-            colors={isAvailable ? ['#E53935', '#FB8C00'] : ['#CBD5E1', '#CBD5E1']}
+            colors={isAvailable ? [colors.PrimaryRed, colors.DeepCrimson] : ['#CBD5E1', '#CBD5E1']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradientButton}

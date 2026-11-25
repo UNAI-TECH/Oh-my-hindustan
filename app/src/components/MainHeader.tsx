@@ -5,17 +5,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabaseClient';
 import { useTranslation } from 'react-i18next';
-import { useFonts, PTSans_700Bold } from '@expo-google-fonts/pt-sans';
+import PostsAppLogo from './PostsAppLogo';
 
 export default function MainHeader() {
   const { colors, isDark } = useAppTheme();
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
   const [profilePic, setProfilePic] = useState<string | null>(null);
-
-  const [fontsLoaded] = useFonts({
-    PTSans_700Bold,
-  });
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -30,11 +26,9 @@ export default function MainHeader() {
 
   return (
     <View style={[styles.header, { backgroundColor: colors.SurfaceWhite, borderBottomColor: colors.Slate200 }]}>
-      <View style={styles.headerLeft}>
-        <Text style={[styles.headerTitle, { color: colors.PrimaryRed }]}>
-          {fontsLoaded ? 'OMH' : 'OMH'}
-        </Text>
-      </View>
+      <TouchableOpacity style={styles.headerLeft} onPress={() => navigation.navigate('Home')} activeOpacity={0.8}>
+        <PostsAppLogo variant={isDark ? 'dark' : 'light'} size="sm" />
+      </TouchableOpacity>
       
       <View style={styles.headerRight}>
         <TouchableOpacity onPress={() => navigation.navigate('Search')} style={styles.iconBtn}>

@@ -2,15 +2,22 @@ import { StyleSheet } from 'react-native';
 
 // Primary palette
 export const lightColors = {
-  PrimaryRed: '#BF3A2B',
-  DeepCrimson: '#8E1F4F',
-  WarmOrange: '#E8722A',
+  PrimaryRed: '#D4191F',
+  DeepCrimson: '#B81414',
+  MastheadRedDark: '#991111',
+  WarmOrange: '#B81414',
   AmberGold: '#F0A500',
 
+  // Editorial Web Chrome
+  HeaderDark: '#141414',
+  NavDark: '#181818',
+  NavSearchBg: '#262626',
+  FooterBorder: '#262626',
+
   // Backgrounds
-  CreamBg: '#EDE9DF',
+  CreamBg: '#F5F5F7',
   SurfaceWhite: '#FFFFFF',
-  BackgroundLight: '#F8F6F6',
+  BackgroundLight: '#F5F5F7',
 
   // Text
   DarkText: '#1A1A1A',
@@ -25,16 +32,16 @@ export const lightColors = {
 
   // Status
   GreenStatus: '#16A34A',
-  RedStatus: '#DC2626',
+  RedStatus: '#D4191F',
   AmberStatus: '#F59E0B',
 
   // Accent
-  PrimaryRedAlpha10: 'rgba(191, 58, 43, 0.10)',
-  PrimaryRedAlpha20: 'rgba(191, 58, 43, 0.20)',
-  PrimaryRedAlpha5: 'rgba(191, 58, 43, 0.05)',
+  PrimaryRedAlpha10: 'rgba(212, 25, 31, 0.10)',
+  PrimaryRedAlpha20: 'rgba(212, 25, 31, 0.20)',
+  PrimaryRedAlpha5: 'rgba(212, 25, 31, 0.05)',
 
   // Admin sidebar
-  AdminSidebar: '#8E1F4F',
+  AdminSidebar: '#B81414',
 };
 
 export const darkColors = {
@@ -43,7 +50,7 @@ export const darkColors = {
   // Backgrounds
   CreamBg: '#121212',
   SurfaceWhite: '#1A1A1A',
-  BackgroundLight: '#000000',
+  BackgroundLight: '#0E0E0E',
 
   // Text (inverted)
   DarkText: '#F8FAFC',
@@ -57,9 +64,9 @@ export const darkColors = {
   Slate200: '#334155',
 
   // Accent overrides for visibility on dark
-  PrimaryRedAlpha10: 'rgba(191, 58, 43, 0.20)',
-  PrimaryRedAlpha20: 'rgba(191, 58, 43, 0.30)',
-  PrimaryRedAlpha5: 'rgba(191, 58, 43, 0.10)',
+  PrimaryRedAlpha10: 'rgba(212, 25, 31, 0.20)',
+  PrimaryRedAlpha20: 'rgba(212, 25, 31, 0.30)',
+  PrimaryRedAlpha5: 'rgba(212, 25, 31, 0.10)',
 };
 
 // Fallback for non-refactored files

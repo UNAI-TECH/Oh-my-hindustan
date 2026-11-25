@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AppBottomNavBar from '../../components/BottomNavBar';
 import MainHeader from '../../components/MainHeader';
 import { useFeed } from '../../context/FeedContext';
+import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { FeedItemType, FeedItem } from '../../types';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +15,18 @@ import { useInteraction } from '../../context/InteractionContext';
 import { supabase } from '../../lib/supabaseClient';
 import AdCard, { AdData } from '../../components/AdCard';
 import { useTranslation } from 'react-i18next';
+import {
+  WebTopMasthead,
+  WebStickyNavBar,
+  WebPopularTagsBar,
+} from '../../components/web/WebPortalHeader';
+import WebBreakingTicker from '../../components/web/WebBreakingTicker';
+import WebHeroSection from '../../components/web/WebHeroSection';
+import WebFeaturedPosts from '../../components/web/WebFeaturedPosts';
+import WebExpressPosts from '../../components/web/WebExpressPosts';
+import WebPortalFooter from '../../components/web/WebPortalFooter';
+import { matchesEditorialCategory } from '../../components/web/webPortalHelpers';
+
 const AD_MARKER = '__AD_PLACEHOLDER__';
 const APP_DOWNLOAD_URL = 'https://play.google.com/store/apps/details?id=com.unai.antigravity';
 
@@ -23,13 +36,22 @@ export default function HomeFeedScreen() {
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
   const { feedItems, isLoading, isRefreshing, refreshFeed, loadMoreFeed, hasMore, sortBy, setSortBy } = useFeed();
+  const { userProfile, isAuthenticated, logout } = useAuth();
   const { unreadCount } = useNotifications();
   const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const numColumns = width >= 768 ? 2 : 1;
   const maxWidth = width >= 768 ? 1024 : '100%';
   
   const [activeTab, setActiveTab] = useState('For you');
   const [activeAds, setActiveAds] = useState<AdData[]>([]);
+  const [savedCount, setSavedCount] = useState(0);
+  const [webCategory, setWebCategory] = useState('HOME');
+  const [webSearchQuery, setWebSearchQuery] = useState('');
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [webFeedMode, setWebFeedMode] = useState<'latest' | 'trending' | 'articles' | 'videos'>('latest');
+  const webScrollRef = useRef<ScrollView>(null);
+  const loggedLeaderboardAdId = useRef<string | null>(null);
   const tabs = ['For you', 'Trending', 'Headlines', 'Articles', 'Videos'];
 
   React.useEffect(() => {
@@ -58,7 +80,18 @@ export default function HomeFeedScreen() {
     React.useCallback(() => {
       // Optional: Refresh feed silently or update metrics when focused
       refreshFeed();
-    }, [])
+      if (userProfile?.id) {
+        supabase
+          .from('Save')
+          .select('id', { count: 'exact', head: true })
+          .eq('userId', userProfile.id)
+          .then(({ count }) => {
+            if (typeof count === 'number') setSavedCount(count);
+          });
+      } else {
+        setSavedCount(0);
+      }
+    }, [userProfile?.id])
   );
 
   // 1. Define Viewability Configuration for high-performance impression tracking
@@ -91,7 +124,7 @@ export default function HomeFeedScreen() {
   const onShare = async (item: FeedItem) => {
     try {
       await Share.share({
-        message: `${item.title}\n\nRead more on Jan Samvad:\nhttps://ohmyhindustan.com/post/${item.id}\n\nDownload the app: ${APP_DOWNLOAD_URL}`,
+        message: `${item.title}\n\nRead more on PostsApp:\nhttps://postsapp.com/post/${item.id}\n\nDownload the app: ${APP_DOWNLOAD_URL}`,
       });
     } catch (error) {
       console.error(error);
@@ -123,6 +156,266 @@ export default function HomeFeedScreen() {
     });
     return result;
   }, [currentTabItems, activeAds]);
+
+  // Web editorial filtering and section slicing
+  const filteredWebItems = useMemo(() => {
+    let items = feedItems.filter((it) => it.type !== FeedItemType.PROMO);
+
+    if (webFeedMode === 'articles') {
+      items = items.filter((it) =>
+        [FeedItemType.NEWS, FeedItemType.UPDATE, FeedItemType.POLICY_TYPE, FeedItemType.BLOG].includes(it.type)
+      );
+    } else if (webFeedMode === 'videos') {
+      items = items.filter((it) =>
+        [FeedItemType.VIDEO, FeedItemType.DEBATE].includes(it.type) || !!it.videoUrl
+      );
+    }
+
+    if (webCategory !== 'HOME') {
+      items = items.filter((it) => matchesEditorialCategory(it, webCategory));
+    }
+
+    if (activeTag) {
+      const cleanTag = activeTag.replace(/^#/, '').toLowerCase();
+      items = items.filter((it) => {
+        const hay = `${it.title} ${it.category || ''} ${(it.hashtags || []).join(' ')}`.toLowerCase();
+        return hay.includes(cleanTag);
+      });
+    }
+
+    if (webSearchQuery.trim().length > 0) {
+      const q = webSearchQuery.trim().toLowerCase();
+      items = items.filter(
+        (it) =>
+          it.title.toLowerCase().includes(q) ||
+          (it.category || '').toLowerCase().includes(q) ||
+          (it.authorName || '').toLowerCase().includes(q) ||
+          (it.excerpt || '').toLowerCase().includes(q)
+      );
+    }
+
+    return items;
+  }, [feedItems, webFeedMode, webCategory, activeTag, webSearchQuery]);
+
+  const webSections = useMemo(() => {
+    const pool = filteredWebItems;
+    const breakingItems = pool.slice(0, 5);
+    const mainNews = pool.find((it) => !!it.thumbnail) || pool[0] || null;
+    const withoutMain = pool.filter((it) => it.id !== mainNews?.id);
+    const trendingNow = [...pool]
+      .sort(
+        (a, b) =>
+          (b.isTrending ? 10000 : 0) +
+          (b.viewCount || 0) +
+          (b.upvoteCount || 0) -
+          ((a.isTrending ? 10000 : 0) + (a.viewCount || 0) + (a.upvoteCount || 0))
+      )
+      .slice(0, 4);
+
+    const editorsPicks = withoutMain.slice(0, 3);
+    const usedIds = new Set<string>([
+      ...(mainNews ? [mainNews.id] : []),
+      ...editorsPicks.map((i) => i.id),
+    ]);
+    const remainingForFeatured = pool.filter((it) => !usedIds.has(it.id));
+    const featuredItems =
+      remainingForFeatured.length >= 4
+        ? remainingForFeatured.slice(0, 4)
+        : pool.slice(0, 4);
+
+    featuredItems.forEach((i) => usedIds.add(i.id));
+    const remainingForExpress = pool.filter((it) => !usedIds.has(it.id));
+    const expressPool = remainingForExpress.length >= 5 ? remainingForExpress : pool;
+    const expressOneItems = expressPool.slice(0, 5);
+    const expressTwoItems =
+      expressPool.length > 5 ? expressPool.slice(5, 9) : pool.slice(0, 4);
+    const extraItems = pool.slice(16);
+
+    return {
+      breakingItems,
+      mainNews,
+      trendingNow,
+      editorsPicks,
+      featuredItems,
+      expressOneItems,
+      expressTwoItems,
+      extraItems,
+    };
+  }, [filteredWebItems]);
+
+  const leaderboardAd = activeAds[0] ? { ...activeAds[0], __isAd: true as const } : null;
+
+  React.useEffect(() => {
+    if (!isWebDesktop || !leaderboardAd?.id) return;
+    if (loggedLeaderboardAdId.current === leaderboardAd.id) return;
+    loggedLeaderboardAdId.current = leaderboardAd.id;
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        await supabase.rpc('track_ad_impression', {
+          p_ad_id: leaderboardAd.id,
+          p_user_id: session?.user?.id || 'anonymous',
+        });
+      } catch (_) {}
+    })();
+  }, [isWebDesktop, leaderboardAd?.id]);
+
+  const handleWebSelectCategory = (cat: string) => {
+    setWebCategory(cat);
+    setActiveTag(null);
+    webScrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const handleWebSelectTag = (tag: string) => {
+    setActiveTag((prev) => (prev === tag ? null : tag));
+    setWebCategory('HOME');
+  };
+
+  const handleWebFeedMode = (mode: 'latest' | 'trending' | 'articles' | 'videos') => {
+    setWebFeedMode(mode);
+    if (mode === 'trending') setSortBy('trending');
+    else if (mode === 'latest') setSortBy('latest');
+  };
+
+  const handleWebPressItem = (item: FeedItem) => {
+    if (item.type !== FeedItemType.PROMO) {
+      navigation.navigate('ArticleDetail', { id: item.id });
+    }
+  };
+
+  if (isWebDesktop) {
+    const hasActiveWebFilter =
+      webCategory !== 'HOME' || !!activeTag || webSearchQuery.trim().length > 0 || webFeedMode !== 'latest';
+
+    return (
+      <ScrollView
+        ref={webScrollRef}
+        stickyHeaderIndices={[1]}
+        style={{ flex: 1, backgroundColor: '#F5F5F7' }}
+        contentContainerStyle={{ minHeight: '100%' }}
+      >
+        <WebTopMasthead
+          onSelectHome={() => {
+            setWebCategory('HOME');
+            setActiveTag(null);
+            setWebSearchQuery('');
+            setWebFeedMode('latest');
+            setSortBy('latest');
+          }}
+          onNavigate={(route, params) => navigation.navigate(route, params)}
+          savedCount={savedCount}
+          userProfile={userProfile}
+          isAuthenticated={isAuthenticated}
+          onScrollToNewsletter={() => webScrollRef.current?.scrollToEnd({ animated: true })}
+          leaderboardAd={leaderboardAd}
+        />
+
+        <WebStickyNavBar
+          activeCategory={webCategory}
+          onSelectCategory={handleWebSelectCategory}
+          searchQuery={webSearchQuery}
+          onChangeSearch={setWebSearchQuery}
+          onSubmitSearch={() => {
+            if (webSearchQuery.trim().length > 0 && filteredWebItems.length === 0) {
+              navigation.navigate('Search');
+            }
+          }}
+          onPressWatchOnline={() => handleWebSelectCategory(webCategory === 'WATCH_ONLINE' ? 'HOME' : 'WATCH_ONLINE')}
+          onNavigate={(route, params) => navigation.navigate(route, params)}
+          unreadNotifications={unreadCount}
+          isAuthenticated={isAuthenticated}
+          onLogout={logout}
+          feedMode={webFeedMode}
+          onChangeFeedMode={handleWebFeedMode}
+        />
+
+        <View style={{ flex: 1 }}>
+          <WebPopularTagsBar activeTag={activeTag} onSelectTag={handleWebSelectTag} />
+
+          {hasActiveWebFilter && (
+            <View style={styles.webFilterBanner}>
+              <Text style={styles.webFilterText}>
+                Showing {filteredWebItems.length} stories
+                {webCategory !== 'HOME' ? ` in ${webCategory.replace('_', ' ')}` : ''}
+                {activeTag ? ` • ${activeTag}` : ''}
+                {webSearchQuery.trim() ? ` • "${webSearchQuery.trim()}"` : ''}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setWebCategory('HOME');
+                  setActiveTag(null);
+                  setWebSearchQuery('');
+                  handleWebFeedMode('latest');
+                }}
+              >
+                <Text style={styles.webFilterReset}>Reset Filters</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {isLoading && filteredWebItems.length === 0 ? (
+            <View style={{ maxWidth: 1280, width: '100%', alignSelf: 'center', padding: 24 }}>
+              <ActivityIndicator size="large" color={colors.PrimaryRed} style={{ marginVertical: 48 }} />
+            </View>
+          ) : filteredWebItems.length === 0 ? (
+            <View style={{ maxWidth: 1280, width: '100%', alignSelf: 'center', padding: 48, alignItems: 'center' }}>
+              <Ionicons name="newspaper-outline" size={48} color="#9CA3AF" />
+              <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginTop: 12 }}>
+                No matching stories found
+              </Text>
+              <TouchableOpacity
+                style={{ marginTop: 14, backgroundColor: '#D4191F', paddingHorizontal: 18, paddingVertical: 10, borderRadius: 4 }}
+                onPress={() => {
+                  setWebCategory('HOME');
+                  setActiveTag(null);
+                  setWebSearchQuery('');
+                  handleWebFeedMode('latest');
+                }}
+              >
+                <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>View All Stories</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <WebBreakingTicker
+                items={webSections.breakingItems}
+                onPressItem={handleWebPressItem}
+              />
+
+              <WebHeroSection
+                editorsPicks={webSections.editorsPicks}
+                mainNews={webSections.mainNews}
+                trendingNow={webSections.trendingNow}
+                onPressItem={handleWebPressItem}
+              />
+
+              <WebFeaturedPosts
+                items={webSections.featuredItems}
+                onPressItem={handleWebPressItem}
+                onPressViewAll={() => navigation.navigate('Explore')}
+              />
+
+              <WebExpressPosts
+                expressOneItems={webSections.expressOneItems}
+                expressTwoItems={webSections.expressTwoItems}
+                extraItems={webSections.extraItems}
+                activeAds={activeAds}
+                onPressItem={handleWebPressItem}
+                hasMore={hasMore}
+                isLoading={isLoading}
+                onLoadMore={loadMoreFeed}
+              />
+            </>
+          )}
+
+          <WebPortalFooter
+            onSelectCategory={handleWebSelectCategory}
+            onNavigate={(route) => navigation.navigate(route)}
+          />
+        </View>
+      </ScrollView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -322,14 +615,14 @@ const AdPlaceholderCard = () => {
         <Ionicons name="megaphone" size={16} color="white" />
       </View>
       <View style={{ flex: 1, marginLeft: 10 }}>
-        <Text style={styles.adBrandName}>Jan Samvad</Text>
+        <Text style={styles.adBrandName}>PostsApp</Text>
         <Text style={styles.adSponsoredLabel}>Sponsored</Text>
       </View>
       <Ionicons name="ellipsis-horizontal" size={18} color={colors.Slate400} />
     </View>
     <View style={styles.adBanner}>
       <LinearGradient
-        colors={['#BF3A2B', '#8E1F4F', '#E8722A']}
+        colors={[colors.PrimaryRed, colors.DeepCrimson, '#991111']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.adGradient}
@@ -504,5 +797,25 @@ const getStyles = (colors: any) => StyleSheet.create({
   adEngagement: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  webFilterBanner: {
+    maxWidth: 1280,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 20,
+    marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  webFilterText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  webFilterReset: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#D4191F',
   },
 });

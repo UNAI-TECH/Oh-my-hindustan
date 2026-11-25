@@ -82,7 +82,7 @@ export default function OTPScreen() {
           disabled={isLoading}
         >
           <LinearGradient
-            colors={['#E53935', '#FB8C00']}
+            colors={[colors.PrimaryRed, colors.DeepCrimson]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradientButton}

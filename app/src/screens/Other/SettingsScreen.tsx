@@ -32,7 +32,7 @@ export default function SettingsScreen() {
   };
 
   const displayName = userProfile?.username || userProfile?.email?.split('@')[0] || 'User';
-  const avatarUrl = userProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E53935&color=fff&size=200`;
+  const avatarUrl = userProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D4191F&color=fff&size=200`;
   const email = userProfile?.email || '';
 
   return (
@@ -87,7 +87,7 @@ export default function SettingsScreen() {
 
         <SettingsGroup title="Support">
            <SettingsItem label="Help Center" icon="help-circle-outline" onClick={() => setShowHelpDialog(true)} />
-           <SettingsItem label="About Jan Samvad" icon="information-circle-outline" onClick={() => setShowAboutDialog(true)} />
+           <SettingsItem label="About PostsApp" icon="information-circle-outline" onClick={() => setShowAboutDialog(true)} />
         </SettingsGroup>
 
         <TouchableOpacity 
@@ -109,14 +109,14 @@ export default function SettingsScreen() {
             <View style={styles.dialog}>
               <Text style={{ fontWeight: 'bold', fontSize: 18, color: colors.DarkText, marginBottom: 12 }}>Help Center</Text>
               <Text style={{ color: colors.DarkText, marginBottom: 16, lineHeight: 22 }}>
-                Need assistance with Jan Samvad? Reach out to our support team any time!
+                Need assistance with PostsApp? Reach out to our support team any time!
               </Text>
               
-              <TouchableOpacity style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.Slate100 }} onPress={() => Linking.openURL('mailto:support@ohmyhindustan.com')}>
+              <TouchableOpacity style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.Slate100 }} onPress={() => Linking.openURL('mailto:support@postsapp.com')}>
                  <Text style={{ color: colors.PrimaryRed, fontWeight: 'bold' }}>Email Support</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={{ paddingVertical: 12, marginBottom: 16 }} onPress={() => Linking.openURL('https://ohmyhindustan.com/faq')}>
+              <TouchableOpacity style={{ paddingVertical: 12, marginBottom: 16 }} onPress={() => Linking.openURL('https://postsapp.com/faq')}>
                  <Text style={{ color: colors.PrimaryRed, fontWeight: 'bold' }}>Read FAQs</Text>
               </TouchableOpacity>
 
@@ -133,9 +133,9 @@ export default function SettingsScreen() {
         <Modal transparent animationType="fade" visible={showAboutDialog}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowAboutDialog(false)}>
             <View style={styles.dialog}>
-              <Text style={{ fontWeight: 'bold', fontSize: 18, color: colors.DarkText, marginBottom: 8 }}>About Jan Samvad</Text>
+              <Text style={{ fontWeight: 'bold', fontSize: 18, color: colors.DarkText, marginBottom: 8 }}>About PostsApp</Text>
               <Text style={{ color: colors.Slate500, marginBottom: 8 }}>Version 1.0.0 (Build 20240312)</Text>
-              <Text style={{ color: colors.DarkText, marginBottom: 16 }}>Jan Samvad is a platform for citizen analysis and political discourse. Empowering voices for a better nation.</Text>
+              <Text style={{ color: colors.DarkText, marginBottom: 16 }}>PostsApp is a high-velocity news, analysis, and commentary portal empowering informed voices.</Text>
               <TouchableOpacity onPress={() => setShowAboutDialog(false)} style={{ alignSelf: 'flex-end' }}>
                 <Text style={{ color: colors.PrimaryRed, fontWeight: 'bold' }}>Close</Text>
               </TouchableOpacity>

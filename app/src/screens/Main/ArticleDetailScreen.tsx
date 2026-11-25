@@ -442,7 +442,7 @@ export default function ArticleDetailScreen() {
     try {
       const shareTitle = selectedArticle?.title || 'Check this out';
       await Share.share({
-        message: `${shareTitle}\n\nRead more on Jan Samvad:\nhttps://ohmyhindustan.com/post/${id}\n\nDownload the app: ${APP_DOWNLOAD_URL}`,
+        message: `${shareTitle}\n\nRead more on PostsApp:\nhttps://postsapp.com/post/${id}\n\nDownload the app: ${APP_DOWNLOAD_URL}`,
       });
     } catch (e) {}
   }, [selectedArticle?.title, id]);
@@ -547,7 +547,7 @@ export default function ArticleDetailScreen() {
         </View>
       </View>
 
-      <ScrollView ref={scrollViewRef} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView ref={scrollViewRef} contentContainerStyle={{ paddingBottom: 100, maxWidth: 920, width: '100%', alignSelf: 'center' }}>
         <View style={{ padding: 24 }}>
           <View style={styles.categoryPill}>
             <Text style={styles.categoryText}>{category || 'POLICY ANALYSIS'}</Text>
@@ -568,10 +568,10 @@ export default function ArticleDetailScreen() {
             </View>
           )}
           <View style={styles.authorRow}>
-            <Image source={{ uri: authorImage || `https://ui-avatars.com/api/?name=C&background=E53935&color=fff` }} style={styles.authorImage} />
+            <Image source={{ uri: authorImage || `https://ui-avatars.com/api/?name=C&background=D4191F&color=fff` }} style={styles.authorImage} />
             <TouchableOpacity style={{ flex: 1, marginLeft: 12 }} onPress={() => navigation.navigate('CreatorProfile', { authorId: postAuthorId, authorName })}>
               <Text style={styles.authorName}>{authorName || 'Anonymous'}</Text>
-              <Text style={styles.authorSubtitle}>{subtitle || 'Oh My Hindustan'}</Text>
+              <Text style={styles.authorSubtitle}>{subtitle || 'PostsApp'}</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.followBtn, isFollowing && { backgroundColor: '#F1F5F9' }]}
@@ -618,7 +618,7 @@ export default function ArticleDetailScreen() {
 
         <View style={{ padding: 24, minHeight: 100 }}>
           <RenderHtml
-            contentWidth={width - 48}
+            contentWidth={Math.min(width, 920) - 48}
             source={{ html: selectedArticle.content || selectedArticle.excerpt || "" }}
             tagsStyles={htmlTagsStyles}
             renderers={renderers}

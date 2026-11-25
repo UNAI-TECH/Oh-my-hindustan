@@ -234,7 +234,7 @@ export default function ExploreScreen() {
 const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FAFAFA', paddingTop: Platform.OS === 'android' ? 24 : 0 },
 
-  // JAN SAMVAD Header
+  // PostsApp Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -404,11 +404,11 @@ const getStyles = (colors: any) => StyleSheet.create({
     position: 'absolute',
     top: 12,
     left: 12,
-    backgroundColor: '#EF4444',
+    backgroundColor: '#D4191F',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    shadowColor: '#EF4444',
+    shadowColor: '#D4191F',
     shadowOpacity: 0.3,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
