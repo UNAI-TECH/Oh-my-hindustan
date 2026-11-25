@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, ScrollView, TouchableOpacity, Image, Share, ActivityIndicator, Platform, RefreshControl, Linking, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { useAppTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import AppBottomNavBar from '../../components/BottomNavBar';
@@ -34,6 +34,7 @@ export default function HomeFeedScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const { t } = useTranslation();
   const { feedItems, isLoading, isRefreshing, refreshFeed, loadMoreFeed, hasMore, sortBy, setSortBy } = useFeed();
   const { userProfile, isAuthenticated, logout } = useAuth();
@@ -53,6 +54,21 @@ export default function HomeFeedScreen() {
   const webScrollRef = useRef<ScrollView>(null);
   const loggedLeaderboardAdId = useRef<string | null>(null);
   const tabs = ['For you', 'Trending', 'Headlines', 'Articles', 'Videos'];
+
+  React.useEffect(() => {
+    const initCat = route.params?.initialCategory;
+    if (initCat) {
+      setWebCategory(initCat);
+      setActiveTag(null);
+      webScrollRef.current?.scrollTo({ y: 0, animated: false });
+    }
+    const initMode = route.params?.initialFeedMode;
+    if (initMode) {
+      setWebFeedMode(initMode);
+      if (initMode === 'trending') setSortBy('trending');
+      else if (initMode === 'latest') setSortBy('latest');
+    }
+  }, [route.params?.initialCategory, route.params?.initialFeedMode]);
 
   React.useEffect(() => {
     if (activeTab === 'For you' && sortBy !== 'latest') {

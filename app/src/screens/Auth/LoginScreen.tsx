@@ -8,18 +8,22 @@ import {
   KeyboardAvoidingView, 
   Platform,
   ScrollView,
-  ActivityIndicator
+  ActivityIndicator,
+  useWindowDimensions
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import PostsAppLogo from '../../components/PostsAppLogo';
 
 export default function LoginScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { login, signInWithGoogle, signInWithGoogleNative, isLoading, error, loginSuccess, isAuthenticated, needsOnboarding, clearState } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -60,11 +64,18 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, isWebDesktop && { backgroundColor: '#F5F5F7' }]}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="megaphone" size={40} color={colors.PrimaryRed} />
+        <View style={isWebDesktop ? styles.webAuthCard : { width: '100%', alignItems: 'center' }}>
+        {isWebDesktop && (
+          <TouchableOpacity style={styles.webBackHome} onPress={() => navigation.navigate('Home')}>
+            <Ionicons name="arrow-back" size={16} color="#4B5563" />
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#4B5563' }}>Back to PostsApp</Text>
+          </TouchableOpacity>
+        )}
+        <View style={{ marginBottom: 20 }}>
+          <PostsAppLogo variant="light" size="md" />
         </View>
 
         <Text style={styles.title}>Welcome to PostsApp</Text>
@@ -156,6 +167,7 @@ export default function LoginScreen() {
             <Text style={styles.devModeText}>Developer Mode — Skip Login</Text>
           </TouchableOpacity>
         )}
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -328,5 +340,22 @@ const getStyles = (colors: any) => StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
     fontWeight: '500',
+  },
+  webAuthCard: {
+    width: '100%',
+    maxWidth: 480,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 36,
+    alignItems: 'center',
+  },
+  webBackHome: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 18,
   },
 });

@@ -1,12 +1,15 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import { CreatorApi } from '../../api/services';
+import WebStudioShell from '../../components/web/WebStudioShell';
 
 export default function CreatorAnalyticsScreen() {
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
@@ -50,22 +53,12 @@ export default function CreatorAnalyticsScreen() {
     return acc;
   }, {});
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Analytics</Text>
-        <View style={{ width: 36 }} />
-      </View>
-
-      {isLoading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+  const analyticsBody = isLoading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60 }}>
           <ActivityIndicator size="large" color={colors.PrimaryRed} />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
+        <>
           {/* Period Selector */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
             {['7d', '30d', '90d', 'All Time'].map((label, i) => (
@@ -137,6 +130,34 @@ export default function CreatorAnalyticsScreen() {
               ))
             )}
           </View>
+        </>
+      );
+
+  if (isWebDesktop) {
+    return (
+      <WebStudioShell activeRoute="CreatorAnalytics" title="Analytics">
+        {analyticsBody}
+      </WebStudioShell>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
+          <Ionicons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Analytics</Text>
+        <View style={{ width: 36 }} />
+      </View>
+
+      {isLoading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.PrimaryRed} />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
+          {analyticsBody}
         </ScrollView>
       )}
     </SafeAreaView>

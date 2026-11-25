@@ -9,7 +9,8 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Alert
+  Alert,
+  useWindowDimensions
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,11 +18,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import CustomModal from '../../components/CustomModal';
+import PostsAppLogo from '../../components/PostsAppLogo';
 
 export default function SignUpScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { register, signInWithGoogle, isLoading, error, isAuthenticated, needsOnboarding, clearState } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -81,11 +85,18 @@ export default function SignUpScreen() {
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, isWebDesktop && { backgroundColor: '#F5F5F7' }]}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="people" size={40} color={colors.PrimaryRed} />
+        <View style={isWebDesktop ? styles.webAuthCard : { width: '100%', alignItems: 'center' }}>
+        {isWebDesktop && (
+          <TouchableOpacity style={styles.webBackHome} onPress={() => navigation.navigate('Home')}>
+            <Ionicons name="arrow-back" size={16} color="#4B5563" />
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#4B5563' }}>Back to PostsApp</Text>
+          </TouchableOpacity>
+        )}
+        <View style={{ marginBottom: 20 }}>
+          <PostsAppLogo variant="light" size="md" />
         </View>
 
         <Text style={styles.title}>Join PostsApp</Text>
@@ -207,6 +218,7 @@ export default function SignUpScreen() {
           <TouchableOpacity onPress={() => { clearState(); navigation.goBack(); }}>
             <Text style={styles.loginText}>Log In</Text>
           </TouchableOpacity>
+        </View>
         </View>
       </ScrollView>
       <CustomModal 
@@ -369,5 +381,22 @@ const getStyles = (colors: any) => StyleSheet.create({
     color: colors.PrimaryRed,
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  webAuthCard: {
+    width: '100%',
+    maxWidth: 480,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 36,
+    alignItems: 'center',
+  },
+  webBackHome: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 18,
   },
 });

@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +21,8 @@ export default function UsernameSetupScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { checkUsernameAvailability, updateOnboardingProfile, isLoading, userProfile } = useAuth();
   const [username, setUsername] = useState('');
   const [isChecking, setIsChecking] = useState(false);
@@ -103,9 +106,10 @@ export default function UsernameSetupScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, isWebDesktop && { backgroundColor: '#F5F5F7' }]}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView contentContainerStyle={[styles.scrollContainer, isWebDesktop && styles.webScrollContainer]}>
+        <View style={isWebDesktop ? styles.webCard : { flex: 1 }}>
         <View style={styles.stepIndicator}>
           <View style={[styles.stepDot, styles.stepDotActive]} />
           <View style={styles.stepLine} />
@@ -194,6 +198,7 @@ export default function UsernameSetupScreen() {
             )}
           </LinearGradient>
         </TouchableOpacity>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -237,7 +242,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 20,
-    backgroundColor: 'rgba(229, 57, 53, 0.1)',
+    backgroundColor: colors.PrimaryRedAlpha10,
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
@@ -352,5 +357,19 @@ const getStyles = (colors: any) => StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '800',
     fontSize: 16,
+  },
+  webScrollContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  webCard: {
+    width: '100%',
+    maxWidth: 520,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 36,
   },
 });

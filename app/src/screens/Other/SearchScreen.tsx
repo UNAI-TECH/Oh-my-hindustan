@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, FlatList, Image, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, FlatList, Image, Platform, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
+import WebPageShell from '../../components/web/WebPageShell';
 import { FeedItemType, FeedItem } from '../../types';
 import { useFeed } from '../../context/FeedContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -20,8 +21,17 @@ export default function SearchScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { feedItems } = useFeed();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(route.params?.initialQuery || '');
+
+  useEffect(() => {
+    if (typeof route.params?.initialQuery === 'string') {
+      setSearchQuery(route.params.initialQuery);
+    }
+  }, [route.params?.initialQuery]);
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [creators, setCreators] = useState<CreatorResult[]>([]);
   const [searchingCreators, setSearchingCreators] = useState(false);
@@ -75,6 +85,138 @@ export default function SearchScreen() {
 
   const showCreators = selectedFilter === 'All' || selectedFilter === 'Creators';
 
+  if (isWebDesktop) {
+    return (
+      <WebPageShell
+        maxWidth={1280}
+        initialSearch={searchQuery}
+        onSearchSubmitOverride={(q) => setSearchQuery(q)}
+      >
+        <View style={styles.webSearchCard}>
+          <View style={styles.webSearchRow}>
+            <Ionicons name="search" size={20} color={colors.PrimaryRed} />
+            <TextInput
+              style={styles.webSearchInput}
+              placeholder="Search creators, news, blogs, videos..."
+              placeholderTextColor="#9CA3AF"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+            {filters.map(filter => (
+              <TouchableOpacity
+                key={filter}
+                onPress={() => setSelectedFilter(filter)}
+                style={[styles.webFilterChip, selectedFilter === filter && styles.webFilterChipActive]}
+              >
+                <Text style={[styles.webFilterText, selectedFilter === filter && styles.webFilterTextActive]}>
+                  {filter}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {showCreators && creators.length > 0 && (
+          <View style={{ marginBottom: 28 }}>
+            <View style={styles.webSectionRow}>
+              <View style={styles.webDash} />
+              <Text style={styles.webSectionTitle}>Creators</Text>
+            </View>
+            <View style={styles.webResultsGrid}>
+              {creators.map((creator: any, idx) => {
+                const nameDisplay = creator.channel_name || creator.username || 'creator';
+                const avatarUri = creator.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nameDisplay)}&background=D4191F&color=fff&size=200`;
+                return (
+                  <TouchableOpacity
+                    key={`creator-web-${creator.id}-${idx}`}
+                    style={[styles.creatorCard, styles.webResultHalf]}
+                    onPress={() => navigation.navigate('CreatorProfile', { authorId: creator.id, authorName: nameDisplay })}
+                  >
+                    <Image source={{ uri: avatarUri }} style={styles.creatorAvatar} />
+                    <View style={{ flex: 1, marginLeft: 14 }}>
+                      <Text style={styles.creatorName}>{nameDisplay}</Text>
+                      {creator.username && (
+                        <Text style={{ fontSize: 12, color: colors.Slate400, marginTop: 2 }}>@{creator.username}</Text>
+                      )}
+                      <Text style={styles.creatorBio} numberOfLines={1}>{creator.bio || 'Content Creator'}</Text>
+                    </View>
+                    <View style={styles.creatorBadge}>
+                      <Ionicons name="person" size={12} color={colors.PrimaryRed} />
+                      <Text style={{ fontSize: 11, color: colors.PrimaryRed, fontWeight: '600', marginLeft: 4 }}>Creator</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {showCreators && searchingCreators && searchQuery.length >= 2 && (
+          <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+            <ActivityIndicator size="small" color={colors.PrimaryRed} />
+          </View>
+        )}
+
+        {selectedFilter !== 'Creators' && filteredPosts.length > 0 && (
+          <View>
+            <View style={styles.webSectionRow}>
+              <View style={styles.webDash} />
+              <Text style={styles.webSectionTitle}>Stories ({filteredPosts.length})</Text>
+            </View>
+            <View style={styles.webResultsGrid}>
+              {filteredPosts.map((item, idx) => (
+                <TouchableOpacity
+                  key={`post-web-${item.id}-${idx}`}
+                  style={[styles.postCard, styles.webResultHalf, { marginBottom: 0, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 6, shadowOpacity: 0.03 }]}
+                  onPress={() => navigation.navigate('ArticleDetail', { id: item.id })}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16 }}>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.categoryPill}>
+                        <Text style={styles.categoryText}>{item.category || 'NEWS'}</Text>
+                      </View>
+                      <Text style={styles.titleText} numberOfLines={3}>{item.title}</Text>
+                      {item.authorName && (
+                        <Text style={{ fontSize: 12, color: colors.Slate400, marginTop: 6 }}>by {item.authorName}</Text>
+                      )}
+                    </View>
+                    {item.thumbnail && (
+                      <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {!searchingCreators && creators.length === 0 && filteredPosts.length === 0 && searchQuery.length > 0 && (
+          <View style={styles.webEmptyBox}>
+            <Ionicons name="search-outline" size={56} color={colors.Slate400} style={{ opacity: 0.4 }} />
+            <Text style={{ fontSize: 18, color: '#111827', marginTop: 14, fontWeight: '700' }}>No results found</Text>
+            <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 4 }}>Try a different search term</Text>
+          </View>
+        )}
+
+        {searchQuery.length === 0 && filteredPosts.length === 0 && (
+          <View style={styles.webEmptyBox}>
+            <Ionicons name="search" size={48} color={colors.Slate400} style={{ opacity: 0.3 }} />
+            <Text style={{ fontSize: 16, color: '#6B7280', marginTop: 12 }}>Search for creators, news, blogs...</Text>
+          </View>
+        )}
+      </WebPageShell>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -113,14 +255,14 @@ export default function SearchScreen() {
         </ScrollView>
       </View>
 
-      <ScrollView style={{ flex: 1, backgroundColor: '#FFF9F2' }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+      <ScrollView style={{ flex: 1, backgroundColor: '#F5F5F7' }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
         {/* Creator Results */}
         {showCreators && creators.length > 0 && (
           <View style={{ marginBottom: 20 }}>
             <Text style={styles.sectionTitle}>Creators</Text>
             {creators.map((creator: any, idx) => {
               const nameDisplay = creator.channel_name || creator.username || 'creator';
-              const avatarUri = creator.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nameDisplay)}&background=E53935&color=fff&size=200`;
+              const avatarUri = creator.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(nameDisplay)}&background=D4191F&color=fff&size=200`;
               return (
                 <TouchableOpacity 
                   key={`creator-${creator.id}-${idx}`}
@@ -226,4 +368,84 @@ const getStyles = (colors: any) => StyleSheet.create({
   titleText: { fontWeight: 'bold', fontSize: 16 },
   thumbnail: { width: 80, height: 80, borderRadius: 8, marginLeft: 16 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 80 },
+  webSearchCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 18,
+    marginBottom: 24,
+  },
+  webSearchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    height: 46,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  webSearchInput: {
+    flex: 1,
+    marginHorizontal: 10,
+    fontSize: 15,
+    color: '#111827',
+    outlineStyle: 'none' as any,
+  },
+  webFilterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 4,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  webFilterChipActive: {
+    backgroundColor: '#D4191F',
+    borderColor: '#D4191F',
+  },
+  webFilterText: {
+    color: '#374151',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  webFilterTextActive: {
+    color: '#FFFFFF',
+  },
+  webSectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+  webDash: {
+    width: 14,
+    height: 3,
+    backgroundColor: '#D4191F',
+  },
+  webSectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  webResultsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  webResultHalf: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    minWidth: 280,
+    marginBottom: 0,
+  },
+  webEmptyBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 64,
+    alignItems: 'center',
+  },
 });

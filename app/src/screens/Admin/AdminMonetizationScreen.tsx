@@ -1,26 +1,20 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
+import WebStudioShell from '../../components/web/WebStudioShell';
 
 export default function AdminMonetizationScreen() {
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Platform Economics</Text>
-        <View style={{ width: 36 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
+  const monetizationBody = (
+    <>
         <View style={styles.card}>
           <Text style={{ fontWeight: 'bold', fontSize: 16, alignSelf: 'flex-start' }}>Contribution Distribution</Text>
           
@@ -51,6 +45,29 @@ export default function AdminMonetizationScreen() {
             <Text style={{ color: 'white', fontWeight: 'bold' }}>Create Initiative</Text>
           </TouchableOpacity>
         </View>
+    </>
+  );
+
+  if (isWebDesktop) {
+    return (
+      <WebStudioShell activeRoute="AdminMonetization" title="Platform Economics" mode="admin" maxWidth={900}>
+        {monetizationBody}
+      </WebStudioShell>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
+          <Ionicons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Platform Economics</Text>
+        <View style={{ width: 36 }} />
+      </View>
+
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
+        {monetizationBody}
       </ScrollView>
     </SafeAreaView>
   );

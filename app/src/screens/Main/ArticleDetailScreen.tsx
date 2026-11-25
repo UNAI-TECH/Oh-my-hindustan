@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Share, ActivityIndicator, Platform, Modal, TextInput, FlatList, KeyboardAvoidingView, Alert, Dimensions, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Share, ActivityIndicator, Platform, Modal, TextInput, FlatList, KeyboardAvoidingView, Alert, Keyboard, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../context/ThemeContext';
@@ -10,15 +10,13 @@ import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { generateUUID } from '../../utils/uuid';
 import RenderHtml, { defaultHTMLElementModels, HTMLContentModel } from 'react-native-render-html';
-import { useWindowDimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
 import CustomModal from '../../components/CustomModal';
 import { useInteraction } from '../../context/InteractionContext';
 import { AppApi } from '../../api/services';
 import AdBanner from '../../components/AdBanner';
 import AdEnabledVideoPlayer from '../../components/AdEnabledVideoPlayer';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
+import WebPageShell from '../../components/web/WebPageShell';
 
 const customHTMLElementModels = {
   font: defaultHTMLElementModels.span.extend({
@@ -40,6 +38,7 @@ export default function ArticleDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { id } = route.params || {};
   const { userProfile } = useAuth();
   
@@ -530,29 +529,15 @@ export default function ArticleDetailScreen() {
 
   const { title, category, authorName, authorImage, subtitle, thumbnail, type, content, excerpt, quote, authorNameCustom, authorPosition, hashtags } = selectedArticle;
   const isFollowing = postAuthorId ? !!follows[postAuthorId] : false;
+  const relatedCardStyle = isWebDesktop ? styles.relatedCardWeb : { width: (width - 48) / 2 };
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-        <View style={{ flexDirection: 'row' }}>
-          <TouchableOpacity onPress={onShare} style={{ padding: 8 }}>
-             <Ionicons name="share-social-outline" size={24} color="black" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleSave} style={{ padding: 8 }}>
-             <Ionicons name={isSaved ? "bookmark" : "bookmark-outline"} size={24} color={isSaved ? colors.PrimaryRed : "black"} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView ref={scrollViewRef} contentContainerStyle={{ paddingBottom: 100, maxWidth: 920, width: '100%', alignSelf: 'center' }}>
-        <View style={{ padding: 24 }}>
+  const articleBodyContent = (
+    <>
+      <View style={isWebDesktop ? { padding: 32 } : { padding: 24 }}>
           <View style={styles.categoryPill}>
             <Text style={styles.categoryText}>{category || 'POLICY ANALYSIS'}</Text>
           </View>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={[styles.title, isWebDesktop && { fontSize: 34, lineHeight: 42 }]}>{title}</Text>
           {(authorNameCustom || authorPosition || selectedArticle.author_name || selectedArticle.author_position) && (
             <View style={{ marginBottom: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
               {(authorNameCustom || selectedArticle.author_name) && (
@@ -616,9 +601,9 @@ export default function ArticleDetailScreen() {
 
         {/* Mid-Roll Ad Overlay is handled by AdEnabledVideoPlayer */}
 
-        <View style={{ padding: 24, minHeight: 100 }}>
+        <View style={{ padding: isWebDesktop ? 32 : 24, minHeight: 100 }}>
           <RenderHtml
-            contentWidth={Math.min(width, 920) - 48}
+            contentWidth={Math.min(width, 920) - (isWebDesktop ? 64 : 48)}
             source={{ html: selectedArticle.content || selectedArticle.excerpt || "" }}
             tagsStyles={htmlTagsStyles}
             renderers={renderers}
@@ -630,7 +615,7 @@ export default function ArticleDetailScreen() {
         </View>
         
         {((hashtags && hashtags.length > 0) || (selectedArticle.hashtags && selectedArticle.hashtags.length > 0)) && (
-          <View style={{ paddingHorizontal: 24, paddingBottom: 32, marginTop: -8 }}>
+          <View style={{ paddingHorizontal: isWebDesktop ? 32 : 24, paddingBottom: 32, marginTop: -8 }}>
             <View style={{ height: 1, backgroundColor: '#F1F5F9', marginBottom: 16 }} />
             <Text style={{ color: colors.Slate400, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
               Post Hashtags
@@ -652,9 +637,9 @@ export default function ArticleDetailScreen() {
 
         {/* Related Posts Section */}
         {relatedPosts.length > 0 && (
-          <View style={styles.relatedSection}>
+          <View style={[styles.relatedSection, isWebDesktop && { paddingHorizontal: 32 }]}>
             <Text style={styles.relatedTitle}>Related Posts</Text>
-            <View style={styles.relatedGrid}>
+            <View style={[styles.relatedGrid, isWebDesktop && { gap: 16, justifyContent: 'flex-start' }]}>
               {relatedPosts.map((post) => {
                 const authorObj = Array.isArray(post.author) ? post.author[0] : post.author;
                 const postAuthorName = authorObj?.username || 'Creator';
@@ -676,7 +661,7 @@ export default function ArticleDetailScreen() {
                 return (
                   <TouchableOpacity
                     key={post.id}
-                    style={styles.relatedCard}
+                    style={[styles.relatedCard, relatedCardStyle]}
                     activeOpacity={0.8}
                     onPress={() => navigation.push('ArticleDetail', { id: post.id })}
                   >
@@ -703,11 +688,12 @@ export default function ArticleDetailScreen() {
         {loadingRelated && (
           <ActivityIndicator size="small" color={colors.PrimaryRed} style={{ marginVertical: 24 }} />
         )}
-      </ScrollView>
+    </>
+  );
 
-      {/* Floating Action Bar */}
+  const floatingActionBar = (
       <View style={styles.fabContainer}>
-        <View style={styles.fab}>
+        <View style={[styles.fab, isWebDesktop && { maxWidth: 520 }]}>
           <View style={styles.voteControls}>
             <TouchableOpacity onPress={() => handleVote(1)}>
               <Ionicons name="arrow-up" size={20} color={myVote === 1 ? colors.PrimaryRed : colors.Slate500} />
@@ -747,12 +733,15 @@ export default function ArticleDetailScreen() {
           </TouchableOpacity>
         </View>
       </View>
+  );
 
+  const modalsBlock = (
+    <>
       {/* Comments Modal */}
       <Modal visible={showComments} animationType="slide" transparent>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <TouchableOpacity style={[styles.modalOverlay, keyboardOffset > 0 && { paddingBottom: keyboardOffset }]} activeOpacity={1} onPress={() => setShowComments(false)}>
-            <View style={styles.commentsSheet} onStartShouldSetResponder={() => true}>
+            <View style={[styles.commentsSheet, isWebDesktop && styles.webCommentsSheet]} onStartShouldSetResponder={() => true}>
               <View style={styles.sheetHandle} />
               <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 16 }}>Comments ({commentsCount})</Text>
               
@@ -771,7 +760,7 @@ export default function ArticleDetailScreen() {
                     const renderComment = (c: any, isReply = false) => (
                       <View key={c.id} style={[styles.commentItem, isReply && { marginLeft: 32, borderBottomWidth: 0, paddingVertical: 8 }]}>
                         <Image
-                          source={{ uri: c.User?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.User?.username || 'U')}&background=E53935&color=fff` }}
+                          source={{ uri: c.User?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.User?.username || 'U')}&background=D4191F&color=fff` }}
                           style={styles.commentAvatar}
                         />
                         <View style={{ flex: 1, marginLeft: 10 }}>
@@ -791,7 +780,7 @@ export default function ArticleDetailScreen() {
                         {c.creatorLiked && (
                           <View style={{ position: 'absolute', right: 0, bottom: 4 }}>
                             <Ionicons name="heart" size={16} color="red" />
-                            <Image source={{ uri: selectedArticle?.authorImage || `https://ui-avatars.com/api/?name=C&background=E53935&color=fff` }} style={{ width: 12, height: 12, borderRadius: 6, position: 'absolute', bottom: -2, right: -4, borderWidth: 1, borderColor: 'white' }} />
+                            <Image source={{ uri: selectedArticle?.authorImage || `https://ui-avatars.com/api/?name=C&background=D4191F&color=fff` }} style={{ width: 12, height: 12, borderRadius: 6, position: 'absolute', bottom: -2, right: -4, borderWidth: 1, borderColor: 'white' }} />
                           </View>
                         )}
                       </View>
@@ -841,6 +830,65 @@ export default function ArticleDetailScreen() {
         isError={modalConfig.isError} 
         onPrimaryPress={() => setModalConfig(prev => ({ ...prev, visible: false }))} 
       />
+    </>
+  );
+
+  if (isWebDesktop) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#F5F5F7', position: 'relative' }}>
+        <WebPageShell maxWidth={920}>
+          <View style={styles.webTopBar}>
+            <TouchableOpacity style={styles.webBackBtn} onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={16} color="#111827" />
+              <Text style={styles.webBackText}>Back to Stories</Text>
+            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity style={styles.webActionBtn} onPress={onShare}>
+                <Ionicons name="share-social-outline" size={16} color="#374151" />
+                <Text style={styles.webActionText}>Share</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.webActionBtn} onPress={handleSave}>
+                <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={16} color={isSaved ? colors.PrimaryRed : '#374151'} />
+                <Text style={[styles.webActionText, isSaved && { color: colors.PrimaryRed }]}>
+                  {isSaved ? 'Saved' : 'Save'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.webArticleCard}>
+            {articleBodyContent}
+          </View>
+          <View style={{ height: 72 }} />
+        </WebPageShell>
+        {floatingActionBar}
+        {modalsBlock}
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
+          <Ionicons name="arrow-back" size={24} color={colors.DarkText} />
+        </TouchableOpacity>
+        <View style={{ flexDirection: 'row' }}>
+          <TouchableOpacity onPress={onShare} style={{ padding: 8 }}>
+             <Ionicons name="share-social-outline" size={24} color={colors.DarkText} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleSave} style={{ padding: 8 }}>
+             <Ionicons name={isSaved ? "bookmark" : "bookmark-outline"} size={24} color={isSaved ? colors.PrimaryRed : colors.DarkText} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <ScrollView ref={scrollViewRef} contentContainerStyle={{ paddingBottom: 100 }}>
+        {articleBodyContent}
+      </ScrollView>
+
+      {floatingActionBar}
+      {modalsBlock}
     </SafeAreaView>
   );
 }
@@ -891,7 +939,6 @@ const getStyles = (colors: any) => StyleSheet.create({
   relatedTitle: { fontSize: 20, fontWeight: '800', color: colors.DarkText, marginBottom: 16 },
   relatedGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   relatedCard: {
-    width: (SCREEN_WIDTH - 48) / 2,
     backgroundColor: 'white',
     borderRadius: 12,
     marginBottom: 16,
@@ -901,6 +948,65 @@ const getStyles = (colors: any) => StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
     overflow: 'hidden',
+  },
+  relatedCardWeb: {
+    flexBasis: '31%',
+    flexGrow: 1,
+    minWidth: 220,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 6,
+    shadowOpacity: 0.03,
+  },
+  webTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  webBackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  webBackText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  webActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  webActionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  webArticleCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+  },
+  webCommentsSheet: {
+    maxWidth: 560,
+    width: '100%',
+    alignSelf: 'center',
   },
   relatedThumbnail: { width: '100%', height: 100, backgroundColor: '#F1F5F9' },
   relatedCardContent: { padding: 10 },

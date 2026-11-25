@@ -6,8 +6,8 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
-  Dimensions,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -35,8 +35,11 @@ const TOPICS = [
 ];
 
 export default function TopicSelectionScreen() {
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
+  const cardWidth = isWebDesktop ? undefined : (width - 48 - 12) / 2;
   const { colors } = useAppTheme();
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, cardWidth);
   const navigation = useNavigation<any>();
   const { updateOnboardingProfile, isLoading } = useAuth();
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -68,8 +71,9 @@ export default function TopicSelectionScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+    <View style={[styles.container, isWebDesktop && { backgroundColor: '#F5F5F7' }]}>
+      <ScrollView contentContainerStyle={[styles.scrollContainer, isWebDesktop && styles.webScroll]}>
+        <View style={isWebDesktop ? styles.webCard : undefined}>
         <View style={styles.stepIndicator}>
           <View style={[styles.stepDot, styles.stepDotCompleted]} />
           <View style={[styles.stepLine, styles.stepLineCompleted]} />
@@ -93,7 +97,7 @@ export default function TopicSelectionScreen() {
           </Text>
         </View>
 
-        <View style={styles.grid}>
+        <View style={[styles.grid, isWebDesktop && styles.webGrid]}>
           {TOPICS.map((topic) => {
             const isSelected = selectedTopics.includes(topic.name);
             const isMaxReached = selectedTopics.length >= 3 && !isSelected;
@@ -102,6 +106,7 @@ export default function TopicSelectionScreen() {
                 key={topic.name}
                 style={[
                   styles.topicCard,
+                  isWebDesktop && styles.webTopicCard,
                   isSelected && styles.topicCardActive,
                   isMaxReached && styles.topicCardDimmed,
                 ]}
@@ -134,9 +139,10 @@ export default function TopicSelectionScreen() {
             );
           })}
         </View>
+        </View>
       </ScrollView>
 
-      <View style={styles.bottomContainer}>
+      <View style={[styles.bottomContainer, isWebDesktop && styles.webBottom]}>
         <TouchableOpacity
           style={[styles.buttonContainer, (!isEnabled || isLoading) && styles.buttonDisabled]}
           onPress={handleFinish}
@@ -162,9 +168,7 @@ export default function TopicSelectionScreen() {
   );
 }
 
-const cardWidth = (Dimensions.get('window').width - 48 - 12) / 2;
-
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, cardWidth?: number) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
@@ -211,7 +215,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 20,
-    backgroundColor: 'rgba(229, 57, 53, 0.1)',
+    backgroundColor: colors.PrimaryRedAlpha10,
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
@@ -263,7 +267,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   topicCardActive: {
     borderColor: colors.PrimaryRed,
-    backgroundColor: 'rgba(229, 57, 53, 0.05)',
+    backgroundColor: colors.PrimaryRedAlpha5,
     borderWidth: 2,
   },
   topicCardDimmed: {
@@ -279,7 +283,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     marginBottom: 10,
   },
   topicIconBgActive: {
-    backgroundColor: 'rgba(229, 57, 53, 0.12)',
+    backgroundColor: colors.PrimaryRedAlpha10,
   },
   topicText: {
     fontSize: 13,
@@ -330,5 +334,34 @@ const getStyles = (colors: any) => StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '800',
     fontSize: 16,
+  },
+  webScroll: {
+    paddingTop: 36,
+    alignItems: 'center',
+  },
+  webCard: {
+    width: '100%',
+    maxWidth: 760,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 32,
+  },
+  webGrid: {
+    justifyContent: 'flex-start',
+  },
+  webTopicCard: {
+    flexBasis: '23%',
+    flexGrow: 1,
+    minWidth: 150,
+  },
+  webBottom: {
+    maxWidth: 760,
+    alignSelf: 'center',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    bottom: 16,
   },
 });

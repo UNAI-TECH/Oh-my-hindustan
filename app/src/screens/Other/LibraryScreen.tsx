@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import AppBottomNavBar from '../../components/BottomNavBar';
 import MainHeader from '../../components/MainHeader';
+import WebPageShell from '../../components/web/WebPageShell';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -29,6 +30,7 @@ export default function LibraryScreen() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const isTablet = width >= 768;
   const numColumns = isTablet ? 2 : 1;
 
@@ -188,6 +190,133 @@ export default function LibraryScreen() {
       </ScrollView>
     </View>
   );
+
+  if (isWebDesktop) {
+    return (
+      <WebPageShell maxWidth={1280}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ width: 14, height: 3, backgroundColor: '#D4191F' }} />
+            <Text style={{ fontSize: 22, fontWeight: '800', color: '#111827' }}>Your Library</Text>
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            {TAB_CONFIG.map(tab => {
+              const isActive = activeTab === tab.key;
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  onPress={() => setActiveTab(tab.key)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    paddingVertical: 10,
+                    paddingHorizontal: 16,
+                    backgroundColor: isActive ? tab.bg : '#FFFFFF',
+                    borderRadius: 6,
+                    borderWidth: 1,
+                    borderColor: isActive ? tab.color : '#E5E7EB',
+                  }}
+                >
+                  <Ionicons name={tab.icon as any} size={16} color={isActive ? tab.color : '#6B7280'} />
+                  <Text style={{ fontSize: 13, fontWeight: isActive ? '700' : '600', color: isActive ? tab.color : '#374151' }}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: '#111827' }}>{activeTabConfig.label}</Text>
+            <View style={{ backgroundColor: '#E5E7EB', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#374151' }}>{filteredItems.length}</Text>
+            </View>
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            {(['All', 'Blogs', 'Posts', 'Videos', 'News'] as FilterType[]).map(f => (
+              <TouchableOpacity
+                key={f}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 7,
+                  borderRadius: 4,
+                  backgroundColor: activeFilter === f ? '#181818' : '#FFFFFF',
+                  borderWidth: 1,
+                  borderColor: activeFilter === f ? '#181818' : '#E5E7EB',
+                }}
+                onPress={() => setActiveFilter(f)}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '700', color: activeFilter === f ? '#FFFFFF' : '#374151' }}>{f}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {loading ? (
+          <View style={{ paddingVertical: 80, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={activeTabConfig.color} />
+          </View>
+        ) : filteredItems.length === 0 ? (
+          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 6, borderWidth: 1, borderColor: '#E5E7EB', padding: 64, alignItems: 'center' }}>
+            <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: activeTabConfig.bg, justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+              <Ionicons name={activeTabConfig.icon as any} size={32} color={activeTabConfig.color} />
+            </View>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 6 }}>
+              No {activeTabConfig.label.toLowerCase()} yet
+            </Text>
+            <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center' }}>
+              {activeTab === 'saved' ? 'Posts you save will appear here' :
+               activeTab === 'liked' ? 'Posts you like will appear here' :
+               'Your comments will appear here'}
+            </Text>
+          </View>
+        ) : (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
+            {filteredItems.map((item, i) => (
+              <TouchableOpacity
+                key={`${item.id || 'item'}-${activeTab}-${i}`}
+                style={{
+                  flexBasis: width >= 1024 ? '31%' : '47%',
+                  flexGrow: 1,
+                  minWidth: 260,
+                  flexDirection: 'row',
+                  backgroundColor: '#FFFFFF',
+                  padding: 14,
+                  borderRadius: 6,
+                  borderWidth: 1,
+                  borderColor: '#E5E7EB',
+                }}
+                onPress={() => navigation.navigate('ArticleDetail', { id: item.id })}
+                activeOpacity={0.75}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#D4191F', fontSize: 10, fontWeight: '800', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 6 }}>
+                    {item.category || 'General'}
+                  </Text>
+                  <Text style={{ fontWeight: '700', fontSize: 15, color: '#111827', lineHeight: 21 }} numberOfLines={2}>
+                    {item.title || 'Untitled'}
+                  </Text>
+                  {item.commentText && (
+                    <Text style={{ color: '#6B7280', fontSize: 12, marginTop: 6, fontStyle: 'italic' }} numberOfLines={2}>
+                      "{item.commentText}"
+                    </Text>
+                  )}
+                </View>
+                {item.thumbnail && (
+                  <Image source={{ uri: item.thumbnail }} style={{ width: 80, height: 64, borderRadius: 4, marginLeft: 12 }} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </WebPageShell>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FAFAFA', paddingTop: Platform.OS === 'android' ? 24 : 0 }}>

@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Platform, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Platform, Modal, Alert, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import { useNotifications } from '../../context/NotificationContext';
 import CustomModal from '../../components/CustomModal';
+import WebPageShell from '../../components/web/WebPageShell';
 
 export default function NotificationScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { 
     notifications, isLoading, 
     markAsRead, markAllAsRead, deleteNotifications, 
@@ -77,6 +80,119 @@ export default function NotificationScreen() {
     setNotificationsEnabled(!notificationsEnabled);
     setExpandedMenu(false);
   };
+
+  if (isWebDesktop) {
+    return (
+      <WebPageShell maxWidth={860} refreshing={isLoading} onRefresh={fetchNotifications}>
+        <View style={styles.webTopRow}>
+          <View style={styles.webHeadingRow}>
+            <View style={styles.webDash} />
+            <Text style={styles.webTitle}>
+              {isSelectionMode ? `${selectedIds.length} Selected` : 'Notifications'}
+            </Text>
+          </View>
+
+          <View style={styles.webActionsRow}>
+            {isSelectionMode ? (
+              <>
+                <TouchableOpacity
+                  style={styles.webPillBtn}
+                  onPress={() => {
+                    if (selectedIds.length === notifications.length) setSelectedIds([]);
+                    else setSelectedIds(notifications.map(n => n.id));
+                  }}
+                >
+                  <Text style={styles.webPillText}>
+                    {selectedIds.length === notifications.length && notifications.length > 0 ? 'Deselect All' : 'Select All'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.webPillBtn, { borderColor: colors.PrimaryRed }]} onPress={handleDelete}>
+                  <Ionicons name="trash-outline" size={14} color={colors.PrimaryRed} />
+                  <Text style={[styles.webPillText, { color: colors.PrimaryRed }]}>Delete</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.webPillBtn} onPress={() => { setIsSelectionMode(false); setSelectedIds([]); }}>
+                  <Text style={styles.webPillText}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity style={styles.webPillBtn} onPress={() => setIsSelectionMode(true)}>
+                  <Text style={styles.webPillText}>Select</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.webPillBtn} onPress={handleMarkAllAsRead}>
+                  <Text style={styles.webPillText}>Mark all read</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.webPillBtn} onPress={handleToggleNotifications}>
+                  <Text style={[styles.webPillText, { color: notificationsEnabled ? colors.PrimaryRed : '#16A34A' }]}>
+                    {notificationsEnabled ? 'Pause Alerts' : 'Resume Alerts'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+
+        {!notificationsEnabled ? (
+          <View style={styles.webEmptyBox}>
+            <Ionicons name="notifications-off-outline" size={48} color={colors.Slate400} />
+            <Text style={{ color: '#111827', fontSize: 16, fontWeight: '700', marginTop: 12 }}>Notifications are paused</Text>
+            <Text style={{ color: '#6B7280', fontSize: 13, marginTop: 4 }}>Click Resume Alerts above to turn them back on</Text>
+          </View>
+        ) : notifications.length === 0 && !isLoading ? (
+          <View style={styles.webEmptyBox}>
+            <Ionicons name="notifications-outline" size={48} color={colors.Slate400} />
+            <Text style={{ color: '#111827', fontSize: 16, fontWeight: '700', marginTop: 12 }}>You're all caught up!</Text>
+            <Text style={{ color: '#6B7280', fontSize: 13, marginTop: 4 }}>No new notifications</Text>
+          </View>
+        ) : (
+          <View style={{ gap: 12 }}>
+            {notifications.map((item, index) => {
+              const isSelected = selectedIds.includes(item.id);
+              const isRead = item.isRead;
+              return (
+                <TouchableOpacity
+                  key={`${item.id}-${index}`}
+                  style={[
+                    styles.card,
+                    { borderRadius: 6, borderColor: '#E5E7EB' },
+                    isSelected ? { backgroundColor: colors.PrimaryRedAlpha10, borderColor: colors.PrimaryRed } :
+                    !isRead ? { backgroundColor: '#FEF2F2', borderColor: colors.PrimaryRedAlpha20 } : null,
+                  ]}
+                  onPress={() => handleNotificationPress(item)}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }}>
+                    {isSelectionMode && (
+                      <View style={[styles.checkbox, isSelected && { backgroundColor: colors.PrimaryRed, borderColor: colors.PrimaryRed }]} />
+                    )}
+                    <Image source={{ uri: item.imageUrl }} style={[styles.avatar, !isRead && { borderColor: colors.PrimaryRed, borderWidth: 2 }]} />
+                    <View style={{ flex: 1, marginLeft: 16 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <Text style={{ fontWeight: 'bold', fontSize: 14, flex: 1, color: '#111827' }} numberOfLines={1}>{item.title}</Text>
+                        <Text style={{ fontSize: 11, color: !isRead ? colors.PrimaryRed : colors.Slate500, fontWeight: !isRead ? '700' : '400', marginLeft: 8 }}>{item.time}</Text>
+                      </View>
+                      <Text style={{ fontSize: 13, color: colors.Slate500, marginTop: 4 }} numberOfLines={2}>{item.subtitle}</Text>
+                    </View>
+                    {!isRead && !isSelectionMode && <View style={styles.unreadDot} />}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        <CustomModal
+          visible={modalConfig.visible}
+          title={modalConfig.title}
+          message={modalConfig.message}
+          isError={modalConfig.isError}
+          primaryButtonText={modalConfig.primaryButtonText || 'OK'}
+          secondaryButtonText={modalConfig.secondaryButtonText}
+          onPrimaryPress={modalConfig.onPrimaryPress || (() => setModalConfig(prev => ({ ...prev, visible: false })))}
+          onSecondaryPress={modalConfig.onSecondaryPress}
+        />
+      </WebPageShell>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -223,5 +339,13 @@ const getStyles = (colors: any) => StyleSheet.create({
   checkbox: { width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: colors.Slate400, marginRight: 12 },
   unreadDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.PrimaryRed, marginLeft: 12 },
   menuDropdown: { position: 'absolute', top: 60, right: 16, backgroundColor: 'white', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', width: 200, elevation: 4 },
-  menuItem: { padding: 16 }
+  menuItem: { padding: 16 },
+  webTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
+  webHeadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  webDash: { width: 14, height: 3, backgroundColor: '#D4191F' },
+  webTitle: { fontSize: 20, fontWeight: '800', color: '#111827' },
+  webActionsRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  webPillBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 4, paddingHorizontal: 12, paddingVertical: 7 },
+  webPillText: { fontSize: 12, fontWeight: '700', color: '#374151' },
+  webEmptyBox: { backgroundColor: '#FFFFFF', borderRadius: 6, borderWidth: 1, borderColor: '#E5E7EB', padding: 64, alignItems: 'center' },
 });

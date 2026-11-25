@@ -1,14 +1,60 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
+import WebStudioShell from '../../components/web/WebStudioShell';
 
 export default function AdminOverviewScreen() {
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+
+  const overviewBody = (
+    <>
+        <Text style={{ fontWeight: 'bold', fontSize: 24 }}>Governance Overview</Text>
+        <Text style={{ color: colors.Slate500, fontSize: 14 }}>National level platform statistics</Text>
+
+        <View style={{ marginTop: 24, gap: 12 }}>
+          <View style={styles.row}>
+            <AdminKpiCard label="Verified Citizens" value="125,432" change="+12.5%" icon="people" bgColor="#E0F2FE" iconColor="#0284C7" />
+            <AdminKpiCard label="Active Debates" value="12,240" change="+5.2%" icon="flash" bgColor="#DCFCE7" iconColor="#16A34A" />
+          </View>
+          <View style={styles.row}>
+            <AdminKpiCard label="Platform Fund" value="₹4.52Cr" change="+18.1%" icon="cash" bgColor="#FEF3C7" iconColor="#D97706" />
+            <AdminKpiCard label="Fact Check" value="12 New" change="Queue" icon="checkmark-circle" bgColor="#FEE2E2" iconColor="#D4191F" />
+          </View>
+        </View>
+
+        <View style={styles.contributionsCard}>
+          <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 16 }}>Recent Contributions</Text>
+          
+          <AdminPaymentRow user="amit_s" amount="₹499" status="Verified" statusBg="#DCFCE7" statusColor="#16A34A" />
+          <View style={styles.divider} />
+          <AdminPaymentRow user="raj_bjp" amount="₹1,200" status="Review" statusBg="#FEF3C7" statusColor="#D97706" />
+          <View style={styles.divider} />
+          <AdminPaymentRow user="priya_m" amount="₹150" status="Verified" statusBg="#DCFCE7" statusColor="#16A34A" />
+        </View>
+
+        <TouchableOpacity 
+          style={styles.actionBtn}
+          onPress={() => navigation.navigate('AdminMonetization')}
+        >
+          <Text style={{ color: 'white', fontWeight: 'bold' }}>View Economic Details</Text>
+        </TouchableOpacity>
+    </>
+  );
+
+  if (isWebDesktop) {
+    return (
+      <WebStudioShell activeRoute="AdminOverview" title="Governance Hub" mode="admin">
+        {overviewBody}
+      </WebStudioShell>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -30,36 +76,7 @@ export default function AdminOverviewScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
-        <Text style={{ fontWeight: 'bold', fontSize: 24 }}>Governance Overview</Text>
-        <Text style={{ color: colors.Slate500, fontSize: 14 }}>National level platform statistics</Text>
-
-        <View style={{ marginTop: 24, gap: 12 }}>
-          <View style={styles.row}>
-            <AdminKpiCard label="Verified Citizens" value="125,432" change="+12.5%" icon="people" bgColor="#E0F2FE" iconColor="#0284C7" />
-            <AdminKpiCard label="Active Debates" value="12,240" change="+5.2%" icon="flash" bgColor="#DCFCE7" iconColor="#16A34A" />
-          </View>
-          <View style={styles.row}>
-            <AdminKpiCard label="Platform Fund" value="₹4.52Cr" change="+18.1%" icon="cash" bgColor="#FEF3C7" iconColor="#D97706" />
-            <AdminKpiCard label="Fact Check" value="12 New" change="Queue" icon="checkmark-circle" bgColor="#FEE2E2" iconColor="#DC2626" />
-          </View>
-        </View>
-
-        <View style={styles.contributionsCard}>
-          <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 16 }}>Recent Contributions</Text>
-          
-          <AdminPaymentRow user="amit_s" amount="₹499" status="Verified" statusBg="#DCFCE7" statusColor="#16A34A" />
-          <View style={styles.divider} />
-          <AdminPaymentRow user="raj_bjp" amount="₹1,200" status="Review" statusBg="#FEF3C7" statusColor="#D97706" />
-          <View style={styles.divider} />
-          <AdminPaymentRow user="priya_m" amount="₹150" status="Verified" statusBg="#DCFCE7" statusColor="#16A34A" />
-        </View>
-
-        <TouchableOpacity 
-          style={styles.actionBtn}
-          onPress={() => navigation.navigate('AdminMonetization')}
-        >
-          <Text style={{ color: 'white', fontWeight: 'bold' }}>View Economic Details</Text>
-        </TouchableOpacity>
+        {overviewBody}
       </ScrollView>
     </SafeAreaView>
   );

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator, Image, Alert, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,11 +8,14 @@ import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import CustomModal from '../../components/CustomModal';
+import WebPageShell from '../../components/web/WebPageShell';
 
 export default function PersonalDetailsScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { userProfile, uploadProfileImage } = useAuth();
   const [dbUser, setDbUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -96,19 +99,10 @@ export default function PersonalDetailsScreen() {
   const topics = dbUser?.selected_topics || userProfile?.selected_topics || [];
   const language = dbUser?.preferred_language || userProfile?.preferred_language || 'English';
   const displayName = username || email?.split('@')[0] || 'User';
-  const avatarUrl = currentAvatarUrl || dbUser?.avatarUrl || userProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E53935&color=fff&size=200`;
+  const avatarUrl = currentAvatarUrl || dbUser?.avatarUrl || userProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D4191F&color=fff&size=200`;
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Personal Details</Text>
-        <View style={{ width: 36 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+  const detailsBody = (
+    <>
         {/* Profile Picture Section */}
         <View style={styles.profilePictureSection}>
           <View style={styles.avatarWrapper}>
@@ -160,6 +154,46 @@ export default function PersonalDetailsScreen() {
           <Ionicons name="globe-outline" size={20} color={colors.PrimaryRed} />
           <Text style={styles.languageText}>{language}</Text>
         </View>
+    </>
+  );
+
+  if (isWebDesktop) {
+    return (
+      <WebPageShell maxWidth={860}>
+        <View style={styles.webCard}>
+          <View style={styles.webCardHeader}>
+            <TouchableOpacity style={styles.webBackBtn} onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={16} color="#111827" />
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827' }}>Back</Text>
+            </TouchableOpacity>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#111827' }}>Personal Details</Text>
+            <View style={{ width: 64 }} />
+          </View>
+          <View style={{ padding: 24 }}>{detailsBody}</View>
+        </View>
+        <CustomModal 
+          visible={modalConfig.visible} 
+          title={modalConfig.title} 
+          message={modalConfig.message} 
+          isError={modalConfig.isError} 
+          onPrimaryPress={() => setModalConfig(prev => ({ ...prev, visible: false }))} 
+        />
+      </WebPageShell>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
+          <Ionicons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Personal Details</Text>
+        <View style={{ width: 36 }} />
+      </View>
+
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        {detailsBody}
       </ScrollView>
       <CustomModal 
         visible={modalConfig.visible} 
@@ -223,7 +257,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,
-    backgroundColor: 'rgba(229, 57, 53, 0.08)',
+    backgroundColor: colors.PrimaryRedAlpha10,
     gap: 8,
   },
   updatePhotoText: {
@@ -244,7 +278,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   sectionDivider: { height: 1, backgroundColor: '#E2E8F0', marginVertical: 20 },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', color: colors.DarkText, marginBottom: 12 },
   topicsWrapper: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  topicBadge: { backgroundColor: 'rgba(229,57,53,0.1)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  topicBadge: { backgroundColor: colors.PrimaryRedAlpha10, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
   topicText: { color: colors.PrimaryRed, fontSize: 13, fontWeight: '600' },
   emptyText: { color: colors.Slate400, fontSize: 14 },
   languageBox: {
@@ -252,4 +286,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', gap: 10,
   },
   languageText: { fontSize: 16, fontWeight: '600', color: colors.PrimaryRed },
+  webCard: { backgroundColor: '#FFFFFF', borderRadius: 6, borderWidth: 1, borderColor: '#E5E7EB', overflow: 'hidden' },
+  webCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  webBackBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 4, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' },
 });

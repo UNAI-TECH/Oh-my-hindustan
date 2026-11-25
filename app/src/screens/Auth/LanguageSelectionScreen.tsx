@@ -7,6 +7,7 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -31,6 +32,8 @@ export default function LanguageSelectionScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { updateOnboardingProfile, isLoading } = useAuth();
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -47,8 +50,9 @@ export default function LanguageSelectionScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+    <View style={[styles.container, isWebDesktop && { backgroundColor: '#F5F5F7' }]}>
+      <ScrollView contentContainerStyle={[styles.scrollContainer, isWebDesktop && styles.webScroll]}>
+        <View style={isWebDesktop ? styles.webCard : undefined}>
         <View style={styles.stepIndicator}>
           <View style={[styles.stepDot, styles.stepDotCompleted]} />
           <View style={[styles.stepLine, styles.stepLineCompleted]} />
@@ -97,9 +101,10 @@ export default function LanguageSelectionScreen() {
             );
           })}
         </View>
+        </View>
       </ScrollView>
 
-      <View style={styles.bottomContainer}>
+      <View style={[styles.bottomContainer, isWebDesktop && styles.webBottom]}>
         <TouchableOpacity
           style={[styles.buttonContainer, (!selectedLanguage || isLoading) && styles.buttonDisabled]}
           onPress={handleContinue}
@@ -173,7 +178,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 20,
-    backgroundColor: 'rgba(229, 57, 53, 0.1)',
+    backgroundColor: colors.PrimaryRedAlpha10,
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
@@ -212,7 +217,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   languageCardActive: {
     borderColor: colors.PrimaryRed,
-    backgroundColor: 'rgba(229, 57, 53, 0.05)',
+    backgroundColor: colors.PrimaryRedAlpha5,
     borderWidth: 2,
   },
   languageIcon: {
@@ -280,5 +285,26 @@ const getStyles = (colors: any) => StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '800',
     fontSize: 16,
+  },
+  webScroll: {
+    paddingTop: 40,
+    alignItems: 'center',
+  },
+  webCard: {
+    width: '100%',
+    maxWidth: 680,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 32,
+  },
+  webBottom: {
+    maxWidth: 680,
+    alignSelf: 'center',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    bottom: 16,
   },
 });

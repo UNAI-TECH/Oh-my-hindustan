@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, Switch, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, Switch, ActivityIndicator, Alert, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,8 +7,11 @@ import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import CustomModal from '../../components/CustomModal';
+import WebStudioShell from '../../components/web/WebStudioShell';
 
 export default function CreatorSettingsScreen() {
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
@@ -50,23 +53,8 @@ export default function CreatorSettingsScreen() {
     i18n.changeLanguage(lang);
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
-          <Ionicons name="arrow-back" size={24} color="#1E293B" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('creator_studio.settings')}</Text>
-        <TouchableOpacity onPress={handleSave} disabled={isSaving} style={{ padding: 8 }}>
-          {isSaving ? (
-            <ActivityIndicator size="small" color={colors.PrimaryRed} />
-          ) : (
-            <Text style={{ color: colors.PrimaryRed, fontWeight: '800', fontSize: 16 }}>{t('common.save')}</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
+  const settingsBody = (
+    <>
         {/* Profile Section */}
         <Text style={styles.sectionTitle}>Profile</Text>
         <View style={styles.card}>
@@ -142,9 +130,58 @@ export default function CreatorSettingsScreen() {
         </View>
 
         <TouchableOpacity style={styles.logoutBtn} onPress={() => Alert.alert('Logout', 'Are you sure?', [{ text: 'Cancel' }, { text: 'Logout', onPress: () => navigation.navigate('Splash') }])}>
-          <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+          <Ionicons name="log-out-outline" size={20} color="#D4191F" />
           <Text style={styles.logoutText}>{t('creator_studio.logout')}</Text>
         </TouchableOpacity>
+    </>
+  );
+
+  if (isWebDesktop) {
+    return (
+      <WebStudioShell
+        activeRoute="CreatorSettings"
+        title={t('creator_studio.settings')}
+        maxWidth={820}
+        headerRight={
+          <TouchableOpacity onPress={handleSave} disabled={isSaving} style={{ backgroundColor: colors.PrimaryRed, paddingHorizontal: 18, paddingVertical: 8, borderRadius: 4 }}>
+            {isSaving ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>{t('common.save')}</Text>
+            )}
+          </TouchableOpacity>
+        }
+      >
+        {settingsBody}
+        <CustomModal 
+          visible={modalConfig.visible} 
+          title={modalConfig.title} 
+          message={modalConfig.message} 
+          isError={modalConfig.isError} 
+          onPrimaryPress={() => setModalConfig(prev => ({ ...prev, visible: false }))} 
+        />
+      </WebStudioShell>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
+          <Ionicons name="arrow-back" size={24} color="#1E293B" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t('creator_studio.settings')}</Text>
+        <TouchableOpacity onPress={handleSave} disabled={isSaving} style={{ padding: 8 }}>
+          {isSaving ? (
+            <ActivityIndicator size="small" color={colors.PrimaryRed} />
+          ) : (
+            <Text style={{ color: colors.PrimaryRed, fontWeight: '800', fontSize: 16 }}>{t('common.save')}</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        {settingsBody}
       </ScrollView>
 
       <CustomModal 

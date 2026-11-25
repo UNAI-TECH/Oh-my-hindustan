@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Switch, Modal, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Switch, Modal, Linking, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,12 +7,15 @@ import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import AppBottomNavBar from '../../components/BottomNavBar';
+import WebPageShell from '../../components/web/WebPageShell';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen() {
   const { colors, setTheme, themePreference, isDark } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { userProfile, logout } = useAuth();
   const { notificationsEnabled, setNotificationsEnabled } = useNotifications();
   
@@ -35,15 +38,8 @@ export default function SettingsScreen() {
   const avatarUrl = userProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D4191F&color=fff&size=200`;
   const email = userProfile?.email || '';
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={{ width: 36 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
-        
+  const settingsBody = (
+    <>
         {/* User Profile Header */}
         <TouchableOpacity style={styles.userHeader} onPress={() => navigation.navigate('PersonalDetails')}>
           <Image source={{ uri: avatarUrl }} style={styles.userAvatar} />
@@ -57,16 +53,16 @@ export default function SettingsScreen() {
         {/* Become a Creator CTA */}
         <TouchableOpacity 
           style={styles.creatorCTA} 
-          onPress={() => Linking.openURL('https://creatorohmyhindu.vercel.app/')}
+          onPress={() => Linking.openURL(process.env.EXPO_PUBLIC_CREATOR_PORTAL_URL || 'https://creatorohmyhindu.vercel.app/')}
         >
           <View style={styles.creatorIconBox}>
              <Ionicons name="rocket" size={22} color="white" />
           </View>
           <View style={{ flex: 1, marginLeft: 14 }}>
              <Text style={styles.creatorCTATitle}>Become a Creator</Text>
-             <Text style={styles.creatorCTADesc}>Become a voice for the nation!</Text>
+             <Text style={styles.creatorCTADesc}>Share news, policy analysis & commentary on PostsApp</Text>
           </View>
-          <Ionicons name="open-outline" size={20} color="#0284C7" />
+          <Ionicons name="open-outline" size={20} color={colors.PrimaryRed} />
         </TouchableOpacity>
 
         <SettingsGroup title="Account">
@@ -100,13 +96,16 @@ export default function SettingsScreen() {
           <Ionicons name="log-out-outline" size={20} color={colors.PrimaryRed} />
           <Text style={{ color: colors.PrimaryRed, fontWeight: 'bold', marginLeft: 8 }}>Log Out</Text>
         </TouchableOpacity>
-      </ScrollView>
+    </>
+  );
 
+  const settingsModals = (
+    <>
       {/* Help Center Dialog */}
       {showHelpDialog && (
         <Modal transparent animationType="fade" visible={showHelpDialog}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowHelpDialog(false)}>
-            <View style={styles.dialog}>
+            <View style={[styles.dialog, isWebDesktop && { maxWidth: 460 }]}>
               <Text style={{ fontWeight: 'bold', fontSize: 18, color: colors.DarkText, marginBottom: 12 }}>Help Center</Text>
               <Text style={{ color: colors.DarkText, marginBottom: 16, lineHeight: 22 }}>
                 Need assistance with PostsApp? Reach out to our support team any time!
@@ -132,7 +131,7 @@ export default function SettingsScreen() {
       {showAboutDialog && (
         <Modal transparent animationType="fade" visible={showAboutDialog}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowAboutDialog(false)}>
-            <View style={styles.dialog}>
+            <View style={[styles.dialog, isWebDesktop && { maxWidth: 460 }]}>
               <Text style={{ fontWeight: 'bold', fontSize: 18, color: colors.DarkText, marginBottom: 8 }}>About PostsApp</Text>
               <Text style={{ color: colors.Slate500, marginBottom: 8 }}>Version 1.0.0 (Build 20240312)</Text>
               <Text style={{ color: colors.DarkText, marginBottom: 16 }}>PostsApp is a high-velocity news, analysis, and commentary portal empowering informed voices.</Text>
@@ -148,7 +147,7 @@ export default function SettingsScreen() {
       {showNotifSettings && (
         <Modal transparent animationType="fade" visible={showNotifSettings}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowNotifSettings(false)}>
-            <View style={styles.dialog}>
+            <View style={[styles.dialog, isWebDesktop && { maxWidth: 460 }]}>
               <Text style={{ fontWeight: 'bold', fontSize: 18, color: colors.DarkText, marginBottom: 16 }}>Notification Settings</Text>
               
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, marginTop: 8 }}>
@@ -171,6 +170,34 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </Modal>
       )}
+    </>
+  );
+
+  if (isWebDesktop) {
+    return (
+      <WebPageShell maxWidth={860}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+          <View style={{ width: 14, height: 3, backgroundColor: '#D4191F' }} />
+          <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827' }}>Settings</Text>
+        </View>
+        {settingsBody}
+        {settingsModals}
+      </WebPageShell>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Settings</Text>
+        <View style={{ width: 36 }} />
+      </View>
+
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
+        {settingsBody}
+      </ScrollView>
+
+      {settingsModals}
 
       <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
         <AppBottomNavBar currentRoute="Settings" onNavigate={(route) => navigation.navigate(route)} />
@@ -225,12 +252,12 @@ const getStyles = (colors: any) => StyleSheet.create({
   itemContainer: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.Slate100 },
   itemLabel: { flex: 1, marginLeft: 16, fontSize: 16, color: colors.DarkText },
   creatorCTA: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F9FF',
-    padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#BAE6FD', marginBottom: 16,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF2F2',
+    padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#FECACA', marginBottom: 16,
   },
-  creatorIconBox: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#0284C7', justifyContent: 'center', alignItems: 'center' },
-  creatorCTATitle: { fontWeight: 'bold', fontSize: 16, color: '#0369A1' },
-  creatorCTADesc: { color: '#0EA5E9', fontSize: 12, marginTop: 2 },
+  creatorIconBox: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.PrimaryRed, justifyContent: 'center', alignItems: 'center' },
+  creatorCTATitle: { fontWeight: 'bold', fontSize: 16, color: '#991111' },
+  creatorCTADesc: { color: '#B81414', fontSize: 12, marginTop: 2 },
   logoutBtn: {
     flexDirection: 'row', width: '100%', padding: 16, backgroundColor: colors.SurfaceWhite,
     borderRadius: 12, borderWidth: 1, borderColor: colors.PrimaryRedAlpha10,

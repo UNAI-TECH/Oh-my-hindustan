@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform, Alert, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import CustomModal from '../../components/CustomModal';
+import WebStudioShell from '../../components/web/WebStudioShell';
 
 export default function CreatorFeedbackScreen() {
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
@@ -34,17 +37,8 @@ export default function CreatorFeedbackScreen() {
     }, 1000);
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Send Feedback</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <View style={{ padding: 16, flex: 1 }}>
+  const feedbackBody = (
+      <View style={{ padding: isWebDesktop ? 24 : 16, flex: 1 }}>
         <Text style={styles.label}>How can we improve the Creator Studio?</Text>
         <TextInput
           style={styles.textarea}
@@ -65,6 +59,36 @@ export default function CreatorFeedbackScreen() {
           <Text style={styles.sendBtnText}>{isSending ? 'Sending...' : 'Submit Feedback'}</Text>
         </TouchableOpacity>
       </View>
+  );
+
+  if (isWebDesktop) {
+    return (
+      <WebStudioShell activeRoute="CreatorFeedback" title="Send Feedback" maxWidth={780}>
+        <View style={{ backgroundColor: '#FFFFFF', borderRadius: 6, borderWidth: 1, borderColor: '#E5E7EB' }}>
+          {feedbackBody}
+        </View>
+        <CustomModal 
+          visible={modalConfig.visible} 
+          title={modalConfig.title} 
+          message={modalConfig.message} 
+          isError={modalConfig.isError} 
+          onPrimaryPress={modalConfig.onPrimaryPress || (() => setModalConfig(prev => ({ ...prev, visible: false })))} 
+        />
+      </WebStudioShell>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
+          <Ionicons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Send Feedback</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      {feedbackBody}
 
       <CustomModal 
         visible={modalConfig.visible} 

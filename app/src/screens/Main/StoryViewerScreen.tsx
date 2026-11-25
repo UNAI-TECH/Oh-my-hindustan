@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, Image, Dimensions,
+  View, Text, StyleSheet, Image, useWindowDimensions,
   Animated, SafeAreaView, PanResponder, TouchableOpacity,
   TextInput, KeyboardAvoidingView, Platform, Share,
   Modal, FlatList, Keyboard, ActivityIndicator
@@ -11,7 +11,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabaseClient';
 import { WebView } from 'react-native-webview';
 
-const { width, height } = Dimensions.get('window');
 const IMAGE_STORY_DURATION = 5000;
 const VIDEO_STORY_DURATION = 30000;
 
@@ -48,13 +47,44 @@ function WebViewVideoPlayer({
   onProgress: (progress: number) => void;
 }) {
   const webRef = useRef<any>(null);
+  const htmlVideoRef = useRef<any>(null);
 
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      const v = htmlVideoRef.current;
+      if (v) {
+        if (paused) v.pause?.();
+        else v.play?.().catch?.(() => {});
+      }
+      return;
+    }
     if (!webRef.current) return;
     webRef.current.injectJavaScript(
       `(function(){ var v = document.getElementById('sv'); if(v){ ${paused ? 'v.pause()' : 'v.play()'} }; })(); true;`
     );
   }, [paused]);
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={StyleSheet.absoluteFill}>
+        {React.createElement('video', {
+          ref: htmlVideoRef,
+          src: uri,
+          autoPlay: true,
+          playsInline: true,
+          preload: 'auto',
+          style: { width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000', display: 'block' },
+          onEnded,
+          onCanPlay: onLoaded,
+          onTimeUpdate: (e: any) => {
+            const v = e?.target;
+            if (v && v.duration > 0) onProgress(v.currentTime / v.duration);
+          },
+          onError: () => onError('Video playback failed'),
+        })}
+      </View>
+    );
+  }
 
   const html = `
     <!DOCTYPE html>
@@ -118,6 +148,8 @@ function WebViewVideoPlayer({
 
 // ─── Main Screen ────────────────────────────────────────────────────────────
 export default function StoryViewerScreen() {
+  const { width, height } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
@@ -425,9 +457,22 @@ export default function StoryViewerScreen() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
-      <SafeAreaView style={styles.container}>
-        <View style={styles.storyContainer} {...panResponder.panHandlers}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.container, isWebDesktop && styles.webTheaterBg]}>
+      <SafeAreaView style={[styles.container, isWebDesktop && styles.webTheaterBg]}>
+        <View
+          style={[
+            styles.storyContainer,
+            isWebDesktop && {
+              width: Math.min(420, width - 48),
+              maxHeight: Math.min(height * 0.88, 760),
+              alignSelf: 'center',
+              marginVertical: 20,
+              borderWidth: 1,
+              borderColor: '#262626',
+            },
+          ]}
+          {...panResponder.panHandlers}
+        >
 
           {/* ── MEDIA ── */}
           {currentStory.type === 'image' && currentStory.media_url ? (
@@ -516,7 +561,7 @@ export default function StoryViewerScreen() {
                   />
                 </View>
                 <TouchableOpacity onPress={likeStory}>
-                  <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={30} color={isLiked ? '#e11d48' : '#fff'} />
+                  <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={30} color={isLiked ? '#D4191F' : '#fff'} />
                 </TouchableOpacity>
                 {currentStory.allow_comments !== false && (
                   <TouchableOpacity onPress={() => { setIsPaused(true); setShowCommentModal(true); fetchComments(); }}>
@@ -544,7 +589,7 @@ export default function StoryViewerScreen() {
         <Modal visible={showViewersSheet} animationType="slide" transparent>
           <View style={styles.sheetOverlay}>
             <TouchableOpacity style={{ flex: 1 }} onPress={() => { setShowViewersSheet(false); setIsPaused(false); }} />
-            <View style={styles.sheetContent}>
+            <View style={[styles.sheetContent, isWebDesktop && styles.webSheetContent]}>
               <View style={styles.sheetHeader}>
                 <Text style={styles.sheetTitle}>Viewers</Text>
                 <TouchableOpacity onPress={() => { setShowViewersSheet(false); setIsPaused(false); }}>
@@ -581,7 +626,7 @@ export default function StoryViewerScreen() {
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
             <View style={[styles.sheetOverlay, keyboardOffset > 0 && { paddingBottom: keyboardOffset }]}>
               <TouchableOpacity style={{ flex: 1 }} onPress={() => { setShowCommentModal(false); setIsPaused(false); }} />
-              <View style={[styles.sheetContent, { height: height * 0.7, paddingBottom: 0, paddingHorizontal: 0 }]}>
+              <View style={[styles.sheetContent, { height: height * 0.7, paddingBottom: 0, paddingHorizontal: 0 }, isWebDesktop && styles.webSheetContent]}>
                 <View style={[styles.sheetHeader, { paddingHorizontal: 20 }]}>
                   <Text style={styles.sheetTitle}>Comments</Text>
                   <TouchableOpacity onPress={() => { setShowCommentModal(false); setIsPaused(false); }}>
@@ -619,7 +664,7 @@ export default function StoryViewerScreen() {
                     multiline
                   />
                   <TouchableOpacity onPress={sendComment}>
-                    <Ionicons name="send" size={24} color={commentText.trim() ? '#e11d48' : '#999'} />
+                    <Ionicons name="send" size={24} color={commentText.trim() ? '#D4191F' : '#999'} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -689,7 +734,16 @@ const styles = StyleSheet.create({
   sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   sheetContent: {
     backgroundColor: '#fff', borderTopLeftRadius: 20,
-    borderTopRightRadius: 20, padding: 20, maxHeight: height * 0.6,
+    borderTopRightRadius: 20, padding: 20, maxHeight: '65%',
+  },
+  webTheaterBg: {
+    backgroundColor: '#0F0F0F',
+    justifyContent: 'center',
+  },
+  webSheetContent: {
+    maxWidth: 460,
+    width: '100%',
+    alignSelf: 'center',
   },
   sheetHeader: {
     flexDirection: 'row', justifyContent: 'space-between',

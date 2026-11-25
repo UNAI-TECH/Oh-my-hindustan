@@ -106,7 +106,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     marginHorizontal: 4,
   },
   selectedNavItemBg: {
-    backgroundColor: 'rgba(191, 58, 43, 0.10)', // PrimaryRed with 10% opacity indicator
+    backgroundColor: colors.PrimaryRedAlpha10,
   },
   label: {
     fontSize: 10,

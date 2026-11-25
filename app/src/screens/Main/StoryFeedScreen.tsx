@@ -9,11 +9,25 @@ import { useAppTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabaseClient';
 import MainHeader from '../../components/MainHeader';
 import AppBottomNavBar from '../../components/BottomNavBar';
+import WebPageShell from '../../components/web/WebPageShell';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 
-// Safely generate a video thumbnail using WebView to avoid native ExoPlayer crashes entirely
+// Safely generate a video thumbnail using HTML5 video on web and WebView on native
 function VideoThumbnail({ uri }: { uri: string }) {
+  if (Platform.OS === 'web') {
+    return (
+      <View style={StyleSheet.absoluteFillObject}>
+        {React.createElement('video', {
+          src: uri,
+          muted: true,
+          playsInline: true,
+          preload: 'metadata',
+          style: { width: '100%', height: '100%', objectFit: 'cover', display: 'block', backgroundColor: '#000' },
+        })}
+      </View>
+    );
+  }
   const html = `
     <!DOCTYPE html>
     <html>
@@ -57,6 +71,7 @@ interface Story {
 
 export default function StoryFeedScreen() {
   const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const isTablet = width >= 768;
   const { colors } = useAppTheme();
   const styles = getStyles(colors, isTablet, width);
@@ -157,6 +172,98 @@ export default function StoryFeedScreen() {
         openStoryViewer(group.stories[0]);
      }
   };
+
+  if (isWebDesktop) {
+    const webCols = width >= 1024 ? 5 : 3;
+    const contentWidth = Math.min(width - 40, 1280);
+    const webCardWidth = (contentWidth - 16 * (webCols - 1)) / webCols;
+
+    return (
+      <WebPageShell maxWidth={1280}>
+        <View style={styles.webHeadingRow}>
+          <View style={styles.webDash} />
+          <Text style={styles.webPageTitle}>Stories</Text>
+        </View>
+
+        {loading ? (
+          <View style={{ paddingVertical: 80, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.PrimaryRed} />
+          </View>
+        ) : groupedStories.length === 0 ? (
+          <View style={styles.webEmptyCard}>
+            <Ionicons name="aperture-outline" size={64} color={colors.Slate400} />
+            <Text style={[styles.emptyTitle, { color: '#111827' }]}>No Stories Available</Text>
+            <Text style={[styles.emptySubtitle, { color: '#6B7280' }]}>
+              Follow more creators to see their 24-hour updates here.
+            </Text>
+          </View>
+        ) : (
+          <>
+            <View style={styles.webCreatorsStrip}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 20 }}>
+                {groupedStories.map(group => (
+                  <TouchableOpacity
+                    key={group.creator_id}
+                    style={styles.storyCircleBox}
+                    onPress={() => openStoryViewerForCreator(group.creator_id)}
+                  >
+                    <View style={[styles.storyCircle, { borderColor: colors.PrimaryRed }]}>
+                      {group.User?.avatarUrl ? (
+                        <Image source={{ uri: group.User.avatarUrl }} style={styles.storyAvatar} />
+                      ) : (
+                        <Ionicons name="person" size={24} color={colors.Slate400} />
+                      )}
+                    </View>
+                    <Text style={[styles.storyName, { color: '#111827' }]} numberOfLines={1}>
+                      {group.User?.channel_name || group.User?.username || 'Creator'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            <View style={[styles.webHeadingRow, { marginTop: 24 }]}>
+              <View style={styles.webDash} />
+              <Text style={styles.webSectionTitle}>Recent Updates</Text>
+            </View>
+
+            <View style={styles.gridContainer}>
+              {stories.map((story) => (
+                <TouchableOpacity
+                  key={story.id}
+                  style={[styles.storyCard, { width: webCardWidth, backgroundColor: '#18181B' }]}
+                  onPress={() => openStoryViewer(story)}
+                >
+                  {story.type === 'video' ? (
+                    <View style={styles.videoPlaceholder}>
+                      <VideoThumbnail uri={story.media_url} />
+                      <View style={styles.playIconOverlay}>
+                        <Ionicons name="play" size={24} color="#fff" />
+                      </View>
+                    </View>
+                  ) : (
+                    <Image source={{ uri: story.media_url }} style={styles.storyCardImg} />
+                  )}
+                  <View style={styles.storyCardOverlay}>
+                    <View style={styles.storyCardHeader}>
+                      {story.User?.avatarUrl ? (
+                        <Image source={{ uri: story.User.avatarUrl }} style={styles.smallAvatar} />
+                      ) : (
+                        <View style={[styles.smallAvatar, { backgroundColor: colors.Slate400 }]} />
+                      )}
+                      <Text style={styles.storyCardName} numberOfLines={1}>
+                        {story.User?.channel_name || story.User?.username}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
+      </WebPageShell>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -377,6 +484,42 @@ const getStyles = (colors: any, isTablet: boolean, width: number) => {
       bottom: 0,
       left: 0,
       right: 0
-    }
+    },
+    webHeadingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 16,
+    },
+    webDash: {
+      width: 14,
+      height: 3,
+      backgroundColor: '#D4191F',
+    },
+    webPageTitle: {
+      fontSize: 20,
+      fontWeight: '800',
+      color: '#111827',
+    },
+    webSectionTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: '#111827',
+    },
+    webEmptyCard: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+      padding: 64,
+      alignItems: 'center',
+    },
+    webCreatorsStrip: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+      padding: 18,
+    },
   });
 };

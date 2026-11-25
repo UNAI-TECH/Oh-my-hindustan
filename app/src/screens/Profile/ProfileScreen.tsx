@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Linking, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import AppBottomNavBar from '../../components/BottomNavBar';
+import WebPageShell from '../../components/web/WebPageShell';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -13,6 +14,8 @@ export default function ProfileScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { userProfile, logout, isAuthenticated } = useAuth();
   const [selectedTab, setSelectedTab] = useState('Posts');
   const [stats, setStats] = useState({ posts: 0, saved: 0, following: 0, followers: 0 });
@@ -64,19 +67,8 @@ export default function ProfileScreen() {
     return n.toString();
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={{ padding: 8 }}>
-          <Ionicons name="settings-outline" size={24} color="black" />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} bounces={false}>
+  const profileInnerContent = (
+    <>
         {/* Cover + Avatar */}
         <View style={{ width: '100%', paddingBottom: 80 }}>
           <LinearGradient
@@ -91,7 +83,7 @@ export default function ProfileScreen() {
 
         {/* Name & Bio */}
         <View style={{ alignItems: 'center', paddingHorizontal: 16 }}>
-          <Text style={{ fontWeight: 'bold', fontSize: 24 }}>@{displayName}</Text>
+          <Text style={{ fontWeight: 'bold', fontSize: 24, color: colors.DarkText }}>@{displayName}</Text>
           <Text style={{ color: colors.Slate500, fontSize: 14, marginTop: 4 }}>{email}</Text>
           {phone ? <Text style={{ color: colors.Slate500, fontSize: 14, marginTop: 2 }}>{phone}</Text> : null}
           <Text style={{ color: colors.Slate500, fontSize: 13, marginTop: 6, textAlign: 'center' }}>{bio}</Text>
@@ -132,24 +124,61 @@ export default function ProfileScreen() {
 
         {/* Creator Action */}
         <TouchableOpacity 
-          style={[styles.creatorAction, { backgroundColor: '#F0F9FF', borderColor: '#BAE6FD' }]} 
-          onPress={() => Linking.openURL('https://creators-ohmy.vercel.app/')}
+          style={[styles.creatorAction, { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]} 
+          onPress={() => Linking.openURL(process.env.EXPO_PUBLIC_CREATOR_PORTAL_URL || 'https://creators-ohmy.vercel.app/')}
         >
-          <View style={[styles.creatorIconBox, { backgroundColor: '#0284C7' }]}>
+          <View style={[styles.creatorIconBox, { backgroundColor: colors.PrimaryRed }]}>
             <Ionicons name="rocket" size={20} color="white" />
           </View>
           <View style={{ flex: 1, marginLeft: 16 }}>
-            <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#0369A1' }}>Join as Creator</Text>
-            <Text style={{ color: '#0EA5E9', fontSize: 12, marginTop: 2 }}>Become a voice for the nation!</Text>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#991111' }}>Join as Creator</Text>
+            <Text style={{ color: '#B81414', fontSize: 12, marginTop: 2 }}>Become a voice on PostsApp!</Text>
           </View>
-          <Ionicons name="open-outline" size={20} color="#0284C7" />
+          <Ionicons name="open-outline" size={20} color={colors.PrimaryRed} />
         </TouchableOpacity>
 
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+          <Ionicons name="log-out-outline" size={20} color={colors.PrimaryRed} />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
+    </>
+  );
+
+  if (isWebDesktop) {
+    return (
+      <WebPageShell maxWidth={920}>
+        <View style={styles.webProfileCard}>
+          <View style={styles.webProfileTopBar}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ width: 14, height: 3, backgroundColor: '#D4191F' }} />
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#111827' }}>My Profile</Text>
+            </View>
+            <TouchableOpacity style={styles.webSettingsBtn} onPress={() => navigation.navigate('Settings')}>
+              <Ionicons name="settings-outline" size={16} color="#374151" />
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#374151' }}>Settings</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={{ paddingBottom: 24 }}>{profileInnerContent}</View>
+        </View>
+      </WebPageShell>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
+          <Ionicons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Profile</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={{ padding: 8 }}>
+          <Ionicons name="settings-outline" size={24} color="black" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} bounces={false}>
+        {profileInnerContent}
       </ScrollView>
 
       <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
@@ -177,7 +206,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   avatar: { width: 128, height: 128, borderRadius: 64, borderWidth: 4, borderColor: 'white' },
   roleBadge: { 
     flexDirection: 'row', alignItems: 'center', marginTop: 10, 
-    backgroundColor: 'rgba(229, 57, 53, 0.08)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+    backgroundColor: colors.PrimaryRedAlpha10, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
     gap: 6,
   },
   roleText: { fontSize: 12, fontWeight: '700', color: colors.PrimaryRed, textTransform: 'uppercase', letterSpacing: 1 },
@@ -191,7 +220,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     borderRadius: 16, borderWidth: 1.5, borderColor: '#FCA5A5', backgroundColor: '#FEF2F2',
     gap: 10,
   },
-  logoutText: { fontSize: 16, fontWeight: '700', color: '#DC2626' },
+  logoutText: { fontSize: 16, fontWeight: '700', color: colors.PrimaryRed },
   preferencesContainer: {
     paddingHorizontal: 16,
     marginTop: 24,
@@ -219,7 +248,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     marginTop: 8,
   },
   topicBadge: {
-    backgroundColor: 'rgba(229, 57, 53, 0.1)',
+    backgroundColor: colors.PrimaryRedAlpha10,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
@@ -228,5 +257,32 @@ const getStyles = (colors: any) => StyleSheet.create({
     color: colors.PrimaryRed,
     fontSize: 13,
     fontWeight: '600',
+  },
+  webProfileCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+  },
+  webProfileTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  webSettingsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
   },
 });

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  Platform, Alert, ActivityIndicator, KeyboardAvoidingView
+  Platform, Alert, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import { CreatorApi } from '../../api/services';
 import CustomModal from '../../components/CustomModal';
+import WebStudioShell from '../../components/web/WebStudioShell';
 
 const CATEGORIES = [
   'Business', 'Economy', 'Policy', 'Sports', 'Culture', 'Science & Tech', 'World',
@@ -17,6 +18,8 @@ const CATEGORIES = [
 ];
 
 export default function ContentEditorScreen() {
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
@@ -81,33 +84,8 @@ export default function ContentEditorScreen() {
     }
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
-          <Ionicons name="close" size={24} color="black" />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <View style={[styles.typeBadge, { backgroundColor: typeColor + '1A' }]}>
-            <Ionicons name={typeIcon as any} size={16} color={typeColor} />
-            <Text style={[styles.typeBadgeText, { color: typeColor }]}>New {typeLabel}</Text>
-          </View>
-        </View>
-        <TouchableOpacity
-          style={[styles.publishBtn, (!title.trim() || !content.trim() || !category) && styles.publishBtnDisabled]}
-          onPress={handlePublish}
-          disabled={isPublishing || !title.trim() || !content.trim() || !category}
-        >
-          {isPublishing ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
-            <Text style={styles.publishBtnText}>Publish</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+  const editorBody = (
+    <>
           {/* Title */}
           <TextInput
             style={styles.titleInput}
@@ -194,7 +172,71 @@ export default function ContentEditorScreen() {
               />
             </View>
           )}
+    </>
+  );
 
+  if (isWebDesktop) {
+    return (
+      <WebStudioShell
+        activeRoute="CreatorContent"
+        title={`New ${typeLabel}`}
+        maxWidth={860}
+        headerRight={
+          <TouchableOpacity
+            style={[styles.publishBtn, (!title.trim() || !content.trim() || !category) && styles.publishBtnDisabled]}
+            onPress={handlePublish}
+            disabled={isPublishing || !title.trim() || !content.trim() || !category}
+          >
+            {isPublishing ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Text style={styles.publishBtnText}>Publish</Text>
+            )}
+          </TouchableOpacity>
+        }
+      >
+        <View style={{ backgroundColor: '#FFFFFF', borderRadius: 6, borderWidth: 1, borderColor: '#E5E7EB', padding: 28 }}>
+          {editorBody}
+        </View>
+        <CustomModal 
+          visible={modalConfig.visible} 
+          title={modalConfig.title} 
+          message={modalConfig.message} 
+          isError={modalConfig.isError} 
+          onPrimaryPress={modalConfig.onPrimaryPress || (() => setModalConfig(prev => ({ ...prev, visible: false })))} 
+        />
+      </WebStudioShell>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
+          <Ionicons name="close" size={24} color="black" />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <View style={[styles.typeBadge, { backgroundColor: typeColor + '1A' }]}>
+            <Ionicons name={typeIcon as any} size={16} color={typeColor} />
+            <Text style={[styles.typeBadgeText, { color: typeColor }]}>New {typeLabel}</Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          style={[styles.publishBtn, (!title.trim() || !content.trim() || !category) && styles.publishBtnDisabled]}
+          onPress={handlePublish}
+          disabled={isPublishing || !title.trim() || !content.trim() || !category}
+        >
+          {isPublishing ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <Text style={styles.publishBtnText}>Publish</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+          {editorBody}
           <View style={{ height: 80 }} />
         </ScrollView>
       </KeyboardAvoidingView>

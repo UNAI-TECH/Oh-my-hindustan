@@ -1,14 +1,41 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
+import WebStudioShell from '../../components/web/WebStudioShell';
 
 export default function CreatorSubtitlesScreen() {
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+
+  const body = (
+    <View style={styles.content}>
+      <View style={styles.iconCircle}>
+        <Ionicons name="language-outline" size={48} color={colors.PrimaryRed} />
+      </View>
+      <Text style={styles.title}>Subtitle Management</Text>
+      <Text style={styles.subtitle}>Coming Soon</Text>
+      <Text style={styles.description}>
+        Auto-generate and manage subtitles for your video content in multiple languages. 
+        Make your content accessible to a wider audience.
+      </Text>
+    </View>
+  );
+
+  if (isWebDesktop) {
+    return (
+      <WebStudioShell activeRoute="CreatorSubtitles" title="Subtitles" maxWidth={780}>
+        <View style={{ backgroundColor: '#FFFFFF', borderRadius: 6, borderWidth: 1, borderColor: '#E5E7EB', paddingBottom: 48 }}>
+          {body}
+        </View>
+      </WebStudioShell>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -20,17 +47,7 @@ export default function CreatorSubtitlesScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.iconCircle}>
-          <Ionicons name="language-outline" size={48} color={colors.PrimaryRed} />
-        </View>
-        <Text style={styles.title}>Subtitle Management</Text>
-        <Text style={styles.subtitle}>Coming Soon</Text>
-        <Text style={styles.description}>
-          Auto-generate and manage subtitles for your video content in multiple languages. 
-          Make your content accessible to a wider audience.
-        </Text>
-      </View>
+      {body}
     </SafeAreaView>
   );
 }

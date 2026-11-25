@@ -8,6 +8,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +22,8 @@ export default function ProfileImageUploadScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { uploadProfileImage, updateOnboardingProfile, isLoading, userProfile } = useAuth();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -76,8 +79,9 @@ export default function ProfileImageUploadScreen() {
   const avatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D4191F&color=fff&size=200`;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
+    <View style={[styles.container, isWebDesktop && styles.webOuter]}>
+      <View style={isWebDesktop ? styles.webCard : { flex: 1 }}>
+      <View style={[styles.content, isWebDesktop && { flex: 0, paddingTop: 8 }]}>
         {/* Step Indicator - Step 2 of 3 */}
         <View style={styles.stepIndicator}>
           <View style={[styles.stepDot, styles.stepDotCompleted]} />
@@ -158,6 +162,7 @@ export default function ProfileImageUploadScreen() {
           </TouchableOpacity>
         )}
       </View>
+      </View>
       <CustomModal 
         visible={modalConfig.visible} 
         title={modalConfig.title} 
@@ -217,7 +222,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 20,
-    backgroundColor: 'rgba(229, 57, 53, 0.1)',
+    backgroundColor: colors.PrimaryRedAlpha10,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
@@ -280,7 +285,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,
-    backgroundColor: 'rgba(229, 57, 53, 0.08)',
+    backgroundColor: colors.PrimaryRedAlpha10,
     gap: 8,
     marginBottom: 16,
   },
@@ -339,5 +344,21 @@ const getStyles = (colors: any) => StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#94A3B8',
+  },
+  webOuter: {
+    backgroundColor: '#F5F5F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  webCard: {
+    width: '100%',
+    maxWidth: 520,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 24,
+    overflow: 'hidden',
   },
 });

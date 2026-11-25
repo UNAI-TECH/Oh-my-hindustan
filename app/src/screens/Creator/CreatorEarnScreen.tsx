@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ScrollView, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,10 +7,11 @@ import { useAppTheme } from '../../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabaseClient';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import WebStudioShell from '../../components/web/WebStudioShell';
 
 export default function CreatorEarnScreen() {
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
@@ -48,20 +49,8 @@ export default function CreatorEarnScreen() {
     }
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#1E293B" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('monetization.title')}</Text>
-        <TouchableOpacity onPress={fetchMonetizationData} style={styles.headerIcon}>
-          <Ionicons name="refresh" size={22} color="#1E293B" />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+  const earnBody = (
+    <>
         {/* Earnings Card */}
         <LinearGradient
           colors={[colors.PrimaryRed, '#93000d']}
@@ -145,7 +134,40 @@ export default function CreatorEarnScreen() {
           <Text style={styles.helpText}>{t('monetization.how_it_works')}</Text>
           <Ionicons name="arrow-forward" size={18} color="#94A3B8" />
         </TouchableOpacity>
+    </>
+  );
 
+  if (isWebDesktop) {
+    return (
+      <WebStudioShell
+        activeRoute="CreatorEarn"
+        title={t('monetization.title')}
+        headerRight={
+          <TouchableOpacity onPress={fetchMonetizationData} style={styles.headerIcon}>
+            <Ionicons name="refresh" size={20} color="#1E293B" />
+          </TouchableOpacity>
+        }
+      >
+        {earnBody}
+      </WebStudioShell>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color="#1E293B" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t('monetization.title')}</Text>
+        <TouchableOpacity onPress={fetchMonetizationData} style={styles.headerIcon}>
+          <Ionicons name="refresh" size={22} color="#1E293B" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {earnBody}
       </ScrollView>
     </SafeAreaView>
   );

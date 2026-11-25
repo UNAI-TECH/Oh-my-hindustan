@@ -7,7 +7,8 @@ import {
   StyleSheet, 
   KeyboardAvoidingView, 
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  useWindowDimensions
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,6 +20,8 @@ export default function OTPScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const route = useRoute<any>();
   const { verifySignupOtp, isLoading, error } = useAuth();
   
@@ -46,9 +49,9 @@ export default function OTPScreen() {
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, isWebDesktop && { backgroundColor: '#F5F5F7', justifyContent: 'center', alignItems: 'center', padding: 24 }]}
     >
-      <View style={styles.innerContainer}>
+      <View style={[styles.innerContainer, isWebDesktop && styles.webCard]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
@@ -120,7 +123,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 20,
-    backgroundColor: 'rgba(229, 57, 53, 0.1)',
+    backgroundColor: colors.PrimaryRedAlpha10,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
@@ -176,5 +179,15 @@ const getStyles = (colors: any) => StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '800',
     fontSize: 16,
+  },
+  webCard: {
+    flex: 0,
+    width: '100%',
+    maxWidth: 460,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 36,
   },
 });

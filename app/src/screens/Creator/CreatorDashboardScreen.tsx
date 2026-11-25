@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform,
-  Modal, ActivityIndicator, Dimensions
+  Modal, ActivityIndicator, useWindowDimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -10,8 +10,7 @@ import { useAppTheme } from '../../context/ThemeContext';
 import { CreatorApi } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import WebStudioShell from '../../components/web/WebStudioShell';
 
 const getSidebarItems = (t: any) => [
   { label: t('creator_studio.overview'), icon: 'grid-outline', route: 'CreatorDashboard' },
@@ -33,8 +32,10 @@ const getCreateOptions = (t: any) => [
 ];
 
 export default function CreatorDashboardScreen() {
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { colors } = useAppTheme();
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, width);
   const navigation = useNavigation<any>();
   const { userProfile, logout } = useAuth();
   const { t } = useTranslation();
@@ -48,7 +49,7 @@ export default function CreatorDashboardScreen() {
   const [isLoading, setIsLoading] = useState(true);
 
   const displayName = userProfile?.username || userProfile?.email?.split('@')[0] || 'Creator';
-  const avatarUrl = userProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E53935&color=fff&size=200`;
+  const avatarUrl = userProfile?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D4191F&color=fff&size=200`;
 
   const fetchDashboardData = async () => {
     try {
@@ -93,34 +94,8 @@ export default function CreatorDashboardScreen() {
     return n.toString();
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={() => setShowSidebar(true)} style={{ padding: 4, marginRight: 8 }}>
-            <Ionicons name="menu" size={26} color="#1E293B" />
-          </TouchableOpacity>
-          <View style={styles.logoRow}>
-            <View style={styles.logoBox}>
-              <Ionicons name="play" size={16} color="white" />
-            </View>
-            <Text style={styles.headerTitle}>Creator Studio</Text>
-          </View>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity onPress={() => setShowCreateModal(true)} style={styles.createBtn}>
-            <Ionicons name="add" size={18} color="white" />
-            <Text style={styles.createBtnText}>CREATE</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={{ marginLeft: 10 }}>
-            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Main Content */}
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+  const dashboardBody = (
+    <>
         {/* Welcome */}
         <View style={{ marginBottom: 24 }}>
           <Text style={styles.welcomeText}>Welcome back, {displayName}</Text>
@@ -135,10 +110,10 @@ export default function CreatorDashboardScreen() {
           <>
             {/* Stats Grid */}
             <View style={styles.statsGrid}>
-              <StatCard icon="document-text" label="Total Posts" value={formatStat(stats.totalPosts)} color="#8B5CF6" />
-              <StatCard icon="heart" label="Total Votes" value={formatStat(stats.totalVotes)} color={colors.PrimaryRed} />
-              <StatCard icon="chatbubble" label="Comments" value={formatStat(stats.totalComments)} color="#0EA5E9" />
-              <StatCard icon="people" label="Followers" value={formatStat(stats.totalFollowers)} color="#10B981" />
+              <StatCard icon="document-text" label="Total Posts" value={formatStat(stats.totalPosts)} color="#8B5CF6" width={width} />
+              <StatCard icon="heart" label="Total Votes" value={formatStat(stats.totalVotes)} color={colors.PrimaryRed} width={width} />
+              <StatCard icon="chatbubble" label="Comments" value={formatStat(stats.totalComments)} color="#0EA5E9" width={width} />
+              <StatCard icon="people" label="Followers" value={formatStat(stats.totalFollowers)} color="#10B981" width={width} />
             </View>
 
             {/* Quick Actions */}
@@ -186,6 +161,81 @@ export default function CreatorDashboardScreen() {
             )}
           </>
         )}
+    </>
+  );
+
+  const createModalBlock = showCreateModal && (
+        <Modal transparent animationType="slide" visible={showCreateModal} onRequestClose={() => setShowCreateModal(false)}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowCreateModal(false)}>
+            <View style={[styles.createSheet, isWebDesktop && { maxWidth: 520, alignSelf: 'center', width: '100%', borderRadius: 16, marginBottom: 40 }]}>
+              <View style={styles.sheetHandle} />
+              <Text style={styles.sheetTitle}>Create New Content</Text>
+              <Text style={styles.sheetSubtitle}>Choose what you'd like to create</Text>
+
+              {CREATE_OPTIONS.map(opt => (
+                <TouchableOpacity key={opt.type} style={styles.createOption} onPress={() => handleCreate(opt.type)}>
+                  <View style={[styles.createOptionIcon, { backgroundColor: opt.color + '15' }]}>
+                    <Ionicons name={opt.icon as any} size={28} color={opt.color} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.createOptionLabel}>{opt.label}</Text>
+                    <Text style={styles.createOptionDesc}>{opt.desc}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
+  );
+
+  if (isWebDesktop) {
+    return (
+      <WebStudioShell
+        activeRoute="CreatorDashboard"
+        title="Creator Studio Overview"
+        headerRight={
+          <TouchableOpacity onPress={() => setShowCreateModal(true)} style={styles.createBtn}>
+            <Ionicons name="add" size={18} color="white" />
+            <Text style={styles.createBtnText}>CREATE</Text>
+          </TouchableOpacity>
+        }
+      >
+        {dashboardBody}
+        {createModalBlock}
+      </WebStudioShell>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity onPress={() => setShowSidebar(true)} style={{ padding: 4, marginRight: 8 }}>
+            <Ionicons name="menu" size={26} color="#1E293B" />
+          </TouchableOpacity>
+          <View style={styles.logoRow}>
+            <View style={styles.logoBox}>
+              <Ionicons name="play" size={16} color="white" />
+            </View>
+            <Text style={styles.headerTitle}>Creator Studio</Text>
+          </View>
+        </View>
+        <View style={styles.headerRight}>
+          <TouchableOpacity onPress={() => setShowCreateModal(true)} style={styles.createBtn}>
+            <Ionicons name="add" size={18} color="white" />
+            <Text style={styles.createBtnText}>CREATE</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={{ marginLeft: 10 }}>
+            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Main Content */}
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+        {dashboardBody}
       </ScrollView>
 
       {/* Sidebar Drawer */}
@@ -240,31 +290,7 @@ export default function CreatorDashboardScreen() {
         </Modal>
       )}
 
-      {/* Create Options Modal */}
-      {showCreateModal && (
-        <Modal transparent animationType="slide" visible={showCreateModal} onRequestClose={() => setShowCreateModal(false)}>
-          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowCreateModal(false)}>
-            <View style={styles.createSheet}>
-              <View style={styles.sheetHandle} />
-              <Text style={styles.sheetTitle}>Create New Content</Text>
-              <Text style={styles.sheetSubtitle}>Choose what you'd like to create</Text>
-
-              {CREATE_OPTIONS.map(opt => (
-                <TouchableOpacity key={opt.type} style={styles.createOption} onPress={() => handleCreate(opt.type)}>
-                  <View style={[styles.createOptionIcon, { backgroundColor: opt.color + '15' }]}>
-                    <Ionicons name={opt.icon as any} size={28} color={opt.color} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.createOptionLabel}>{opt.label}</Text>
-                    <Text style={styles.createOptionDesc}>{opt.desc}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
-                </TouchableOpacity>
-              ))}
-            </View>
-          </TouchableOpacity>
-        </Modal>
-      )}
+      {createModalBlock}
     </SafeAreaView>
   );
 }
@@ -274,11 +300,11 @@ const TYPE_COLORS: Record<string, string> = {
   FORUM: '#F59E0B', DEBATE: '#10B981', UPDATE: '#6366F1',
 };
 
-const StatCard = ({ icon, label, value, color }: any) => {
+const StatCard = ({ icon, label, value, color, width }: any) => {
   const { colors } = useAppTheme();
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, width);
   return (
-  <View style={styles.statCard}>
+  <View style={[styles.statCard, Platform.OS === 'web' && width >= 768 && { flex: 1, minWidth: 180, width: undefined }]}>
     <View style={[styles.statIconBox, { backgroundColor: color + '15' }]}>
       <Ionicons name={icon} size={20} color={color} />
     </View>
@@ -287,7 +313,7 @@ const StatCard = ({ icon, label, value, color }: any) => {
   </View>
 )};
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, screenWidth = 375) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? 24 : 0 },
 
   // Header
@@ -318,7 +344,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   // Stats
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 28 },
   statCard: {
-    width: (SCREEN_WIDTH - 44) / 2, backgroundColor: 'white', borderRadius: 16,
+    width: (screenWidth - 44) / 2, backgroundColor: 'white', borderRadius: 16,
     padding: 16, borderWidth: 1, borderColor: '#E2E8F0',
   },
   statIconBox: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
@@ -359,7 +385,7 @@ const getStyles = (colors: any) => StyleSheet.create({
   sidebarOverlay: { flex: 1, flexDirection: 'row' },
   sidebarDismiss: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
   sidebar: {
-    position: 'absolute', left: 0, top: 0, bottom: 0, width: SCREEN_WIDTH * 0.75,
+    position: 'absolute', left: 0, top: 0, bottom: 0, width: screenWidth * 0.75,
     backgroundColor: 'white', paddingTop: Platform.OS === 'android' ? 40 : 60,
     elevation: 20, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 20,
   },

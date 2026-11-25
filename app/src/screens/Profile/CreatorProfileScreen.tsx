@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Modal, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Modal, ActivityIndicator, Alert, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,6 +10,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { AppApi } from '../../api/services';
 import { generateUUID } from '../../utils/uuid';
 import CustomModal from '../../components/CustomModal';
+import WebPageShell from '../../components/web/WebPageShell';
 import { useInteraction } from '../../context/InteractionContext';
 
 export default function CreatorProfileScreen() {
@@ -17,6 +18,8 @@ export default function CreatorProfileScreen() {
   const styles = getStyles(colors);
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { authorId, authorName: paramAuthorName } = route.params || {};
   const { userProfile } = useAuth();
 
@@ -121,11 +124,20 @@ export default function CreatorProfileScreen() {
 
   const displayName = creator?.channel_name || creator?.username || paramAuthorName || 'Creator';
   const usernameHandle = creator?.username || '';
-  const avatarUrl = creator?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=E53935&color=fff&size=200`;
+  const avatarUrl = creator?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D4191F&color=fff&size=200`;
   const bio = creator?.bio || 'Content Creator';
   const coverUrl = creator?.coverUrl || null;
 
   if (loading) {
+    if (isWebDesktop) {
+      return (
+        <WebPageShell maxWidth={960}>
+          <View style={{ paddingVertical: 80, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.PrimaryRed} />
+          </View>
+        </WebPageShell>
+      );
+    }
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -135,17 +147,8 @@ export default function CreatorProfileScreen() {
     );
   }
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{displayName}</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} bounces={false}>
+  const creatorBodyContent = (
+    <>
         {/* Cover Banner + Avatar */}
         {coverUrl ? (
           <View style={{ width: '100%', paddingBottom: 60 }}>
@@ -157,7 +160,7 @@ export default function CreatorProfileScreen() {
         ) : (
           <View style={{ width: '100%', paddingBottom: 60 }}>
             <LinearGradient
-              colors={[colors.DeepCrimson, colors.WarmOrange]}
+              colors={[colors.DeepCrimson, colors.PrimaryRed]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
               style={{ width: '100%', height: 160 }}
             />
@@ -203,9 +206,9 @@ export default function CreatorProfileScreen() {
 
         <Text style={{ paddingHorizontal: 24, fontSize: 20, fontWeight: 'bold', marginTop: 32, marginBottom: 16 }}>Publications</Text>
 
-        <View style={{ paddingHorizontal: 16, gap: 16 }}>
+        <View style={isWebDesktop ? styles.webPostsGrid : { paddingHorizontal: 16, gap: 16 }}>
           {posts.length === 0 ? (
-            <View style={{ padding: 48, alignItems: 'center' }}>
+            <View style={{ padding: 48, alignItems: 'center', width: '100%' }}>
               <Ionicons name="document-text-outline" size={48} color={colors.Slate400} style={{ opacity: 0.4 }} />
               <Text style={{ color: colors.Slate500, marginTop: 12 }}>No posts yet</Text>
             </View>
@@ -213,7 +216,7 @@ export default function CreatorProfileScreen() {
             posts.map((item, idx) => (
               <TouchableOpacity 
                 key={`post-${item.id}-${idx}`} 
-                style={styles.postCard}
+                style={[styles.postCard, isWebDesktop && styles.webPostCard]}
                 onPress={() => navigation.navigate('ArticleDetail', { id: item.id })}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
@@ -224,7 +227,7 @@ export default function CreatorProfileScreen() {
                 {item.thumbnail && (
                   <Image source={{ uri: item.thumbnail }} style={{ width: '100%', height: 160, borderRadius: 10, marginBottom: 10 }} />
                 )}
-                <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{item.title}</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 16 }} numberOfLines={2}>{item.title}</Text>
                 {item.content && (
                   <Text style={{ fontSize: 13, color: 'gray', marginTop: 6 }} numberOfLines={2}>
                     {item.content.replace(/<[^>]*>?/gm, '')}
@@ -250,6 +253,46 @@ export default function CreatorProfileScreen() {
             ))
           )}
         </View>
+    </>
+  );
+
+  if (isWebDesktop) {
+    return (
+      <WebPageShell maxWidth={960}>
+        <View style={styles.webCardContainer}>
+          <View style={styles.webTopBar}>
+            <TouchableOpacity style={styles.webBackBtn} onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={16} color="#111827" />
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827' }}>Back</Text>
+            </TouchableOpacity>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: '#111827' }}>{displayName}</Text>
+            <View style={{ width: 60 }} />
+          </View>
+          <View style={{ paddingBottom: 28 }}>{creatorBodyContent}</View>
+        </View>
+        <CustomModal 
+          visible={modalConfig.visible} 
+          title={modalConfig.title} 
+          message={modalConfig.message} 
+          isError={modalConfig.isError} 
+          onPrimaryPress={() => setModalConfig(prev => ({ ...prev, visible: false }))} 
+        />
+      </WebPageShell>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
+          <Ionicons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{displayName}</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} bounces={false}>
+        {creatorBodyContent}
       </ScrollView>
 
       <CustomModal 
@@ -285,4 +328,9 @@ const getStyles = (colors: any) => StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   bottomSheet: { backgroundColor: 'white', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16, paddingBottom: 32 },
   sheetItem: { paddingVertical: 16 },
+  webCardContainer: { backgroundColor: '#FFFFFF', borderRadius: 6, borderWidth: 1, borderColor: '#E5E7EB', overflow: 'hidden' },
+  webTopBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  webBackBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 4, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' },
+  webPostsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, paddingHorizontal: 24 },
+  webPostCard: { flexBasis: '48%', flexGrow: 1, minWidth: 280, borderRadius: 6 },
 });

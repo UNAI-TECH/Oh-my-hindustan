@@ -1,13 +1,14 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Image,
-  Platform, ActivityIndicator, RefreshControl
+  Platform, ActivityIndicator, RefreshControl, useWindowDimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import { CreatorApi } from '../../api/services';
+import WebStudioShell from '../../components/web/WebStudioShell';
 
 const formatTimeAgo = (iso: string) => {
   try {
@@ -28,6 +29,8 @@ const formatTimeAgo = (iso: string) => {
 };
 
 export default function CreatorCommentsScreen() {
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
@@ -53,7 +56,7 @@ export default function CreatorCommentsScreen() {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Image
-          source={{ uri: item.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.username)}&background=E53935&color=fff&size=80` }}
+          source={{ uri: item.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.username)}&background=D4191F&color=fff&size=80` }}
           style={styles.avatar}
         />
         <View style={{ flex: 1, marginLeft: 12 }}>
@@ -68,6 +71,32 @@ export default function CreatorCommentsScreen() {
       </View>
     </View>
   );
+
+  if (isWebDesktop) {
+    return (
+      <WebStudioShell activeRoute="CreatorComments" title="Comments">
+        {isLoading ? (
+          <View style={{ paddingVertical: 80, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.PrimaryRed} />
+          </View>
+        ) : comments.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="chatbubbles-outline" size={64} color="#CBD5E1" />
+            <Text style={styles.emptyTitle}>No Comments Yet</Text>
+            <Text style={styles.emptySubtitle}>Comments on your content will appear here</Text>
+          </View>
+        ) : (
+          <View style={{ gap: 12 }}>
+            {comments.map((item, index) => (
+              <React.Fragment key={`${item.id}-${index}`}>
+                {renderItem({ item })}
+              </React.Fragment>
+            ))}
+          </View>
+        )}
+      </WebStudioShell>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>

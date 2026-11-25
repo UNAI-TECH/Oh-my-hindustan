@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Image,
-  Platform, Alert, ActivityIndicator, RefreshControl
+  Platform, Alert, ActivityIndicator, RefreshControl, useWindowDimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import { CreatorApi } from '../../api/services';
 import CustomModal from '../../components/CustomModal';
+import WebStudioShell from '../../components/web/WebStudioShell';
 
 const TYPE_COLORS: Record<string, string> = {
   BLOG: '#8B5CF6',
@@ -27,6 +28,8 @@ const formatDate = (iso: string) => {
 };
 
 export default function CreatorContentScreen() {
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
@@ -103,6 +106,43 @@ export default function CreatorContentScreen() {
       </View>
     </View>
   );
+
+  if (isWebDesktop) {
+    return (
+      <WebStudioShell activeRoute="CreatorContent" title="My Content">
+        {isLoading ? (
+          <View style={{ paddingVertical: 80, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.PrimaryRed} />
+          </View>
+        ) : posts.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="document-text-outline" size={64} color="#CBD5E1" />
+            <Text style={styles.emptyTitle}>No Content Yet</Text>
+            <Text style={styles.emptySubtitle}>Start creating to see your content here</Text>
+          </View>
+        ) : (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
+            {posts.map((item, index) => (
+              <View key={`${item.id}-${index}`} style={{ flexBasis: '48%', flexGrow: 1, minWidth: 300 }}>
+                {renderItem({ item })}
+              </View>
+            ))}
+          </View>
+        )}
+
+        <CustomModal 
+          visible={modalConfig.visible} 
+          title={modalConfig.title} 
+          message={modalConfig.message} 
+          isError={modalConfig.isError} 
+          primaryButtonText={modalConfig.primaryButtonText || 'OK'}
+          secondaryButtonText={modalConfig.secondaryButtonText}
+          onPrimaryPress={modalConfig.onPrimaryPress || (() => setModalConfig(prev => ({ ...prev, visible: false })))} 
+          onSecondaryPress={modalConfig.onSecondaryPress}
+        />
+      </WebStudioShell>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>

@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Switch, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Switch, Alert, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomModal from '../../components/CustomModal';
+import WebPageShell from '../../components/web/WebPageShell';
 
 export default function PrivacySecurityScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
 
   const [personalizedAds, setPersonalizedAds] = useState(true);
   const [analyticsCookies, setAnalyticsCookies] = useState(true);
@@ -50,18 +53,8 @@ export default function PrivacySecurityScreen() {
     });
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Privacy & Security</Text>
-        <View style={{ width: 36 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        
+  const privacyBody = (
+    <>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Data Safety & Usage</Text>
           <Text style={styles.sectionDesc}>Manage how your data is used to improve PostsApp.</Text>
@@ -108,7 +101,52 @@ export default function PrivacySecurityScreen() {
             <Text style={styles.actionText}>Clear Search History</Text>
           </TouchableOpacity>
         </View>
+    </>
+  );
 
+  if (isWebDesktop) {
+    return (
+      <WebPageShell maxWidth={860}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ width: 14, height: 3, backgroundColor: '#D4191F' }} />
+            <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827' }}>Privacy & Security</Text>
+          </View>
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 4, paddingHorizontal: 10, paddingVertical: 6 }}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={16} color="#111827" />
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827' }}>Back</Text>
+          </TouchableOpacity>
+        </View>
+        {privacyBody}
+        <CustomModal 
+          visible={modalConfig.visible} 
+          title={modalConfig.title} 
+          message={modalConfig.message} 
+          isError={modalConfig.isError} 
+          primaryButtonText={modalConfig.primaryButtonText || 'OK'}
+          secondaryButtonText={modalConfig.secondaryButtonText}
+          onPrimaryPress={modalConfig.onPrimaryPress || (() => setModalConfig(prev => ({ ...prev, visible: false })))} 
+          onSecondaryPress={modalConfig.onSecondaryPress}
+        />
+      </WebPageShell>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
+          <Ionicons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Privacy & Security</Text>
+        <View style={{ width: 36 }} />
+      </View>
+
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        {privacyBody}
       </ScrollView>
 
       <CustomModal 

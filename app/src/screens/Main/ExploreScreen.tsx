@@ -1,18 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Platform, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, FlatList, ActivityIndicator, RefreshControl, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import AppBottomNavBar from '../../components/BottomNavBar';
 import MainHeader from '../../components/MainHeader';
+import WebPageShell from '../../components/web/WebPageShell';
 import { useFeed } from '../../context/FeedContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { FeedItemType, FeedItem } from '../../types';
 import { supabase } from '../../lib/supabaseClient';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface FollowedCreator {
   id: string;
@@ -24,6 +23,8 @@ export default function ExploreScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { feedItems, isLoading: feedLoading } = useFeed();
   const { isAuthenticated, userProfile } = useAuth();
   const { unreadCount } = useNotifications();
@@ -65,8 +66,8 @@ export default function ExploreScreen() {
     let items = feedItems.filter(item => item.type !== FeedItemType.PROMO);
 
     // Filter by type
-    if (selectedFilter === 'Articles') items = items.filter(it => it.type === FeedItemType.NEWS || it.type === FeedItemType.UPDATE);
-    if (selectedFilter === 'Headlines') items = items.filter(it => it.type === FeedItemType.BLOG || it.type === FeedItemType.FORUM);
+    if (selectedFilter === 'News') items = items.filter(it => [FeedItemType.NEWS, FeedItemType.UPDATE, FeedItemType.POLICY_TYPE].includes(it.type));
+    if (selectedFilter === 'Blogs') items = items.filter(it => [FeedItemType.BLOG, FeedItemType.FORUM].includes(it.type));
     if (selectedFilter === 'Videos') items = items.filter(it => it.type === FeedItemType.VIDEO || it.type === FeedItemType.DEBATE);
     if (selectedFilter === 'Trending') items = items.filter(it => it.isTrending);
 
@@ -81,7 +82,7 @@ export default function ExploreScreen() {
   }, [fetchFollowedCreators]);
 
   const renderCreatorAvatar = (creator: FollowedCreator, index: number) => {
-    const avatarUri = creator.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.username || 'C')}&background=E53935&color=fff&size=200`;
+    const avatarUri = creator.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.username || 'C')}&background=D4191F&color=fff&size=200`;
     return (
       <TouchableOpacity
         key={`creator-${creator.id}-${index}`}
@@ -159,6 +160,75 @@ export default function ExploreScreen() {
       </TouchableOpacity>
     );
   };
+
+  if (isWebDesktop) {
+    return (
+      <WebPageShell maxWidth={1280} refreshing={refreshing} onRefresh={onRefresh}>
+        <View style={styles.webHeaderRow}>
+          <View style={styles.webTitleRow}>
+            <View style={styles.webDash} />
+            <Text style={styles.webPageTitle}>Explore Stories & Creators</Text>
+          </View>
+          <View style={styles.webFilterPills}>
+            {filters.map((filter) => (
+              <TouchableOpacity
+                key={filter}
+                style={[styles.webFilterChip, selectedFilter === filter && styles.webFilterChipActive]}
+                onPress={() => setSelectedFilter(filter)}
+              >
+                <Text style={[styles.webFilterText, selectedFilter === filter && styles.webFilterTextActive]}>
+                  {filter}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {followedCreators.length > 0 && (
+          <View style={styles.webCreatorsCard}>
+            <Text style={styles.webCreatorsLabel}>FOLLOWING</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {followedCreators.map((c, idx) => renderCreatorAvatar(c, idx))}
+              <TouchableOpacity
+                style={styles.creatorItem}
+                onPress={() => navigation.navigate('Search')}
+              >
+                <View style={[styles.creatorAvatarRing, { borderColor: '#E2E8F0' }]}>
+                  <View style={[styles.creatorAvatar, { backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }]}>
+                    <Text style={{ fontSize: 11, fontWeight: 'bold', color: colors.Slate500 }}>All</Text>
+                  </View>
+                </View>
+                <Text style={[styles.creatorName, { color: colors.Slate500 }]}>Discover</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        )}
+
+        {feedLoading ? (
+          <View style={{ paddingVertical: 80, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.PrimaryRed} />
+          </View>
+        ) : contentFeed.length === 0 ? (
+          <View style={styles.webEmptyBox}>
+            <Ionicons name="compass-outline" size={48} color={colors.Slate400} />
+            <Text style={{ color: '#111827', fontSize: 18, fontWeight: '700', marginTop: 12 }}>No content found</Text>
+            <Text style={{ color: '#6B7280', fontSize: 13, marginTop: 4 }}>Follow creators or try another filter</Text>
+          </View>
+        ) : (
+          <View style={styles.webGrid}>
+            {contentFeed.map((item, index) => (
+              <View
+                key={`explore-web-${item.id}-${index}`}
+                style={width >= 1024 ? styles.webCardWrapDesktop : styles.webCardWrapTablet}
+              >
+                {renderContentItem({ item, index })}
+              </View>
+            ))}
+          </View>
+        )}
+      </WebPageShell>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -467,6 +537,94 @@ const getStyles = (colors: any) => StyleSheet.create({
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  webHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginBottom: 20,
+  },
+  webTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  webDash: {
+    width: 14,
+    height: 3,
+    backgroundColor: '#D4191F',
+  },
+  webPageTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  webFilterPills: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  webFilterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  webFilterChipActive: {
+    backgroundColor: '#D4191F',
+    borderColor: '#D4191F',
+  },
+  webFilterText: {
+    color: '#374151',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  webFilterTextActive: {
+    color: '#FFFFFF',
+  },
+  webCreatorsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 16,
+    marginBottom: 22,
+  },
+  webCreatorsLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#6B7280',
+    letterSpacing: 0.8,
+    marginBottom: 12,
+  },
+  webGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 18,
+  },
+  webCardWrapDesktop: {
+    flexBasis: '31%',
+    flexGrow: 1,
+    minWidth: 280,
+    marginHorizontal: -16,
+  },
+  webCardWrapTablet: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    minWidth: 260,
+    marginHorizontal: -16,
+  },
+  webEmptyBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 64,
     alignItems: 'center',
   },
 });
