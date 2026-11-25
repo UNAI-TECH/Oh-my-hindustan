@@ -1,0 +1,12 @@
+.git
+.gradle
+gradle
+app_native
+backend
+node_modules
+app/node_modules
+app/.expo
+app/dist
+*.log
+*.apk
+*.aab

@@ -75,6 +75,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     // ─── Native Google Sign-In Configuration ───
     // This allows the "Choose an account" screen to show "OMH" instead of the Supabase URL.
     // Replace the webClientId with your actual ID from Google Cloud Console.
@@ -454,6 +455,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // ─── Native Google Sign-In (Fixes Branding Issue) ───
   const signInWithGoogleNative = async () => {
+    if (Platform.OS === 'web') {
+      return signInWithGoogle();
+    }
     if (isHandlingOAuthRef.current) return;
     setIsLoading(true);
     setError(null);

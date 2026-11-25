@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "build": "npm run build:web --prefix app"
+  },
   "devDependencies": {
     "@supabase/supabase-js": "^2.100.0"
   }
