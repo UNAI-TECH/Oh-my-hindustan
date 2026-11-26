@@ -57,7 +57,21 @@ export default function ExploreScreen() {
 
   useEffect(() => {
     fetchFollowedCreators();
-  }, [fetchFollowedCreators]);
+    if (!userProfile?.id) return;
+    const channel = supabase
+      .channel(`explore-follows-${userProfile.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Follow', filter: `followerId=eq.${userProfile.id}` }, () => {
+        fetchFollowedCreators();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'User' }, () => {
+        fetchFollowedCreators();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchFollowedCreators, userProfile?.id]);
 
   // Get content from followed creators, shuffled
   const followedCreatorIds = useMemo(() => followedCreators.map(c => c.id), [followedCreators]);

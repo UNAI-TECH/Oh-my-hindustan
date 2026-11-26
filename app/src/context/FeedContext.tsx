@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
 import { withRetry } from '../utils/networkUtils';
+import { formatCardExcerpt } from '../components/web/webPortalHelpers';
 
 const FEED_CACHE_KEY = 'home_feed_cache';
 
@@ -66,7 +67,7 @@ const mapPostType = (type: string): FeedItemType => {
   return typeMap[type] || FeedItemType.NEWS;
 };
 
-const toFeedItem = (post: any): FeedItem => {
+export const mapPostToFeedItem = (post: any): FeedItem => {
   return {
     id: post.id,
     type: mapPostType(post.type),
@@ -83,7 +84,7 @@ const toFeedItem = (post: any): FeedItem => {
     downvoteCount: post.downvoteCount || 0,
     comments: post.commentCount || 0,
     viewCount: post.viewCount || 0,
-    excerpt: post.content?.substring(0, 150) || null,
+    excerpt: formatCardExcerpt(post.content, 160) || null,
     content: post.content,
     videoDuration: post.video_duration || null,
     videoUrl: post.videoUrl || post.video_url || null,
@@ -95,6 +96,8 @@ const toFeedItem = (post: any): FeedItem => {
     hashtags: Array.isArray(post.hashtags) ? post.hashtags : (post.hashtags ? [post.hashtags] : null),
   };
 };
+
+const toFeedItem = mapPostToFeedItem;
 
 const FeedContext = createContext<FeedContextProps | undefined>(undefined);
 
@@ -242,6 +245,11 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
       debounceTimer = setTimeout(() => {
         if (page === 1) {
           fetchHomeFeed(false, true);
+        }
+        if (payload?.table === 'Post' && payload?.new?.id && selectedArticle?.id === payload.new.id) {
+          AppApi.getPost(payload.new.id)
+            .then((fresh) => { if (fresh) setSelectedArticle(toFeedItem(fresh)); })
+            .catch(() => {});
         }
       }, 300);
 

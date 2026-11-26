@@ -19,6 +19,7 @@ import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import CustomModal from '../../components/CustomModal';
 import PostsAppLogo from '../../components/PostsAppLogo';
+import WebAuthShell, { webAuthCardStyles } from '../../components/web/WebAuthShell';
 
 export default function SignUpScreen() {
   const { colors } = useAppTheme();
@@ -81,6 +82,142 @@ export default function SignUpScreen() {
   };
 
   const displayError = localError || error;
+
+  if (Platform.OS === 'web') {
+    return (
+      <>
+        <WebAuthShell>
+          <Text style={webAuthCardStyles.title}>{'Join\nPostsApp'}</Text>
+          <Text style={webAuthCardStyles.subtitle}>Please login or sign up to continue</Text>
+
+          <View style={webAuthCardStyles.form}>
+            <View style={webAuthCardStyles.inputWrap}>
+              <Ionicons name="person-outline" size={18} color="#18181B" style={webAuthCardStyles.inputIcon} />
+              <TextInput
+                style={webAuthCardStyles.input}
+                placeholder="Full Name"
+                placeholderTextColor="#6B7280"
+                value={name}
+                onChangeText={(text) => { setName(text); setLocalError(null); }}
+              />
+            </View>
+
+            <View style={webAuthCardStyles.inputWrap}>
+              <Ionicons name="mail-outline" size={18} color="#18181B" style={webAuthCardStyles.inputIcon} />
+              <TextInput
+                style={webAuthCardStyles.input}
+                placeholder="Your Email"
+                placeholderTextColor="#6B7280"
+                value={email}
+                onChangeText={(text) => { setEmail(text); setLocalError(null); }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={webAuthCardStyles.inputWrap}>
+              <Ionicons name="call-outline" size={18} color="#18181B" style={webAuthCardStyles.inputIcon} />
+              <TextInput
+                style={webAuthCardStyles.input}
+                placeholder="Mobile Number"
+                placeholderTextColor="#6B7280"
+                value={mobile}
+                onChangeText={(text) => { setMobile(text); setLocalError(null); }}
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            <View style={webAuthCardStyles.inputWrap}>
+              <Ionicons name="lock-closed-outline" size={18} color="#18181B" style={webAuthCardStyles.inputIcon} />
+              <TextInput
+                style={webAuthCardStyles.input}
+                placeholder="Your Password"
+                placeholderTextColor="#6B7280"
+                value={password}
+                onChangeText={(text) => { setPassword(text); setLocalError(null); }}
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity
+                style={webAuthCardStyles.eyeBtn}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={19}
+                  color="#6B7280"
+                />
+              </TouchableOpacity>
+            </View>
+
+            <View style={webAuthCardStyles.inputWrap}>
+              <Ionicons name="shield-checkmark-outline" size={18} color="#18181B" style={webAuthCardStyles.inputIcon} />
+              <TextInput
+                style={webAuthCardStyles.input}
+                placeholder="Confirm Password"
+                placeholderTextColor="#6B7280"
+                value={confirmPassword}
+                onChangeText={(text) => { setConfirmPassword(text); setLocalError(null); }}
+                secureTextEntry={!showConfirmPassword}
+                onSubmitEditing={handleSignUp}
+              />
+              <TouchableOpacity
+                style={webAuthCardStyles.eyeBtn}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                <Ionicons
+                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={19}
+                  color="#6B7280"
+                />
+              </TouchableOpacity>
+            </View>
+
+            {displayError && (
+              <Text style={webAuthCardStyles.errorText}>{displayError}</Text>
+            )}
+
+            <TouchableOpacity
+              style={webAuthCardStyles.primaryBtn}
+              onPress={handleSignUp}
+              disabled={isLoading}
+              activeOpacity={0.88}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={webAuthCardStyles.primaryBtnText}>Sign Up</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={webAuthCardStyles.googleBtn}
+              onPress={handleGoogleSignIn}
+              disabled={isLoading}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="logo-google" size={18} color="#DB4437" />
+              <Text style={webAuthCardStyles.googleBtnText}>Google</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={webAuthCardStyles.footerRow}>
+            <Text style={webAuthCardStyles.footerMuted}>Already Have An Account? </Text>
+            <TouchableOpacity onPress={() => { clearState(); navigation.navigate('Login' as never); }}>
+              <Text style={webAuthCardStyles.footerLink}>Login</Text>
+            </TouchableOpacity>
+          </View>
+        </WebAuthShell>
+
+        <CustomModal
+          visible={modalConfig.visible}
+          title={modalConfig.title}
+          message={modalConfig.message}
+          isError={modalConfig.isError}
+          onPrimaryPress={() => setModalConfig(prev => ({ ...prev, visible: false }))}
+        />
+      </>
+    );
+  }
 
   return (
     <KeyboardAvoidingView 

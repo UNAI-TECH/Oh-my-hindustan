@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import React from 'react';
+import { StyleSheet, Platform } from 'react-native';
+import { NavigationContainer, getStateFromPath, getPathFromState } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
+import * as Linking from 'expo-linking';
 
 import RootNavigator from './src/navigation/RootNavigator';
 import { AuthProvider } from './src/context/AuthContext';
@@ -10,7 +11,86 @@ import { NotificationProvider } from './src/context/NotificationContext';
 import { InteractionProvider } from './src/context/InteractionContext';
 import { navigationRef } from './src/utils/navigation';
 import { ThemeProvider } from './src/context/ThemeContext';
+import { categoryToSlug, slugToCategory, WEB_NAV_CATEGORIES } from './src/components/web/webPortalHelpers';
 import './src/lib/i18n';
+
+const CATEGORY_SLUGS = new Set([
+  ...WEB_NAV_CATEGORIES.map((c) => categoryToSlug(c)),
+  'watch-online',
+  'science-and-tech',
+]);
+
+const linking: any = {
+  prefixes: [
+    ...(Platform.OS === 'web' && typeof window !== 'undefined' ? [window.location.origin] : []),
+    Linking.createURL('/'),
+  ],
+  config: {
+    screens: {
+      Home: {
+        path: 'category/:initialCategory?',
+        parse: {
+          initialCategory: (val: string) => slugToCategory(val),
+        },
+        stringify: {
+          initialCategory: (val: string) => categoryToSlug(val || 'HOME'),
+        },
+      },
+      CreatorProfile: 'creator/:authorId',
+      ArticleDetail: 'article/:id',
+      Login: 'login',
+      SignUp: 'signup',
+      OTP: 'otp',
+      ProfileSetup: 'onboarding/profile',
+      UsernameSetup: 'onboarding/username',
+      LanguageSelection: 'onboarding/language',
+      TopicSelection: 'onboarding/topics',
+      ProfileImageUpload: 'onboarding/avatar',
+      Explore: 'explore',
+      StoryFeed: 'stories',
+      StoryViewer: 'story/:storyId',
+      Library: 'library',
+      Search: 'search',
+      Notifications: 'notifications',
+      InterestsSelection: 'interests',
+      Profile: 'profile',
+      Settings: 'settings',
+      PersonalDetails: 'settings/details',
+      PrivacySecurity: 'settings/privacy',
+      CreatorDashboard: 'studio',
+      CreatorAnalytics: 'studio/analytics',
+      ContentEditor: 'studio/editor',
+      CreatorContent: 'studio/content',
+      CreatorComments: 'studio/comments',
+      CreatorSubtitles: 'studio/subtitles',
+      CreatorEarn: 'studio/earn',
+      CreatorSettings: 'studio/settings',
+      CreatorFeedback: 'studio/feedback',
+      AdminOverview: 'admin',
+      AdminMonetization: 'admin/economics',
+      Splash: 'splash',
+    },
+  },
+  getStateFromPath(path: string, options: any) {
+    const cleanPath = path.split('?')[0].replace(/^\/+|\/+$/g, '');
+    if (!cleanPath) {
+      return { routes: [{ name: 'Home', params: { initialCategory: 'HOME' } }] };
+    }
+    const queryIndex = path.indexOf('?');
+    const querySuffix = queryIndex >= 0 ? path.slice(queryIndex) : '';
+    if (CATEGORY_SLUGS.has(cleanPath.toLowerCase())) {
+      return getStateFromPath(`category/${cleanPath.toLowerCase()}${querySuffix}`, options);
+    }
+    return getStateFromPath(path, options);
+  },
+  getPathFromState(state: any, options: any) {
+    const resolved = getPathFromState(state, options);
+    if (resolved === '/category/home' || resolved === '/category') {
+      return '/';
+    }
+    return resolved;
+  },
+};
 
 export default function App() {
   return (
@@ -19,7 +99,7 @@ export default function App() {
         <InteractionProvider>
           <FeedProvider>
             <NotificationProvider>
-              <NavigationContainer ref={navigationRef}>
+              <NavigationContainer ref={navigationRef} linking={linking}>
                 <RootNavigator />
                 <StatusBar style="auto" />
               </NavigationContainer>

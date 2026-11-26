@@ -5,6 +5,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import WebPageShell from '../../components/web/WebPageShell';
+import { formatCardExcerpt } from '../../components/web/webPortalHelpers';
 import { FeedItemType, FeedItem } from '../../types';
 import { useFeed } from '../../context/FeedContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -34,46 +35,107 @@ export default function SearchScreen() {
   }, [route.params?.initialQuery]);
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [creators, setCreators] = useState<CreatorResult[]>([]);
+  const [remotePosts, setRemotePosts] = useState<FeedItem[]>([]);
   const [searchingCreators, setSearchingCreators] = useState(false);
+  const [liveSyncTick, setLiveSyncTick] = useState(0);
   const filters = ['All', 'Creators', 'News', 'Blogs', 'Videos'];
 
-  // Search creators from Supabase when query changes
+  // Live Supabase search for both creators and published posts
   useEffect(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (q.length < 2) {
+    const q = searchQuery.trim();
+    if (q.length < 1) {
       setCreators([]);
+      setRemotePosts([]);
       return;
     }
 
+    let cancelled = false;
+    const safeQ = q.replace(/[,()]/g, ' ').trim();
     const timeoutId = setTimeout(async () => {
       setSearchingCreators(true);
       try {
-        const { data, error } = await supabase
-          .from('User')
-          .select('id, username, channel_name, "avatarUrl", bio, role')
-          .in('role', ['ANALYST', 'CREATOR'])
-          .or(`username.ilike.%${q}%,channel_name.ilike.%${q}%`)
-          .limit(10);
-        if (error) console.warn('Creator search error:', error);
-        setCreators(data || []);
-      } catch (e) {
-        console.warn('Creator search error:', e);
-      } finally {
-        setSearchingCreators(false);
-      }
-    }, 300);
+        const [creatorRes, postRes] = await Promise.all([
+          q.length >= 2
+            ? supabase
+                .from('User')
+                .select('id, username, channel_name, "avatarUrl", bio, role')
+                .in('role', ['ANALYST', 'CREATOR'])
+                .or(`username.ilike.%${safeQ}%,channel_name.ilike.%${safeQ}%`)
+                .limit(10)
+            : Promise.resolve({ data: [], error: null }),
+          supabase
+            .from('Post')
+            .select('id, title, content, type, thumbnail, category, custom_category, createdAt, author:User!authorId(id, username, channel_name, avatarUrl)')
+            .or('is_active.eq.true,is_active.is.null')
+            .or(`title.ilike.%${safeQ}%,category.ilike.%${safeQ}%,content.ilike.%${safeQ}%`)
+            .order('createdAt', { ascending: false })
+            .limit(20),
+        ]);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+        if (cancelled) return;
+        if (creatorRes.error) console.warn('Creator search error:', creatorRes.error);
+        setCreators(creatorRes.data || []);
+
+        const mappedPosts: FeedItem[] = (postRes.data || []).map((p: any) => ({
+          id: p.id,
+          type: (p.type as FeedItemType) || FeedItemType.NEWS,
+          title: p.title,
+          subtitle: 'PostsApp',
+          authorName: p.author?.channel_name || p.author?.username || 'Creator',
+          authorImage: p.author?.avatarUrl || '',
+          authorId: p.author?.id || null,
+          thumbnail: p.thumbnail || null,
+          category: p.category === 'custom' && p.custom_category ? p.custom_category : (p.category || 'General'),
+          timestamp: '',
+          votes: 0,
+          comments: 0,
+          excerpt: formatCardExcerpt(p.content, 160) || null,
+          content: p.content,
+        }));
+        setRemotePosts(mappedPosts);
+      } catch (e) {
+        console.warn('Realtime search error:', e);
+      } finally {
+        if (!cancelled) setSearchingCreators(false);
+      }
+    }, 200);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [searchQuery, liveSyncTick]);
+
+  // Keep search screen synced when posts change in Supabase
+  useEffect(() => {
+    if (!searchQuery.trim()) return;
+    const channel = supabase
+      .channel('search-screen-realtime-posts')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Post' }, () => {
+        setLiveSyncTick((v) => v + 1);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [Boolean(searchQuery.trim())]);
 
   const filteredPosts = useMemo(() => {
     if (selectedFilter === 'Creators') return [];
-    return feedItems.filter(item => {
-      const q = searchQuery.toLowerCase();
-      const matchesQuery = !q || item.title.toLowerCase().includes(q) || 
-                           (item.excerpt?.toLowerCase().includes(q)) || 
+    const q = searchQuery.trim().toLowerCase();
+    const combined = q ? [...remotePosts, ...feedItems] : feedItems;
+    const seen = new Set<string>();
+
+    return combined.filter(item => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+
+      const matchesQuery = !q || item.title.toLowerCase().includes(q) ||
+                           (item.excerpt?.toLowerCase().includes(q)) ||
+                           (item.category?.toLowerCase().includes(q)) ||
                            (item.authorName?.toLowerCase().includes(q));
-      
+
       let matchesFilter = true;
       if (selectedFilter === 'News') matchesFilter = item.type === FeedItemType.NEWS;
       if (selectedFilter === 'Blogs') matchesFilter = item.type === FeedItemType.BLOG;
@@ -81,7 +143,7 @@ export default function SearchScreen() {
 
       return matchesQuery && matchesFilter && item.type !== FeedItemType.PROMO;
     });
-  }, [searchQuery, selectedFilter, feedItems]);
+  }, [searchQuery, selectedFilter, feedItems, remotePosts]);
 
   const showCreators = selectedFilter === 'All' || selectedFilter === 'Creators';
 

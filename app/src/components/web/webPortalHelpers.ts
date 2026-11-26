@@ -2,6 +2,7 @@ import { FeedItem, FeedItemType } from '../../types';
 
 export const WEB_NAV_CATEGORIES = [
   'HOME',
+  'POLITICS',
   'BUSINESS',
   'ECONOMY',
   'POLICY',
@@ -12,6 +13,7 @@ export const WEB_NAV_CATEGORIES = [
 ] as const;
 
 export const FOOTER_CATEGORIES = [
+  'Politics',
   'Business',
   'Economy',
   'Policy',
@@ -32,9 +34,10 @@ export const POPULAR_TAGS = [
 ] as const;
 
 const CATEGORY_ALIASES: Record<string, string[]> = {
+  POLITICS: ['politics', 'political', 'election', 'parliament', 'government', 'minister', 'party', 'assembly', 'lok sabha', 'rajya sabha', 'governance', 'policy'],
   BUSINESS: ['business', 'economy', 'infrastructure', 'corporate', 'market', 'finance'],
   ECONOMY: ['economy', 'business', 'finance', 'agricultural', 'market', 'growth'],
-  POLICY: ['policy', 'politics', 'governance', 'pmo', 'national security', 'defense', 'election', 'social justice'],
+  POLICY: ['policy', 'governance', 'pmo', 'national security', 'defense', 'social justice'],
   SPORTS: ['sports', 'sport', 'athletics', 'cricket', 'football'],
   CULTURE: ['culture', 'cultural', 'heritage', 'entertainment', 'education', 'rural'],
   'SCIENCE & TECH': ['science', 'tech', 'technology', 'digital india', 'space', 'ai'],
@@ -64,19 +67,99 @@ export function matchesEditorialCategory(item: FeedItem, activeCategory: string)
   return aliases.some((alias) => haystack.includes(alias));
 }
 
+const HTML_ENTITY_MAP: Record<string, string> = {
+  '&nbsp;': ' ',
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&apos;': "'",
+  '&#39;': "'",
+  '&#039;': "'",
+  '&lsquo;': '\u2018',
+  '&rsquo;': '\u2019',
+  '&ldquo;': '\u201C',
+  '&rdquo;': '\u201D',
+  '&ndash;': '\u2013',
+  '&mdash;': '\u2014',
+  '&hellip;': '...',
+  '&bull;': '\u2022',
+  '&copy;': '\u00A9',
+  '&reg;': '\u00AE',
+  '&trade;': '\u2122',
+};
+
 /**
- * Strips HTML tags and entities for clean card excerpts and read-time calculation.
+ * Strips HTML tags (including incomplete trailing tags), style/script blocks,
+ * and decodes named and numeric HTML entities into clean plain text.
  */
 export function stripHtml(html?: string | null): string {
   if (!html) return '';
-  return html
+  let text = String(html)
+    .replace(/<(style|script)[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<\/(p|div|h[1-6]|li|blockquote|section|article|tr)>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, ' ')
     .replace(/<[^>]*>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
+    .replace(/<[^>]*$/g, ' ');
+
+  // Decode named and numeric HTML entities safely (handle double-encoded strings cleanly)
+  for (let pass = 0; pass < 2; pass++) {
+    const prev = text;
+    text = text
+      .replace(/&(nbsp|amp|lt|gt|quot|apos|lsquo|rsquo|ldquo|rdquo|ndash|mdash|hellip|bull|copy|reg|trade);|&#0?39;/gi, (m) => {
+        return HTML_ENTITY_MAP[m.toLowerCase()] ?? m;
+      })
+      .replace(/&#(\d+);/g, (_, dec) => {
+        const code = Number(dec);
+        return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '';
+      })
+      .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
+        const code = parseInt(hex, 16);
+        return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '';
+      });
+    if (text === prev) break;
+  }
+
+  return text
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/<[^>]*$/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/**
+ * Strips and decodes HTML before truncating so cards never show partial tags or raw CSS attributes.
+ */
+export function formatCardExcerpt(html?: string | null, maxLength = 155): string {
+  const clean = stripHtml(html);
+  if (!clean || clean.length <= maxLength) return clean;
+  const sliced = clean.slice(0, maxLength);
+  const lastSpace = sliced.lastIndexOf(' ');
+  const trimmed = lastSpace > maxLength * 0.6 ? sliced.slice(0, lastSpace) : sliced;
+  return `${trimmed.trimEnd()}...`;
+}
+
+/**
+ * Converts a nav category label (e.g. "SCIENCE & TECH") to a clean URL slug ("science-tech").
+ */
+export function categoryToSlug(category: string): string {
+  const upper = category.trim().toUpperCase();
+  if (upper === 'SCIENCE & TECH') return 'science-tech';
+  if (upper === 'WATCH_ONLINE') return 'watch-online';
+  return upper.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+/**
+ * Resolves a category URL slug back into the canonical nav category constant.
+ */
+export function slugToCategory(slug?: string | null): string {
+  if (!slug) return 'HOME';
+  const norm = slug.trim().toLowerCase();
+  if (norm === 'home' || norm === '') return 'HOME';
+  if (norm === 'watch-online' || norm === 'watch_online') return 'WATCH_ONLINE';
+  if (norm === 'science-tech' || norm === 'science-and-tech' || norm === 'science & tech') return 'SCIENCE & TECH';
+  const match = WEB_NAV_CATEGORIES.find((c) => categoryToSlug(c) === norm || c.toLowerCase() === norm);
+  return match || norm.toUpperCase();
 }
 
 /**

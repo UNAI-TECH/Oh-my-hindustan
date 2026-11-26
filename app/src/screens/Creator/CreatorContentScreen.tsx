@@ -10,6 +10,7 @@ import { useAppTheme } from '../../context/ThemeContext';
 import { CreatorApi } from '../../api/services';
 import CustomModal from '../../components/CustomModal';
 import WebStudioShell from '../../components/web/WebStudioShell';
+import { formatCardExcerpt } from '../../components/web/webPortalHelpers';
 
 const TYPE_COLORS: Record<string, string> = {
   BLOG: '#8B5CF6',
@@ -87,7 +88,7 @@ export default function CreatorContentScreen() {
       </View>
 
       <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-      <Text style={styles.cardExcerpt} numberOfLines={2}>{item.content?.substring(0, 120)}...</Text>
+      <Text style={styles.cardExcerpt} numberOfLines={2}>{formatCardExcerpt(item.content, 120)}</Text>
 
       <View style={styles.cardFooter}>
         <View style={styles.cardStat}>

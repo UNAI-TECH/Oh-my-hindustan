@@ -565,7 +565,7 @@ export const AppApi = {
 
     return supabase
       .channel('viewer-feed')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'Post' }, debouncedCallback)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Post' }, debouncedCallback)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'Vote' }, debouncedCallback)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'Comment' }, debouncedCallback)
       .subscribe();

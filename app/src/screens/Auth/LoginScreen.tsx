@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import PostsAppLogo from '../../components/PostsAppLogo';
+import WebAuthShell, { webAuthCardStyles } from '../../components/web/WebAuthShell';
 
 export default function LoginScreen() {
   const { colors } = useAppTheme();
@@ -60,6 +61,96 @@ export default function LoginScreen() {
   };
 
   const displayError = localError || error;
+
+  if (Platform.OS === 'web') {
+    return (
+      <WebAuthShell>
+        <Text style={webAuthCardStyles.title}>{'Welcome\nto PostsApp'}</Text>
+        <Text style={webAuthCardStyles.subtitle}>Please login or sign up to continue</Text>
+
+        <View style={webAuthCardStyles.form}>
+          <View style={webAuthCardStyles.inputWrap}>
+            <Ionicons name="mail-outline" size={18} color="#18181B" style={webAuthCardStyles.inputIcon} />
+            <TextInput
+              style={webAuthCardStyles.input}
+              placeholder="Your Email or Username"
+              placeholderTextColor="#6B7280"
+              value={identifier}
+              onChangeText={(text) => { setIdentifier(text); setLocalError(null); }}
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View style={webAuthCardStyles.inputWrap}>
+            <Ionicons name="lock-closed-outline" size={18} color="#18181B" style={webAuthCardStyles.inputIcon} />
+            <TextInput
+              style={webAuthCardStyles.input}
+              placeholder="Your Password"
+              placeholderTextColor="#6B7280"
+              value={password}
+              onChangeText={(text) => { setPassword(text); setLocalError(null); }}
+              secureTextEntry={!showPassword}
+              onSubmitEditing={handleLogin}
+            />
+            <TouchableOpacity
+              style={webAuthCardStyles.eyeBtn}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={19}
+                color="#6B7280"
+              />
+            </TouchableOpacity>
+          </View>
+
+          {displayError && (
+            <Text style={webAuthCardStyles.errorText}>{displayError}</Text>
+          )}
+
+          <TouchableOpacity
+            style={webAuthCardStyles.primaryBtn}
+            onPress={handleLogin}
+            disabled={isLoading}
+            activeOpacity={0.88}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={webAuthCardStyles.primaryBtnText}>Sign In</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={webAuthCardStyles.googleBtn}
+            onPress={handleGoogleSignIn}
+            disabled={isLoading}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="logo-google" size={18} color="#DB4437" />
+            <Text style={webAuthCardStyles.googleBtnText}>Google</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={webAuthCardStyles.footerRow}>
+          <Text style={webAuthCardStyles.footerMuted}>Don't Have An Account? </Text>
+          <TouchableOpacity onPress={() => { clearState(); navigation.navigate('SignUp' as never); }}>
+            <Text style={webAuthCardStyles.footerLink}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
+
+        {__DEV__ && (
+          <TouchableOpacity
+            style={styles.devModeButton}
+            onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Home' }] })}
+          >
+            <Ionicons name="code-slash-outline" size={15} color="#6B7280" />
+            <Text style={styles.devModeText}>Developer Mode — Skip Login</Text>
+          </TouchableOpacity>
+        )}
+      </WebAuthShell>
+    );
+  }
 
   return (
     <KeyboardAvoidingView 

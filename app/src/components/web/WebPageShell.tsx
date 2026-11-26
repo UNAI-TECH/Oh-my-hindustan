@@ -12,6 +12,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { AdData } from '../AdCard';
 import { WebTopMasthead, WebStickyNavBar } from './WebPortalHeader';
 import WebPortalFooter from './WebPortalFooter';
+import { categoryToSlug } from './webPortalHelpers';
 
 interface WebPageShellProps {
   children: React.ReactNode;
@@ -51,7 +52,12 @@ export default function WebPageShell({
   }, [initialSearch]);
 
   useEffect(() => {
-    if (userProfile?.id) {
+    if (!userProfile?.id) {
+      setSavedCount(0);
+      return;
+    }
+
+    const fetchSavedCount = () => {
       supabase
         .from('Save')
         .select('id', { count: 'exact', head: true })
@@ -59,9 +65,17 @@ export default function WebPageShell({
         .then(({ count }) => {
           if (typeof count === 'number') setSavedCount(count);
         });
-    } else {
-      setSavedCount(0);
-    }
+    };
+
+    fetchSavedCount();
+    const channel = supabase
+      .channel(`web-shell-saves-${userProfile.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Save', filter: `userId=eq.${userProfile.id}` }, fetchSavedCount)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [userProfile?.id]);
 
   useEffect(() => {
@@ -78,7 +92,7 @@ export default function WebPageShell({
   }, []);
 
   const handleSelectCategory = (cat: string) => {
-    navigation.navigate('Home', { initialCategory: cat });
+    navigation.navigate('Home', { initialCategory: categoryToSlug(cat) });
   };
 
   const handleSearchSubmit = () => {
@@ -102,7 +116,7 @@ export default function WebPageShell({
       }
     >
       <WebTopMasthead
-        onSelectHome={() => navigation.navigate('Home', { initialCategory: 'HOME' })}
+        onSelectHome={() => navigation.navigate('Home', { initialCategory: 'home' })}
         onNavigate={(route, params) => navigation.navigate(route, params)}
         savedCount={savedCount}
         userProfile={userProfile}
@@ -117,7 +131,7 @@ export default function WebPageShell({
         searchQuery={searchQuery}
         onChangeSearch={setSearchQuery}
         onSubmitSearch={handleSearchSubmit}
-        onPressWatchOnline={() => navigation.navigate('Home', { initialCategory: 'WATCH_ONLINE' })}
+        onPressWatchOnline={() => navigation.navigate('Home', { initialCategory: 'watch-online' })}
         onNavigate={(route, params) => navigation.navigate(route, params)}
         unreadNotifications={unreadCount}
         isAuthenticated={isAuthenticated}

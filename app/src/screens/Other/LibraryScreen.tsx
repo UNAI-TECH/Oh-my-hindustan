@@ -83,6 +83,27 @@ export default function LibraryScreen() {
   useEffect(() => { activeFetch(); }, [activeFetch]);
   useFocusEffect(React.useCallback(() => { activeFetch(); }, [activeFetch]));
 
+  useEffect(() => {
+    if (!userId) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedFetch = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => { activeFetch(); }, 250);
+    };
+
+    const channel = supabase
+      .channel(`library-sync-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Save', filter: `userId=eq.${userId}` }, debouncedFetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Vote', filter: `userId=eq.${userId}` }, debouncedFetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Comment', filter: `userId=eq.${userId}` }, debouncedFetch)
+      .subscribe();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabase.removeChannel(channel);
+    };
+  }, [userId, activeFetch]);
+
   const filteredItems = items.filter(item => {
     if (activeFilter === 'All') return true;
     if (activeFilter === 'Blogs' && item.category?.toLowerCase().includes('blog')) return true;

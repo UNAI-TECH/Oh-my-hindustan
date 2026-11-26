@@ -20,12 +20,12 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
-  Linking,
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { trackMidRollImpression, trackMidRollClick, MidRollAd } from '../api/adDecisionService';
+import { openExternalUrl } from '../utils/openExternalUrl';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SKIP_DELAY_SECONDS = 5;
@@ -118,10 +118,10 @@ export default function MidRollAdOverlay({
     });
   }, [onClose, fadeAnim]);
 
-  const handleClick = useCallback(async () => {
+  const handleClick = useCallback(() => {
     try {
+      openExternalUrl(ad.redirect_url);
       trackMidRollClick(ad.id, postId, userId).catch(() => {});
-      Linking.openURL(ad.redirect_url);
     } catch (e) {
       console.warn('[MidRoll] Ad click failed:', e);
     }

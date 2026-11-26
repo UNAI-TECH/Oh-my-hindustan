@@ -11,6 +11,7 @@ import { AppApi } from '../../api/services';
 import { generateUUID } from '../../utils/uuid';
 import CustomModal from '../../components/CustomModal';
 import WebPageShell from '../../components/web/WebPageShell';
+import { formatCardExcerpt } from '../../components/web/webPortalHelpers';
 import { useInteraction } from '../../context/InteractionContext';
 
 export default function CreatorProfileScreen() {
@@ -28,7 +29,13 @@ export default function CreatorProfileScreen() {
   const [followerCount, setFollowerCount] = useState(0);
   const [postCount, setPostCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [modalConfig, setModalConfig] = useState({ visible: false, title: '', message: '', isError: false });
+  const [modalConfig, setModalConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    isError: boolean;
+    isLoginPrompt?: boolean;
+  }>({ visible: false, title: '', message: '', isError: false });
   
   const { follows, toggleFollow } = useInteraction();
   const isFollowed = !!follows[authorId];
@@ -97,6 +104,8 @@ export default function CreatorProfileScreen() {
       .channel(`creator_profile_${authorId}_interactions`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'Vote' }, handleChanges)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'Comment' }, handleChanges)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Follow', filter: `followingId=eq.${authorId}` }, handleChanges)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Post', filter: `authorId=eq.${authorId}` }, handleChanges)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'User', filter: `id=eq.${authorId}` }, handleChanges)
       .subscribe();
 
@@ -114,7 +123,13 @@ export default function CreatorProfileScreen() {
 
   const handleFollow = async () => {
     if (!userProfile?.id || !authorId) { 
-      setModalConfig({ visible: true, title: 'Login Required', message: 'Please login to follow creators', isError: true }); 
+      setModalConfig({
+        visible: true,
+        title: 'Login Required',
+        message: 'Please login to follow creators',
+        isError: true,
+        isLoginPrompt: true,
+      }); 
       return; 
     }
     
@@ -230,7 +245,7 @@ export default function CreatorProfileScreen() {
                 <Text style={{ fontWeight: 'bold', fontSize: 16 }} numberOfLines={2}>{item.title}</Text>
                 {item.content && (
                   <Text style={{ fontSize: 13, color: 'gray', marginTop: 6 }} numberOfLines={2}>
-                    {item.content.replace(/<[^>]*>?/gm, '')}
+                    {formatCardExcerpt(item.content, 140)}
                   </Text>
                 )}
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
@@ -274,8 +289,16 @@ export default function CreatorProfileScreen() {
           visible={modalConfig.visible} 
           title={modalConfig.title} 
           message={modalConfig.message} 
-          isError={modalConfig.isError} 
-          onPrimaryPress={() => setModalConfig(prev => ({ ...prev, visible: false }))} 
+          isError={modalConfig.isError}
+          icon={modalConfig.isLoginPrompt ? 'log-in-outline' : undefined}
+          primaryButtonText={modalConfig.isLoginPrompt ? 'Sign In' : 'OK'}
+          secondaryButtonText={modalConfig.isLoginPrompt ? 'Cancel' : undefined}
+          onPrimaryPress={() => {
+            const goLogin = !!modalConfig.isLoginPrompt;
+            setModalConfig(prev => ({ ...prev, visible: false, isLoginPrompt: false }));
+            if (goLogin) navigation.navigate('Login');
+          }}
+          onSecondaryPress={() => setModalConfig(prev => ({ ...prev, visible: false, isLoginPrompt: false }))}
         />
       </WebPageShell>
     );
@@ -299,8 +322,16 @@ export default function CreatorProfileScreen() {
         visible={modalConfig.visible} 
         title={modalConfig.title} 
         message={modalConfig.message} 
-        isError={modalConfig.isError} 
-        onPrimaryPress={() => setModalConfig(prev => ({ ...prev, visible: false }))} 
+        isError={modalConfig.isError}
+        icon={modalConfig.isLoginPrompt ? 'log-in-outline' : undefined}
+        primaryButtonText={modalConfig.isLoginPrompt ? 'Sign In' : 'OK'}
+        secondaryButtonText={modalConfig.isLoginPrompt ? 'Cancel' : undefined}
+        onPrimaryPress={() => {
+          const goLogin = !!modalConfig.isLoginPrompt;
+          setModalConfig(prev => ({ ...prev, visible: false, isLoginPrompt: false }));
+          if (goLogin) navigation.navigate('Login');
+        }}
+        onSecondaryPress={() => setModalConfig(prev => ({ ...prev, visible: false, isLoginPrompt: false }))}
       />
     </SafeAreaView>
   );

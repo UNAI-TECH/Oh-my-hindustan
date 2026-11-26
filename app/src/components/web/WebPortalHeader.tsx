@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Linking,
   Image,
   ScrollView,
+  ActivityIndicator,
+  Platform,
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import PostsAppLogo from '../PostsAppLogo';
 import { AdData } from '../AdCard';
 import { supabase } from '../../lib/supabaseClient';
+import { openExternalUrl } from '../../utils/openExternalUrl';
 import {
   WEB_NAV_CATEGORIES,
   POPULAR_TAGS,
@@ -44,21 +47,24 @@ export function WebTopMasthead({
   const { width } = useWindowDimensions();
   const isDesktopWide = width >= 1024;
 
-  const handleAdClick = async () => {
+  const handleAdClick = () => {
     if (!leaderboardAd) {
       onScrollToNewsletter();
       return;
     }
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      await supabase.rpc('track_ad_click', {
-        p_ad_id: leaderboardAd.id,
-        p_user_id: session?.user?.id || 'anonymous',
-      });
-    } catch (_) {}
-    if (leaderboardAd.redirect_url) {
-      Linking.openURL(leaderboardAd.redirect_url);
-    }
+
+    // Open redirect synchronously inside the user click gesture before async tracking
+    openExternalUrl(leaderboardAd.redirect_url);
+
+    void (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        await supabase.rpc('track_ad_click', {
+          p_ad_id: leaderboardAd.id,
+          p_user_id: session?.user?.id || 'anonymous',
+        });
+      } catch (_) {}
+    })();
   };
 
   return (
@@ -149,58 +155,75 @@ export function WebTopMasthead({
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.leaderboardSlot}
+            style={[styles.leaderboardSlot, !isDesktopWide && styles.leaderboardSlotTablet]}
             activeOpacity={0.85}
             onPress={handleAdClick}
           >
-            <LinearGradient
-              colors={['rgba(20, 20, 20, 0.52)', 'rgba(130, 12, 16, 0.48)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.leaderboardGradient}
-            >
-              {leaderboardAd ? (
-                <View style={styles.leaderboardContent}>
-                  <View style={styles.sponsoredPill}>
-                    <Text style={styles.sponsoredPillText}>SPONSORED</Text>
-                  </View>
-                  <View style={styles.leaderboardTextWrap}>
-                    <Text style={styles.leaderboardHeadline} numberOfLines={1}>
-                      {leaderboardAd.title}
-                    </Text>
-                    <Text style={styles.leaderboardDesc} numberOfLines={1}>
-                      {leaderboardAd.description || leaderboardAd.advertiser_name}
-                    </Text>
-                  </View>
-                  {leaderboardAd.media_url ? (
-                    <Image
-                      source={{ uri: leaderboardAd.media_url }}
-                      style={styles.leaderboardThumb}
-                    />
-                  ) : null}
-                  <Text style={styles.leaderboardMeta}>LEARN MORE →</Text>
+            {leaderboardAd && leaderboardAd.media_url ? (
+              <View style={styles.leaderboardMediaWrap} pointerEvents="none">
+                <Image
+                  source={{ uri: leaderboardAd.media_url }}
+                  style={styles.leaderboardMediaBackdrop}
+                  resizeMode="cover"
+                  blurRadius={16}
+                />
+                <View style={styles.leaderboardMediaScrim} />
+                <Image
+                  source={{ uri: leaderboardAd.media_url }}
+                  style={styles.leaderboardMediaContain}
+                  resizeMode="contain"
+                />
+                <View style={styles.sponsoredBadgeOverlay}>
+                  <Text style={styles.sponsoredPillText}>SPONSORED</Text>
                 </View>
-              ) : (
-                <View style={styles.leaderboardContent}>
-                  <View style={styles.sponsoredPill}>
-                    <Text style={styles.sponsoredPillText}>SPONSORED</Text>
-                  </View>
-                  <View style={styles.leaderboardTextWrap}>
-                    <Text style={styles.leaderboardTitleRow} numberOfLines={1}>
-                      <Text style={styles.leaderboardWhite}>BANNER </Text>
-                      <Text style={styles.leaderboardAccent}>ADVERTISEMENT</Text>
-                    </Text>
-                    <Text style={styles.leaderboardDesc} numberOfLines={1}>
-                      PostsApp Annual Policy & Infrastructure Conclave 2026 — Register Now
-                    </Text>
-                  </View>
-                  <View style={styles.leaderboardSlotRight}>
-                    <Text style={styles.leaderboardSlotLabel}>LEADERBOARD SLOT</Text>
-                    <Text style={styles.leaderboardSlotDims}>930 × 110 px →</Text>
-                  </View>
+                <View style={styles.learnMoreOverlay}>
+                  <Text style={styles.learnMoreOverlayText}>LEARN MORE →</Text>
                 </View>
-              )}
-            </LinearGradient>
+              </View>
+            ) : (
+              <LinearGradient
+                colors={['rgba(20, 20, 20, 0.52)', 'rgba(130, 12, 16, 0.48)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.leaderboardGradient}
+              >
+                {leaderboardAd ? (
+                  <View style={styles.leaderboardContent}>
+                    <View style={styles.sponsoredPill}>
+                      <Text style={styles.sponsoredPillText}>SPONSORED</Text>
+                    </View>
+                    <View style={styles.leaderboardTextWrap}>
+                      <Text style={styles.leaderboardHeadline} numberOfLines={1}>
+                        {leaderboardAd.title}
+                      </Text>
+                      <Text style={styles.leaderboardDesc} numberOfLines={1}>
+                        {leaderboardAd.description || leaderboardAd.advertiser_name}
+                      </Text>
+                    </View>
+                    <Text style={styles.leaderboardMeta}>LEARN MORE →</Text>
+                  </View>
+                ) : (
+                  <View style={styles.leaderboardContent}>
+                    <View style={styles.sponsoredPill}>
+                      <Text style={styles.sponsoredPillText}>SPONSORED</Text>
+                    </View>
+                    <View style={styles.leaderboardTextWrap}>
+                      <Text style={styles.leaderboardTitleRow} numberOfLines={1}>
+                        <Text style={styles.leaderboardWhite}>BANNER </Text>
+                        <Text style={styles.leaderboardAccent}>ADVERTISEMENT</Text>
+                      </Text>
+                      <Text style={styles.leaderboardDesc} numberOfLines={1}>
+                        PostsApp Annual Policy & Infrastructure Conclave 2026 — Register Now
+                      </Text>
+                    </View>
+                    <View style={styles.leaderboardSlotRight}>
+                      <Text style={styles.leaderboardSlotLabel}>LEADERBOARD SLOT</Text>
+                      <Text style={styles.leaderboardSlotDims}>930 × 110 px →</Text>
+                    </View>
+                  </View>
+                )}
+              </LinearGradient>
+            )}
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -238,6 +261,93 @@ export function WebStickyNavBar({
   onChangeFeedMode,
 }: WebStickyNavBarProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [livePosts, setLivePosts] = useState<any[]>([]);
+  const [liveCreators, setLiveCreators] = useState<any[]>([]);
+  const [liveSearching, setLiveSearching] = useState(false);
+  const [liveRefreshTick, setLiveRefreshTick] = useState(0);
+  const blurTimerRef = useRef<any>(null);
+
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      setLivePosts([]);
+      setLiveCreators([]);
+      setLiveSearching(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLiveSearching(true);
+    const safeQ = trimmed.replace(/[,()]/g, ' ').trim();
+
+    const timer = setTimeout(async () => {
+      try {
+        const [postsRes, creatorsRes] = await Promise.all([
+          supabase
+            .from('Post')
+            .select('id, title, type, category, custom_category, thumbnail, createdAt, author:User!authorId(id, username, channel_name)')
+            .or('is_active.eq.true,is_active.is.null')
+            .or(`title.ilike.%${safeQ}%,category.ilike.%${safeQ}%,content.ilike.%${safeQ}%`)
+            .order('createdAt', { ascending: false })
+            .limit(6),
+          supabase
+            .from('User')
+            .select('id, username, channel_name, "avatarUrl", role')
+            .in('role', ['ANALYST', 'CREATOR'])
+            .or(`username.ilike.%${safeQ}%,channel_name.ilike.%${safeQ}%`)
+            .limit(3),
+        ]);
+
+        if (!cancelled) {
+          setLivePosts(postsRes.data || []);
+          setLiveCreators(creatorsRes.data || []);
+        }
+      } catch (_) {
+        if (!cancelled) {
+          setLivePosts([]);
+          setLiveCreators([]);
+        }
+      } finally {
+        if (!cancelled) setLiveSearching(false);
+      }
+    }, 180);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchQuery, liveRefreshTick]);
+
+  // Keep open search results synced in real time when posts are created or updated
+  useEffect(() => {
+    if (!searchQuery.trim()) return;
+    const channel = supabase
+      .channel('web-header-live-search')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Post' }, () => {
+        setLiveRefreshTick((t) => t + 1);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [Boolean(searchQuery.trim())]);
+
+  const showLiveDropdown = searchFocused && searchQuery.trim().length > 0;
+
+  const handleSelectLivePost = (postId: string) => {
+    if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+    setSearchFocused(false);
+    onNavigate('ArticleDetail', { id: postId });
+  };
+
+  const handleSelectLiveCreator = (creator: any) => {
+    if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+    setSearchFocused(false);
+    const authorName = creator.channel_name || creator.username || 'Creator';
+    onNavigate('CreatorProfile', { authorId: creator.id, authorName });
+  };
 
   return (
     <View style={styles.stickyNav}>
@@ -274,19 +384,167 @@ export function WebStickyNavBar({
         </View>
 
         <View style={styles.navRight}>
-          <View style={styles.searchBox}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search news..."
-              placeholderTextColor="#9CA3AF"
-              value={searchQuery}
-              onChangeText={onChangeSearch}
-              onSubmitEditing={onSubmitSearch}
-              returnKeyType="search"
-            />
-            <TouchableOpacity onPress={onSubmitSearch}>
-              <Ionicons name="search" size={16} color="#9CA3AF" />
-            </TouchableOpacity>
+          <View style={styles.searchContainer}>
+            <View style={[styles.searchBox, showLiveDropdown && styles.searchBoxFocused]}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search news..."
+                placeholderTextColor="#9CA3AF"
+                value={searchQuery}
+                onChangeText={(q) => {
+                  onChangeSearch(q);
+                  setSearchFocused(true);
+                }}
+                onFocus={() => {
+                  if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+                  setSearchFocused(true);
+                }}
+                onBlur={() => {
+                  blurTimerRef.current = setTimeout(() => setSearchFocused(false), 220);
+                }}
+                onSubmitEditing={() => {
+                  setSearchFocused(false);
+                  onSubmitSearch();
+                }}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => onChangeSearch('')}
+                  style={{ marginRight: 6 }}
+                  accessibilityLabel="Clear search"
+                >
+                  <Ionicons name="close-circle" size={15} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                onPress={() => {
+                  setSearchFocused(false);
+                  onSubmitSearch();
+                }}
+              >
+                <Ionicons name="search" size={16} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            {showLiveDropdown && (
+              <View style={styles.liveSearchDropdown}>
+                <View style={styles.liveSearchHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={styles.livePulseDot} />
+                    <Text style={styles.liveSearchTitle}>LIVE RESULTS</Text>
+                  </View>
+                  {liveSearching ? (
+                    <ActivityIndicator size="small" color="#D4191F" />
+                  ) : (
+                    <Text style={styles.liveSearchCount}>
+                      {livePosts.length + liveCreators.length} found
+                    </Text>
+                  )}
+                </View>
+
+                <ScrollView
+                  style={{ maxHeight: 340 }}
+                  keyboardShouldPersistTaps="handled"
+                  nestedScrollEnabled
+                >
+                  {liveCreators.length > 0 && (
+                    <View style={styles.liveSectionBlock}>
+                      <Text style={styles.liveSectionLabel}>CREATORS</Text>
+                      {liveCreators.map((c) => {
+                        const displayName = c.channel_name || c.username || 'Creator';
+                        return (
+                          <TouchableOpacity
+                            key={`live-c-${c.id}`}
+                            style={styles.liveResultRow}
+                            onPress={() => handleSelectLiveCreator(c)}
+                          >
+                            {c.avatarUrl ? (
+                              <Image source={{ uri: c.avatarUrl }} style={styles.liveCreatorAvatar} />
+                            ) : (
+                              <View style={[styles.liveCreatorAvatar, styles.liveThumbFallback]}>
+                                <Ionicons name="person" size={14} color="#D4191F" />
+                              </View>
+                            )}
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.liveResultTitle} numberOfLines={1}>
+                                {displayName}
+                              </Text>
+                              {c.username && (
+                                <Text style={styles.liveResultMeta}>@{c.username}</Text>
+                              )}
+                            </View>
+                            <Ionicons name="chevron-forward" size={14} color="#6B7280" />
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  )}
+
+                  {livePosts.length > 0 && (
+                    <View style={styles.liveSectionBlock}>
+                      <Text style={styles.liveSectionLabel}>STORIES</Text>
+                      {livePosts.map((post) => {
+                        const catLabel =
+                          post.category === 'custom' && post.custom_category
+                            ? post.custom_category
+                            : post.category || 'NEWS';
+                        const authorLabel =
+                          post.author?.channel_name || post.author?.username || 'PostsApp';
+                        return (
+                          <TouchableOpacity
+                            key={`live-p-${post.id}`}
+                            style={styles.liveResultRow}
+                            onPress={() => handleSelectLivePost(post.id)}
+                          >
+                            {post.thumbnail ? (
+                              <Image source={{ uri: post.thumbnail }} style={styles.livePostThumb} />
+                            ) : (
+                              <View style={[styles.livePostThumb, styles.liveThumbFallback]}>
+                                <Ionicons name="newspaper-outline" size={16} color="#9CA3AF" />
+                              </View>
+                            )}
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.livePostCat} numberOfLines={1}>
+                                {String(catLabel).toUpperCase()}
+                              </Text>
+                              <Text style={styles.liveResultTitle} numberOfLines={2}>
+                                {post.title}
+                              </Text>
+                              <Text style={styles.liveResultMeta} numberOfLines={1}>
+                                {authorLabel}
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  )}
+
+                  {!liveSearching && livePosts.length === 0 && liveCreators.length === 0 && (
+                    <View style={styles.liveEmptyState}>
+                      <Ionicons name="search-outline" size={22} color="#6B7280" />
+                      <Text style={styles.liveEmptyText}>
+                        No matching stories found for "{searchQuery.trim()}"
+                      </Text>
+                    </View>
+                  )}
+                </ScrollView>
+
+                <TouchableOpacity
+                  style={styles.liveFooterBtn}
+                  onPress={() => {
+                    if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+                    setSearchFocused(false);
+                    onSubmitSearch();
+                  }}
+                >
+                  <Text style={styles.liveFooterBtnText}>
+                    View all results for "{searchQuery.trim()}" →
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           <TouchableOpacity
@@ -299,7 +557,7 @@ export function WebStickyNavBar({
         </View>
       </View>
 
-      {/* Slide-over Navigation Drawer for all app features */}
+      {/* Slide-over Sidebar Drawer */}
       <Modal
         visible={drawerOpen}
         transparent
@@ -316,39 +574,43 @@ export function WebStickyNavBar({
             </View>
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 12 }}>
-              <Text style={styles.drawerSectionTitle}>NAVIGATION</Text>
-              {[
-                { label: 'Home Portal', icon: 'home-outline', route: 'Home' },
-                { label: 'Explore Creators', icon: 'compass-outline', route: 'Explore' },
-                { label: '24h Stories', icon: 'aperture-outline', route: 'StoryFeed' },
-                { label: 'Saved Library', icon: 'bookmark-outline', route: 'Library' },
-                { label: 'Search All', icon: 'search-outline', route: 'Search' },
-                {
-                  label: unreadNotifications > 0 ? `Notifications (${unreadNotifications})` : 'Notifications',
-                  icon: 'notifications-outline',
-                  route: 'Notifications',
-                },
-                { label: 'My Profile', icon: 'person-outline', route: 'Profile' },
-                { label: 'Settings', icon: 'settings-outline', route: 'Settings' },
-              ].map((item) => (
-                <TouchableOpacity
-                  key={item.route}
-                  style={styles.drawerItem}
-                  onPress={() => {
-                    setDrawerOpen(false);
-                    if (item.route === 'Home') {
-                      onSelectCategory('HOME');
-                    } else {
-                      onNavigate(item.route);
-                    }
-                  }}
-                >
-                  <Ionicons name={item.icon as any} size={18} color="#D1D5DB" />
-                  <Text style={styles.drawerItemText}>{item.label}</Text>
-                </TouchableOpacity>
-              ))}
+              {Platform.OS !== 'web' && (
+                <>
+                  <Text style={styles.drawerSectionTitle}>NAVIGATION</Text>
+                  {[
+                    { label: 'Home Portal', icon: 'home-outline', route: 'Home' },
+                    { label: 'Explore Creators', icon: 'compass-outline', route: 'Explore' },
+                    { label: '24h Stories', icon: 'aperture-outline', route: 'StoryFeed' },
+                    { label: 'Saved Library', icon: 'bookmark-outline', route: 'Library' },
+                    { label: 'Search All', icon: 'search-outline', route: 'Search' },
+                    {
+                      label: unreadNotifications > 0 ? `Notifications (${unreadNotifications})` : 'Notifications',
+                      icon: 'notifications-outline',
+                      route: 'Notifications',
+                    },
+                    { label: 'My Profile', icon: 'person-outline', route: 'Profile' },
+                    { label: 'Settings', icon: 'settings-outline', route: 'Settings' },
+                  ].map((item) => (
+                    <TouchableOpacity
+                      key={item.route}
+                      style={styles.drawerItem}
+                      onPress={() => {
+                        setDrawerOpen(false);
+                        if (item.route === 'Home') {
+                          onSelectCategory('HOME');
+                        } else {
+                          onNavigate(item.route);
+                        }
+                      }}
+                    >
+                      <Ionicons name={item.icon as any} size={18} color="#D1D5DB" />
+                      <Text style={styles.drawerItemText}>{item.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
 
-              <Text style={[styles.drawerSectionTitle, { marginTop: 20 }]}>FEED FILTERS</Text>
+              <Text style={[styles.drawerSectionTitle, { marginTop: Platform.OS === 'web' ? 4 : 20 }]}>FEED FILTERS</Text>
               {(
                 [
                   { key: 'latest', label: 'For you (Latest)' },
@@ -604,12 +866,65 @@ const styles = StyleSheet.create({
   },
   leaderboardSlot: {
     flex: 1,
-    maxWidth: 740,
-    minHeight: 82,
+    maxWidth: 820,
+    height: 104,
     borderRadius: 4,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
+  },
+  leaderboardSlotTablet: {
+    flex: 0,
+    width: '100%',
+  },
+  leaderboardMediaWrap: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+    backgroundColor: '#141414',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  leaderboardMediaBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    opacity: 0.35,
+  },
+  leaderboardMediaScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 15, 15, 0.42)',
+  },
+  leaderboardMediaContain: {
+    width: '100%',
+    height: '100%',
+  },
+  sponsoredBadgeOverlay: {
+    position: 'absolute',
+    top: 8,
+    left: 10,
+    backgroundColor: 'rgba(212, 25, 31, 0.92)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 3,
+  },
+  learnMoreOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    right: 10,
+    backgroundColor: 'rgba(20, 20, 20, 0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 3,
+  },
+  learnMoreOverlayText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
   leaderboardGradient: {
     flex: 1,
@@ -657,11 +972,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.85)',
     fontSize: 12,
     marginTop: 3,
-  },
-  leaderboardThumb: {
-    width: 72,
-    height: 48,
-    borderRadius: 4,
   },
   leaderboardMeta: {
     color: '#FCA5A5',
@@ -741,6 +1051,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     paddingVertical: 7,
+    position: 'relative',
+    zIndex: 250,
+  },
+  searchContainer: {
+    position: 'relative',
+    zIndex: 300,
   },
   searchBox: {
     flexDirection: 'row',
@@ -749,15 +1065,139 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     paddingHorizontal: 12,
     height: 36,
-    width: 190,
+    width: 210,
     borderWidth: 1,
     borderColor: '#3A3A3A',
+  },
+  searchBoxFocused: {
+    borderColor: '#D4191F',
   },
   searchInput: {
     flex: 1,
     color: '#FFFFFF',
     fontSize: 12,
     outlineStyle: 'none' as any,
+  },
+  liveSearchDropdown: {
+    position: 'absolute',
+    top: 42,
+    right: 0,
+    width: 370,
+    maxWidth: 420,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 16,
+    zIndex: 999,
+    overflow: 'hidden',
+  },
+  liveSearchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: '#181818',
+    borderBottomWidth: 1,
+    borderBottomColor: '#262626',
+  },
+  livePulseDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#22C55E',
+  },
+  liveSearchTitle: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  liveSearchCount: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  liveSectionBlock: {
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  liveSectionLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+    color: '#9CA3AF',
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+  },
+  liveResultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  liveCreatorAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+  },
+  livePostThumb: {
+    width: 56,
+    height: 42,
+    borderRadius: 4,
+    backgroundColor: '#F3F4F6',
+  },
+  liveThumbFallback: {
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  livePostCat: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#D4191F',
+    letterSpacing: 0.4,
+  },
+  liveResultTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+    lineHeight: 17,
+  },
+  liveResultMeta: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  liveEmptyState: {
+    padding: 24,
+    alignItems: 'center',
+    gap: 6,
+  },
+  liveEmptyText: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  liveFooterBtn: {
+    backgroundColor: '#F9FAFB',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+  },
+  liveFooterBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#D4191F',
   },
   watchOnlineBtn: {
     flexDirection: 'row',

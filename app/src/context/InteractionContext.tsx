@@ -80,6 +80,27 @@ export const InteractionProvider = ({ children }: { children: ReactNode }) => {
     initializeInteractions();
   }, [userProfile?.id]);
 
+  // Keep likes and follows synced in real time across views/tabs
+  useEffect(() => {
+    if (!userProfile?.id) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleSync = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => { syncFromServer(); }, 250);
+    };
+
+    const channel = supabase
+      .channel(`interaction-sync-${userProfile.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Vote', filter: `userId=eq.${userProfile.id}` }, scheduleSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Follow', filter: `followerId=eq.${userProfile.id}` }, scheduleSync)
+      .subscribe();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabase.removeChannel(channel);
+    };
+  }, [userProfile?.id]);
+
   const toggleLike = async (postId: string) => {
     if (!userProfile?.id) return;
 

@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Linking, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../lib/supabaseClient';
 import { useAppTheme } from '../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
+import { openExternalUrl } from '../utils/openExternalUrl';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -29,22 +30,21 @@ export default function AdCard({ ad }: AdCardProps) {
   const styles = getStyles(colors);
   const { t } = useTranslation();
 
-  const handlePress = async () => {
-    try {
-      // 1. Log the click via high-performance RPC (handles budget logic atomically)
-      const { data: { session } } = await supabase.auth.getSession();
-      await supabase.rpc('track_ad_click', {
-        p_ad_id: ad.id,
-        p_user_id: session?.user?.id || 'anonymous'
-      });
-      
-      // 2. Open the URL
-      Linking.openURL(ad.redirect_url);
-    } catch (err) {
-      console.warn('Ad click handling failed:', err);
-      // Fallback open even if tracking fails to not hurt user experience
-      Linking.openURL(ad.redirect_url);
-    }
+  const handlePress = () => {
+    // Open redirect synchronously inside click gesture so web popup blockers do not suppress it
+    openExternalUrl(ad.redirect_url);
+
+    void (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        await supabase.rpc('track_ad_click', {
+          p_ad_id: ad.id,
+          p_user_id: session?.user?.id || 'anonymous',
+        });
+      } catch (err) {
+        console.warn('Ad click tracking failed:', err);
+      }
+    })();
   };
 
   return (

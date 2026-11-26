@@ -37,6 +37,19 @@ const formatTime = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
+const getVideoEmbedUrl = (url: string, autoPlay: boolean): string | null => {
+  if (!url) return null;
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch?.[1]) {
+    return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=${autoPlay ? 1 : 0}&rel=0`;
+  }
+  const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vimeoMatch?.[1]) {
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=${autoPlay ? 1 : 0}`;
+  }
+  return null;
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const OMHCustomPlayer = React.memo(function OMHCustomPlayer({
@@ -64,6 +77,7 @@ const OMHCustomPlayer = React.memo(function OMHCustomPlayer({
 
   // ── Refs: hot-path data that should NOT trigger re-renders ─────────────────
   const webRef = useRef<WebView>(null);
+  const htmlVideoRef = useRef<any>(null);
   const controlsTimerRef = useRef<NodeJS.Timeout | null>(null);
   const currentTimeRef = useRef(0);
   const durationRef = useRef(0);
@@ -84,8 +98,16 @@ const OMHCustomPlayer = React.memo(function OMHCustomPlayer({
   useEffect(() => { onEndedRef.current = onEnded; }, [onEnded]);
   useEffect(() => { onLoadRef.current = onLoad; }, [onLoad]);
 
-  // ── Sync play/pause to WebView ─────────────────────────────────────────────
+  // ── Sync play/pause ────────────────────────────────────────────────────────
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      const v = htmlVideoRef.current;
+      if (v) {
+        if (isPlaying) v.play?.().catch?.(() => {});
+        else v.pause?.();
+      }
+      return;
+    }
     if (!webRef.current) return;
     const cmd = isPlaying ? 'play()' : 'pause()';
     webRef.current.injectJavaScript(
@@ -113,6 +135,10 @@ const OMHCustomPlayer = React.memo(function OMHCustomPlayer({
 
   // ── Handle Mute ────────────────────────────────────────────────────────────
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      if (htmlVideoRef.current) htmlVideoRef.current.muted = isMuted;
+      return;
+    }
     if (!webRef.current) return;
     webRef.current.injectJavaScript(
       `(function(){var v=document.getElementById('omh-v');if(v)v.muted=${isMuted}})();true;`
@@ -296,6 +322,74 @@ v.addEventListener('error',function(){window.ReactNativeWebView.postMessage(JSON
   }, []);
 
   // ── Render ─────────────────────────────────────────────────────────────────
+  if (Platform.OS === 'web') {
+    const embedUrl = getVideoEmbedUrl(uri, autoPlay && !paused);
+    return (
+      <View style={styles.container}>
+        {embedUrl ? (
+          React.createElement('iframe', {
+            src: embedUrl,
+            allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen',
+            allowFullScreen: true,
+            style: { width: '100%', height: '100%', border: 'none', backgroundColor: '#000' },
+            onLoad: () => {
+              setIsLoading(false);
+              onLoadRef.current?.();
+            },
+          })
+        ) : (
+          React.createElement('video', {
+            ref: htmlVideoRef,
+            src: uri,
+            controls: !hideControls,
+            autoPlay: autoPlay && !paused,
+            muted: isMuted,
+            playsInline: true,
+            preload: 'metadata',
+            style: { width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000', display: 'block' },
+            onLoadedMetadata: (e: any) => {
+              const v = e?.target;
+              if (!v) return;
+              if (initialTime > 0) v.currentTime = initialTime / 1000;
+              durationRef.current = v.duration || 0;
+              setDisplayDuration(formatTime(v.duration || 0));
+            },
+            onCanPlay: () => {
+              setIsLoading(false);
+              onLoadRef.current?.();
+            },
+            onPlaying: () => {
+              setIsPlaying(true);
+              setIsLoading(false);
+            },
+            onPause: () => setIsPlaying(false),
+            onEnded: () => {
+              setIsPlaying(false);
+              onEndedRef.current?.();
+            },
+            onTimeUpdate: (e: any) => {
+              const v = e?.target;
+              if (!v || !v.duration) return;
+              currentTimeRef.current = v.currentTime;
+              durationRef.current = v.duration;
+              onProgressRef.current?.(v.currentTime / v.duration);
+              onTimeUpdateRef.current?.(v.currentTime, v.duration);
+            },
+            onError: () => {
+              setIsLoading(false);
+            },
+          })
+        )}
+
+        {isLoading && (
+          <View style={styles.centerOverlay} pointerEvents="none">
+            <ActivityIndicator size="large" color="#D4191F" />
+          </View>
+        )}
+      </View>
+    );
+  }
+
   const playerContent = (
     <View style={styles.container}>
       <WebView

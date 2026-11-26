@@ -6,7 +6,8 @@ import { useAppTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import AppBottomNavBar from '../../components/BottomNavBar';
 import MainHeader from '../../components/MainHeader';
-import { useFeed } from '../../context/FeedContext';
+import { useFeed, mapPostToFeedItem } from '../../context/FeedContext';
+import { AppApi } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { FeedItemType, FeedItem } from '../../types';
@@ -25,7 +26,11 @@ import WebHeroSection from '../../components/web/WebHeroSection';
 import WebFeaturedPosts from '../../components/web/WebFeaturedPosts';
 import WebExpressPosts from '../../components/web/WebExpressPosts';
 import WebPortalFooter from '../../components/web/WebPortalFooter';
-import { matchesEditorialCategory } from '../../components/web/webPortalHelpers';
+import {
+  matchesEditorialCategory,
+  categoryToSlug,
+  slugToCategory,
+} from '../../components/web/webPortalHelpers';
 
 const AD_MARKER = '__AD_PLACEHOLDER__';
 const APP_DOWNLOAD_URL = 'https://play.google.com/store/apps/details?id=com.unai.antigravity';
@@ -47,10 +52,12 @@ export default function HomeFeedScreen() {
   const [activeTab, setActiveTab] = useState('For you');
   const [activeAds, setActiveAds] = useState<AdData[]>([]);
   const [savedCount, setSavedCount] = useState(0);
-  const [webCategory, setWebCategory] = useState('HOME');
+  const [webCategory, setWebCategory] = useState(() => slugToCategory(route.params?.initialCategory));
   const [webSearchQuery, setWebSearchQuery] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [webFeedMode, setWebFeedMode] = useState<'latest' | 'trending' | 'articles' | 'videos'>('latest');
+  const [categoryPoolItems, setCategoryPoolItems] = useState<FeedItem[]>([]);
+  const [categorySyncTick, setCategorySyncTick] = useState(0);
   const webScrollRef = useRef<ScrollView>(null);
   const loggedLeaderboardAdId = useRef<string | null>(null);
   const tabs = ['For you', 'Trending', 'Headlines', 'Articles', 'Videos'];
@@ -58,7 +65,7 @@ export default function HomeFeedScreen() {
   React.useEffect(() => {
     const initCat = route.params?.initialCategory;
     if (initCat) {
-      setWebCategory(initCat);
+      setWebCategory(slugToCategory(initCat));
       setActiveTag(null);
       webScrollRef.current?.scrollTo({ y: 0, animated: false });
     }
@@ -92,9 +99,72 @@ export default function HomeFeedScreen() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  // Keep saved count and active navbar category pool synced in real time
+  React.useEffect(() => {
+    if (!userProfile?.id) {
+      setSavedCount(0);
+      return;
+    }
+    const fetchSaved = () => {
+      supabase
+        .from('Save')
+        .select('id', { count: 'exact', head: true })
+        .eq('userId', userProfile.id)
+        .then(({ count }) => {
+          if (typeof count === 'number') setSavedCount(count);
+        });
+    };
+    fetchSaved();
+    const saveChannel = supabase
+      .channel(`home-saves-${userProfile.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Save', filter: `userId=eq.${userProfile.id}` }, fetchSaved)
+      .subscribe();
+    return () => {
+      supabase.removeChannel(saveChannel);
+    };
+  }, [userProfile?.id]);
+
+  React.useEffect(() => {
+    if (!isWebDesktop || webCategory === 'HOME') {
+      setCategoryPoolItems([]);
+      return;
+    }
+    let cancelled = false;
+    AppApi.getHomeFeed(1, 60, sortBy)
+      .then((res) => {
+        if (!cancelled && res?.data) {
+          setCategoryPoolItems(res.data.map(mapPostToFeedItem));
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isWebDesktop, webCategory, sortBy, categorySyncTick]);
+
+  React.useEffect(() => {
+    if (!isWebDesktop || webCategory === 'HOME') return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const triggerSync = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => setCategorySyncTick((t) => t + 1), 250);
+    };
+    const channel = supabase
+      .channel('home-category-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Post' }, triggerSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Vote' }, triggerSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Comment' }, triggerSync)
+      .subscribe();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabase.removeChannel(channel);
+    };
+  }, [isWebDesktop, webCategory]);
+
   useFocusEffect(
     React.useCallback(() => {
-      // Optional: Refresh feed silently or update metrics when focused
       refreshFeed();
       if (userProfile?.id) {
         supabase
@@ -175,7 +245,10 @@ export default function HomeFeedScreen() {
 
   // Web editorial filtering and section slicing
   const filteredWebItems = useMemo(() => {
-    let items = feedItems.filter((it) => it.type !== FeedItemType.PROMO);
+    const sourcePool = webCategory !== 'HOME' && categoryPoolItems.length > 0
+      ? [...categoryPoolItems, ...feedItems.filter((fi) => !categoryPoolItems.some((cp) => cp.id === fi.id))]
+      : feedItems;
+    let items = sourcePool.filter((it) => it.type !== FeedItemType.PROMO);
 
     if (webFeedMode === 'articles') {
       items = items.filter((it) =>
@@ -211,7 +284,7 @@ export default function HomeFeedScreen() {
     }
 
     return items;
-  }, [feedItems, webFeedMode, webCategory, activeTag, webSearchQuery]);
+  }, [feedItems, categoryPoolItems, webFeedMode, webCategory, activeTag, webSearchQuery]);
 
   const webSections = useMemo(() => {
     const pool = filteredWebItems;
@@ -279,6 +352,7 @@ export default function HomeFeedScreen() {
   const handleWebSelectCategory = (cat: string) => {
     setWebCategory(cat);
     setActiveTag(null);
+    navigation.setParams({ initialCategory: categoryToSlug(cat) });
     webScrollRef.current?.scrollTo({ y: 0, animated: true });
   };
 
@@ -317,6 +391,7 @@ export default function HomeFeedScreen() {
             setWebSearchQuery('');
             setWebFeedMode('latest');
             setSortBy('latest');
+            navigation.setParams({ initialCategory: 'home' });
           }}
           onNavigate={(route, params) => navigation.navigate(route, params)}
           savedCount={savedCount}

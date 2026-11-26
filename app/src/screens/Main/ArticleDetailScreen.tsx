@@ -60,7 +60,23 @@ export default function ArticleDetailScreen() {
   const [relatedPosts, setRelatedPosts] = useState<any[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
-  const [modalConfig, setModalConfig] = useState({ visible: false, title: '', message: '', isError: false });
+  const [modalConfig, setModalConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    isError: boolean;
+    isLoginPrompt?: boolean;
+  }>({ visible: false, title: '', message: '', isError: false });
+
+  const promptLogin = (message: string) => {
+    setModalConfig({
+      visible: true,
+      title: 'Login Required',
+      message,
+      isError: true,
+      isLoginPrompt: true,
+    });
+  };
   const [refreshSyncTrigger, setRefreshSyncTrigger] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
@@ -182,7 +198,7 @@ export default function ArticleDetailScreen() {
   };
 
   const handleVote = async (voteType: 1 | -1) => {
-    if (!userProfile?.id) { setModalConfig({ visible: true, title: 'Login Required', message: 'Please login to vote', isError: true }); return; }
+    if (!userProfile?.id) { promptLogin('Please login to vote'); return; }
     
     // Save current state for rollback
     const prevUpvotes = upvotes;
@@ -241,7 +257,7 @@ export default function ArticleDetailScreen() {
   };
 
   const handleSave = async () => {
-    if (!userProfile?.id) { setModalConfig({ visible: true, title: 'Login Required', message: 'Please login to save posts', isError: true }); return; }
+    if (!userProfile?.id) { promptLogin('Please login to save posts'); return; }
     const prevSaved = isSaved;
     try {
       // Optimistic
@@ -268,7 +284,7 @@ export default function ArticleDetailScreen() {
 
   const handleFollow = async () => {
     if (!userProfile?.id || !postAuthorId) { 
-      setModalConfig({ visible: true, title: 'Login Required', message: 'Please login to follow creators', isError: true }); 
+      promptLogin('Please login to follow creators');
       return; 
     }
     await toggleFollow(postAuthorId);
@@ -303,7 +319,7 @@ export default function ArticleDetailScreen() {
   };
 
   const handleCommentVote = async (commentId: string, type: 1 | -1) => {
-    if (!userProfile?.id) { setModalConfig({ visible: true, title: 'Login Required', message: 'Please login to vote on comments', isError: true }); return; }
+    if (!userProfile?.id) { promptLogin('Please login to vote on comments'); return; }
     try {
       await AppApi.voteComment(commentId, type);
       fetchComments(); // Instead of building optimistic map, we just wait for real-time or refetch
@@ -314,7 +330,7 @@ export default function ArticleDetailScreen() {
 
   const submitComment = async () => {
     if (!newComment.trim()) return;
-    if (!userProfile?.id) { setModalConfig({ visible: true, title: 'Login Required', message: 'Please login to comment', isError: true }); return; }
+    if (!userProfile?.id) { promptLogin('Please login to comment'); return; }
     
     const commentContent = newComment.trim();
     const prevComments = [...comments];
@@ -823,12 +839,23 @@ export default function ArticleDetailScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      <CustomModal 
-        visible={modalConfig.visible} 
-        title={modalConfig.title} 
-        message={modalConfig.message} 
-        isError={modalConfig.isError} 
-        onPrimaryPress={() => setModalConfig(prev => ({ ...prev, visible: false }))} 
+      <CustomModal
+        visible={modalConfig.visible}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        isError={modalConfig.isError}
+        icon={modalConfig.isLoginPrompt ? 'log-in-outline' : undefined}
+        primaryButtonText={modalConfig.isLoginPrompt ? 'Sign In' : 'OK'}
+        secondaryButtonText={modalConfig.isLoginPrompt ? 'Cancel' : undefined}
+        onPrimaryPress={() => {
+          const goToLogin = !!modalConfig.isLoginPrompt;
+          setModalConfig(prev => ({ ...prev, visible: false, isLoginPrompt: false }));
+          if (goToLogin) {
+            setShowComments(false);
+            navigation.navigate('Login');
+          }
+        }}
+        onSecondaryPress={() => setModalConfig(prev => ({ ...prev, visible: false, isLoginPrompt: false }))}
       />
     </>
   );
