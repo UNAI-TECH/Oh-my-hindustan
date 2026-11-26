@@ -23,6 +23,7 @@ import {
   WEB_NAV_CATEGORIES,
   POPULAR_TAGS,
   getFormattedHeaderDate,
+  buildArticleParams,
 } from './webPortalHelpers';
 
 interface WebTopMastheadProps {
@@ -218,7 +219,7 @@ export function WebTopMasthead({
                     </View>
                     <View style={styles.leaderboardSlotRight}>
                       <Text style={styles.leaderboardSlotLabel}>LEADERBOARD SLOT</Text>
-                      <Text style={styles.leaderboardSlotDims}>930 × 110 px →</Text>
+                      <Text style={styles.leaderboardSlotDims}>984 × 125 px →</Text>
                     </View>
                   </View>
                 )}
@@ -336,10 +337,10 @@ export function WebStickyNavBar({
 
   const showLiveDropdown = searchFocused && searchQuery.trim().length > 0;
 
-  const handleSelectLivePost = (postId: string) => {
+  const handleSelectLivePost = (post: any) => {
     if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
     setSearchFocused(false);
-    onNavigate('ArticleDetail', { id: postId });
+    onNavigate('ArticleDetail', buildArticleParams(post));
   };
 
   const handleSelectLiveCreator = (creator: any) => {
@@ -495,7 +496,7 @@ export function WebStickyNavBar({
                           <TouchableOpacity
                             key={`live-p-${post.id}`}
                             style={styles.liveResultRow}
-                            onPress={() => handleSelectLivePost(post.id)}
+                            onPress={() => handleSelectLivePost(post)}
                           >
                             {post.thumbnail ? (
                               <Image source={{ uri: post.thumbnail }} style={styles.livePostThumb} />
@@ -866,8 +867,10 @@ const styles = StyleSheet.create({
   },
   leaderboardSlot: {
     flex: 1,
+    width: '100%',
     maxWidth: 820,
-    height: 104,
+    aspectRatio: 984 / 125,
+    minHeight: 68,
     borderRadius: 4,
     overflow: 'hidden',
     borderWidth: 1,
@@ -876,6 +879,7 @@ const styles = StyleSheet.create({
   leaderboardSlotTablet: {
     flex: 0,
     width: '100%',
+    maxWidth: '100%',
   },
   leaderboardMediaWrap: {
     flex: 1,
@@ -902,22 +906,22 @@ const styles = StyleSheet.create({
   },
   sponsoredBadgeOverlay: {
     position: 'absolute',
-    top: 8,
-    left: 10,
+    top: 6,
+    left: 8,
     backgroundColor: 'rgba(212, 25, 31, 0.92)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 3,
   },
   learnMoreOverlay: {
     position: 'absolute',
-    bottom: 8,
-    right: 10,
+    bottom: 6,
+    right: 8,
     backgroundColor: 'rgba(20, 20, 20, 0.85)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.22)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 3,
   },
   learnMoreOverlayText: {

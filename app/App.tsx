@@ -37,7 +37,18 @@ const linking: any = {
         },
       },
       CreatorProfile: 'creator/:authorId',
-      ArticleDetail: 'article/:id',
+      ArticleDetail: {
+        path: 'article/:slug',
+        parse: {
+          slug: (val: string) => {
+            try {
+              return decodeURIComponent(val);
+            } catch {
+              return val;
+            }
+          },
+        },
+      },
       Login: 'login',
       SignUp: 'signup',
       OTP: 'otp',
@@ -88,8 +99,24 @@ const linking: any = {
     if (resolved === '/category/home' || resolved === '/category') {
       return '/';
     }
+    if (resolved.startsWith('/article/')) {
+      return resolved.split('?')[0];
+    }
     return resolved;
   },
+};
+
+const ROUTE_PAGE_TITLES: Record<string, string> = {
+  Home: 'PostsApp — Independent Digital Magazine & Wire',
+  Explore: 'Explore Creators | PostsApp',
+  Search: 'Search Stories | PostsApp',
+  Library: 'Saved Library | PostsApp',
+  Notifications: 'Notifications | PostsApp',
+  CreatorProfile: 'Creator Profile | PostsApp',
+  Profile: 'My Profile | PostsApp',
+  Settings: 'Settings | PostsApp',
+  Login: 'Sign In | PostsApp',
+  SignUp: 'Create Account | PostsApp',
 };
 
 export default function App() {
@@ -99,7 +126,33 @@ export default function App() {
         <InteractionProvider>
           <FeedProvider>
             <NotificationProvider>
-              <NavigationContainer ref={navigationRef} linking={linking}>
+              <NavigationContainer
+                ref={navigationRef}
+                linking={linking}
+                documentTitle={{
+                  formatter: (options, route) => {
+                    if (options?.title) {
+                      return options.title.includes('PostsApp')
+                        ? options.title
+                        : `${options.title} | PostsApp`;
+                    }
+                    if (route?.name === 'ArticleDetail') {
+                      const params = (route.params || {}) as { title?: string };
+                      return params.title ? `${params.title} | PostsApp` : 'PostsApp';
+                    }
+                    if (route?.name === 'Home') {
+                      const cat = ((route.params || {}) as { initialCategory?: string }).initialCategory;
+                      if (cat && cat !== 'HOME') return `${cat} | PostsApp`;
+                      return ROUTE_PAGE_TITLES.Home;
+                    }
+                    if (route?.name === 'CreatorProfile') {
+                      const authorName = ((route.params || {}) as { authorName?: string }).authorName;
+                      return authorName ? `${authorName} | PostsApp` : ROUTE_PAGE_TITLES.CreatorProfile;
+                    }
+                    return (route?.name && ROUTE_PAGE_TITLES[route.name]) || 'PostsApp';
+                  },
+                }}
+              >
                 <RootNavigator />
                 <StatusBar style="auto" />
               </NavigationContainer>

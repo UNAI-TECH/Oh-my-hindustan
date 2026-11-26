@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AppBottomNavBar from '../../components/BottomNavBar';
 import MainHeader from '../../components/MainHeader';
 import WebPageShell from '../../components/web/WebPageShell';
+import { buildArticleParams } from '../../components/web/webPortalHelpers';
 import { useFeed } from '../../context/FeedContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
@@ -117,7 +118,7 @@ export default function ExploreScreen() {
     return (
       <TouchableOpacity
         style={styles.contentCard}
-        onPress={() => navigation.navigate('ArticleDetail', { id: item.id })}
+        onPress={() => navigation.navigate('ArticleDetail', buildArticleParams(item))}
       >
         {/* Thumbnail */}
         <View style={styles.thumbnailContainer}>

@@ -70,7 +70,7 @@ export default function NotificationScreen() {
         if (item.type === 'STORY') {
           navigation.navigate('StoryFeed');
         } else {
-          navigation.navigate('ArticleDetail', { id: item.targetId });
+          navigation.navigate('ArticleDetail', { id: item.targetId, slug: item.targetId });
         }
       }
     }

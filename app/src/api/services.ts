@@ -1,5 +1,11 @@
 import { supabase } from '../lib/supabaseClient';
 import { generateUUID } from '../utils/uuid';
+import {
+  cacheArticleSlug,
+  getCachedArticleIdBySlug,
+  isUuid,
+  titleToSlug,
+} from '../components/web/webPortalHelpers';
 
 /**
  * Authentication API - Supabase direct
@@ -237,6 +243,59 @@ export const AppApi = {
         slug: displayCategory.toLowerCase().replace(/\s+/g, '-'),
       },
     };
+  },
+
+  resolvePostIdBySlug: async (slug: string): Promise<string | null> => {
+    if (!slug) return null;
+    if (isUuid(slug)) return slug;
+
+    let cleanSlug = slug.trim().toLowerCase();
+    try {
+      cleanSlug = decodeURIComponent(slug).trim().toLowerCase();
+    } catch (_) {}
+
+    const cachedId = getCachedArticleIdBySlug(cleanSlug);
+    if (cachedId) return cachedId;
+
+    const { data, error } = await supabase
+      .from('Post')
+      .select('id, title')
+      .or('is_active.eq.true,is_active.is.null')
+      .order('createdAt', { ascending: false })
+      .limit(500);
+
+    if (error || !data) return null;
+
+    const exactMatch = data.find((p: any) => titleToSlug(p.title) === cleanSlug);
+    if (exactMatch) {
+      cacheArticleSlug(exactMatch.id, exactMatch.title);
+      return exactMatch.id;
+    }
+
+    if (cleanSlug.length > 12) {
+      const prefixMatch = data.find((p: any) => {
+        const s = titleToSlug(p.title);
+        return s && (s.startsWith(cleanSlug) || cleanSlug.startsWith(s));
+      });
+      if (prefixMatch) {
+        cacheArticleSlug(prefixMatch.id, prefixMatch.title);
+        return prefixMatch.id;
+      }
+    }
+
+    return null;
+  },
+
+  getPostByIdOrSlug: async (idOrSlug: string) => {
+    if (!idOrSlug) throw new Error('Missing article identifier');
+    if (isUuid(idOrSlug)) {
+      return AppApi.getPost(idOrSlug);
+    }
+    const resolvedId = await AppApi.resolvePostIdBySlug(idOrSlug);
+    if (resolvedId) {
+      return AppApi.getPost(resolvedId);
+    }
+    return AppApi.getPost(idOrSlug);
   },
 
   getNotifications: async (page = 1, limit = 20) => {

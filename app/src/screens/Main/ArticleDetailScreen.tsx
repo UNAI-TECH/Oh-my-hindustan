@@ -17,6 +17,12 @@ import { AppApi } from '../../api/services';
 import AdBanner from '../../components/AdBanner';
 import AdEnabledVideoPlayer from '../../components/AdEnabledVideoPlayer';
 import WebPageShell from '../../components/web/WebPageShell';
+import {
+  buildArticleParams,
+  cacheArticleSlug,
+  isUuid,
+  titleToSlug,
+} from '../../components/web/webPortalHelpers';
 
 const customHTMLElementModels = {
   font: defaultHTMLElementModels.span.extend({
@@ -39,10 +45,37 @@ export default function ArticleDetailScreen() {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const isWebDesktop = Platform.OS === 'web' && width >= 768;
-  const { id } = route.params || {};
+  const { id: routeId, slug: routeSlug } = route.params || {};
+  const articleLookupKey = routeId || routeSlug || '';
   const { userProfile } = useAuth();
   
   const { selectedArticle, isLoading, fetchArticle } = useFeed();
+
+  const decodedRouteSlug = React.useMemo(() => {
+    if (!routeSlug) return '';
+    try {
+      return decodeURIComponent(String(routeSlug)).trim().toLowerCase();
+    } catch {
+      return String(routeSlug).trim().toLowerCase();
+    }
+  }, [routeSlug]);
+
+  const id = React.useMemo(() => {
+    if (routeId) return String(routeId);
+    if (selectedArticle?.id) {
+      const slugMatches =
+        !decodedRouteSlug ||
+        selectedArticle.id === decodedRouteSlug ||
+        titleToSlug(selectedArticle.title) === decodedRouteSlug ||
+        isUuid(decodedRouteSlug) ||
+        !isLoading;
+      if (slugMatches) return selectedArticle.id;
+    }
+    if (routeSlug && isUuid(String(routeSlug))) {
+      return String(routeSlug);
+    }
+    return undefined;
+  }, [routeId, selectedArticle?.id, selectedArticle?.title, decodedRouteSlug, routeSlug, isLoading]);
   const [upvotes, setUpvotes] = useState(0);
   const [downvotes, setDownvotes] = useState(0);
   const [myVote, setMyVote] = useState<1 | -1 | 0>(0);
@@ -104,10 +137,46 @@ export default function ArticleDetailScreen() {
     setRelatedPosts([]);
     setIsReady(false);
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    if (id) fetchArticle(id);
+    if (articleLookupKey) fetchArticle(articleLookupKey);
     const timer = setTimeout(() => setIsReady(true), 150);
     return () => clearTimeout(timer);
-  }, [id]);
+  }, [articleLookupKey]);
+
+  useEffect(() => {
+    if (!selectedArticle?.title) return;
+    const isCurrentMatch =
+      selectedArticle.id === routeId ||
+      selectedArticle.id === articleLookupKey ||
+      titleToSlug(selectedArticle.title) === decodedRouteSlug ||
+      (!isLoading && !!selectedArticle.id);
+    if (!isCurrentMatch) return;
+
+    const targetSlug = cacheArticleSlug(selectedArticle.id, selectedArticle.title);
+    navigation.setOptions({ title: selectedArticle.title });
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.title = `${selectedArticle.title} | PostsApp`;
+    }
+    if (
+      targetSlug &&
+      (routeSlug !== targetSlug || route.params?.title !== selectedArticle.title)
+    ) {
+      navigation.setParams({
+        id: selectedArticle.id,
+        slug: targetSlug,
+        title: selectedArticle.title,
+      });
+    }
+  }, [
+    selectedArticle?.id,
+    selectedArticle?.title,
+    routeId,
+    articleLookupKey,
+    decodedRouteSlug,
+    routeSlug,
+    route.params?.title,
+    isLoading,
+    navigation,
+  ]);
 
   const fetchInteractions = useCallback(async () => {
     if (!id) return;
@@ -456,8 +525,13 @@ export default function ArticleDetailScreen() {
   const onShare = useCallback(async () => {
     try {
       const shareTitle = selectedArticle?.title || 'Check this out';
+      const shareSlug = titleToSlug(selectedArticle?.title) || id;
+      const origin =
+        Platform.OS === 'web' && typeof window !== 'undefined'
+          ? window.location.origin
+          : 'https://postsapp.com';
       await Share.share({
-        message: `${shareTitle}\n\nRead more on PostsApp:\nhttps://postsapp.com/post/${id}\n\nDownload the app: ${APP_DOWNLOAD_URL}`,
+        message: `${shareTitle}\n\nRead more on PostsApp:\n${origin}/article/${shareSlug}\n\nDownload the app: ${APP_DOWNLOAD_URL}`,
       });
     } catch (e) {}
   }, [selectedArticle?.title, id]);
@@ -679,7 +753,7 @@ export default function ArticleDetailScreen() {
                     key={post.id}
                     style={[styles.relatedCard, relatedCardStyle]}
                     activeOpacity={0.8}
-                    onPress={() => navigation.push('ArticleDetail', { id: post.id })}
+                    onPress={() => navigation.push('ArticleDetail', buildArticleParams(post))}
                   >
                     <Image
                       source={{ uri: post.thumbnail || 'https://via.placeholder.com/200x120/f1f5f9/94a3b8?text=No+Image' }}

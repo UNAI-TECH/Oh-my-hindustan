@@ -11,7 +11,7 @@ import { AppApi } from '../../api/services';
 import { generateUUID } from '../../utils/uuid';
 import CustomModal from '../../components/CustomModal';
 import WebPageShell from '../../components/web/WebPageShell';
-import { formatCardExcerpt } from '../../components/web/webPortalHelpers';
+import { formatCardExcerpt, buildArticleParams } from '../../components/web/webPortalHelpers';
 import { useInteraction } from '../../context/InteractionContext';
 
 export default function CreatorProfileScreen() {
@@ -138,6 +138,15 @@ export default function CreatorProfileScreen() {
   };
 
   const displayName = creator?.channel_name || creator?.username || paramAuthorName || 'Creator';
+
+  useEffect(() => {
+    if (displayName) {
+      navigation.setOptions({ title: displayName });
+      if (Platform.OS === 'web' && typeof document !== 'undefined') {
+        document.title = `${displayName} | PostsApp`;
+      }
+    }
+  }, [displayName, navigation]);
   const usernameHandle = creator?.username || '';
   const avatarUrl = creator?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D4191F&color=fff&size=200`;
   const bio = creator?.bio || 'Content Creator';
@@ -232,7 +241,7 @@ export default function CreatorProfileScreen() {
               <TouchableOpacity 
                 key={`post-${item.id}-${idx}`} 
                 style={[styles.postCard, isWebDesktop && styles.webPostCard]}
-                onPress={() => navigation.navigate('ArticleDetail', { id: item.id })}
+                onPress={() => navigation.navigate('ArticleDetail', buildArticleParams(item))}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
                   <Image source={{ uri: avatarUrl }} style={{ width: 24, height: 24, borderRadius: 12 }} />

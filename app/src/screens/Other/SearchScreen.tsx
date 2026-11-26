@@ -5,7 +5,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import WebPageShell from '../../components/web/WebPageShell';
-import { formatCardExcerpt } from '../../components/web/webPortalHelpers';
+import { formatCardExcerpt, buildArticleParams } from '../../components/web/webPortalHelpers';
 import { FeedItemType, FeedItem } from '../../types';
 import { useFeed } from '../../context/FeedContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -239,7 +239,7 @@ export default function SearchScreen() {
                 <TouchableOpacity
                   key={`post-web-${item.id}-${idx}`}
                   style={[styles.postCard, styles.webResultHalf, { marginBottom: 0, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 6, shadowOpacity: 0.03 }]}
-                  onPress={() => navigation.navigate('ArticleDetail', { id: item.id })}
+                  onPress={() => navigation.navigate('ArticleDetail', buildArticleParams(item))}
                 >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16 }}>
                     <View style={{ flex: 1 }}>
@@ -362,7 +362,7 @@ export default function SearchScreen() {
           <View>
             {showCreators && creators.length > 0 && <Text style={styles.sectionTitle}>Posts</Text>}
             {filteredPosts.map((item, idx) => (
-              <TouchableOpacity key={`post-${item.id}-${idx}`} style={styles.postCard} onPress={() => navigation.navigate('ArticleDetail', { id: item.id })}>
+              <TouchableOpacity key={`post-${item.id}-${idx}`} style={styles.postCard} onPress={() => navigation.navigate('ArticleDetail', buildArticleParams(item))}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16 }}>
                   <View style={{ flex: 1 }}>
                     <View style={styles.categoryPill}>

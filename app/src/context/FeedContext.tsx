@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
 import { withRetry } from '../utils/networkUtils';
-import { formatCardExcerpt } from '../components/web/webPortalHelpers';
+import { formatCardExcerpt, cacheArticleSlug, titleToSlug } from '../components/web/webPortalHelpers';
 
 const FEED_CACHE_KEY = 'home_feed_cache';
 
@@ -68,6 +68,9 @@ const mapPostType = (type: string): FeedItemType => {
 };
 
 export const mapPostToFeedItem = (post: any): FeedItem => {
+  if (post?.id && post?.title) {
+    cacheArticleSlug(post.id, post.title);
+  }
   return {
     id: post.id,
     type: mapPostType(post.type),
@@ -210,18 +213,28 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const fetchArticle = async (id: string) => {
+  const fetchArticle = async (idOrSlug: string) => {
     setIsLoading(true);
     try {
-      const localItem = feedItems.find(it => it.id === id);
+      let decodedSlug = idOrSlug;
+      try {
+        decodedSlug = decodeURIComponent(idOrSlug);
+      } catch (_) {}
+      const normalizedSlug = decodedSlug.trim().toLowerCase();
+
+      const localItem = feedItems.find(
+        it => it.id === idOrSlug || titleToSlug(it.title) === normalizedSlug
+      );
       if (localItem) {
+        cacheArticleSlug(localItem.id, localItem.title);
         setSelectedArticle(localItem);
         // Stale-while-revalidate: Fetch fresh data silently for flags like ads_enabled
-        AppApi.getPost(id).then(freshResponse => {
+        AppApi.getPost(localItem.id).then(freshResponse => {
            if (freshResponse) setSelectedArticle(toFeedItem(freshResponse));
         }).catch(() => {});
       } else {
-        const response = await AppApi.getPost(id);
+        setSelectedArticle(null);
+        const response = await AppApi.getPostByIdOrSlug(idOrSlug);
         if (response) {
           setSelectedArticle(toFeedItem(response));
         } else {

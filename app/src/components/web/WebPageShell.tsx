@@ -13,6 +13,7 @@ import { AdData } from '../AdCard';
 import { WebTopMasthead, WebStickyNavBar } from './WebPortalHeader';
 import WebPortalFooter from './WebPortalFooter';
 import { categoryToSlug } from './webPortalHelpers';
+import { openExternalUrl } from '../../utils/openExternalUrl';
 
 interface WebPageShellProps {
   children: React.ReactNode;
@@ -131,7 +132,7 @@ export default function WebPageShell({
         searchQuery={searchQuery}
         onChangeSearch={setSearchQuery}
         onSubmitSearch={handleSearchSubmit}
-        onPressWatchOnline={() => navigation.navigate('Home', { initialCategory: 'watch-online' })}
+        onPressWatchOnline={() => openExternalUrl('https://www.youtube.com/@postsapp')}
         onNavigate={(route, params) => navigation.navigate(route, params)}
         unreadNotifications={unreadCount}
         isAuthenticated={isAuthenticated}

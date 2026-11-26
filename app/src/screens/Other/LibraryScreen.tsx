@@ -7,6 +7,7 @@ import { useAppTheme } from '../../context/ThemeContext';
 import AppBottomNavBar from '../../components/BottomNavBar';
 import MainHeader from '../../components/MainHeader';
 import WebPageShell from '../../components/web/WebPageShell';
+import { buildArticleParams } from '../../components/web/webPortalHelpers';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -312,7 +313,7 @@ export default function LibraryScreen() {
                   borderWidth: 1,
                   borderColor: '#E5E7EB',
                 }}
-                onPress={() => navigation.navigate('ArticleDetail', { id: item.id })}
+                onPress={() => navigation.navigate('ArticleDetail', buildArticleParams(item))}
                 activeOpacity={0.75}
               >
                 <View style={{ flex: 1 }}>
@@ -395,7 +396,7 @@ export default function LibraryScreen() {
                   shadowOffset: { width: 0, height: 4 },
                 } : { elevation: 2 }),
               }}
-              onPress={() => navigation.navigate('ArticleDetail', { id: item.id })}
+              onPress={() => navigation.navigate('ArticleDetail', buildArticleParams(item))}
               activeOpacity={0.7}
             >
               <View style={{ flex: 1 }}>

@@ -30,10 +30,13 @@ import {
   matchesEditorialCategory,
   categoryToSlug,
   slugToCategory,
+  buildArticleParams,
 } from '../../components/web/webPortalHelpers';
+import { openExternalUrl } from '../../utils/openExternalUrl';
 
 const AD_MARKER = '__AD_PLACEHOLDER__';
 const APP_DOWNLOAD_URL = 'https://play.google.com/store/apps/details?id=com.unai.antigravity';
+const YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@postsapp';
 
 export default function HomeFeedScreen() {
   const { colors } = useAppTheme();
@@ -369,7 +372,7 @@ export default function HomeFeedScreen() {
 
   const handleWebPressItem = (item: FeedItem) => {
     if (item.type !== FeedItemType.PROMO) {
-      navigation.navigate('ArticleDetail', { id: item.id });
+      navigation.navigate('ArticleDetail', buildArticleParams(item));
     }
   };
 
@@ -411,7 +414,7 @@ export default function HomeFeedScreen() {
               navigation.navigate('Search');
             }
           }}
-          onPressWatchOnline={() => handleWebSelectCategory(webCategory === 'WATCH_ONLINE' ? 'HOME' : 'WATCH_ONLINE')}
+          onPressWatchOnline={() => openExternalUrl(YOUTUBE_CHANNEL_URL)}
           onNavigate={(route, params) => navigation.navigate(route, params)}
           unreadNotifications={unreadCount}
           isAuthenticated={isAuthenticated}
@@ -586,7 +589,7 @@ export default function HomeFeedScreen() {
                   item={feedItem} 
                   onClick={() => {
                     if (feedItem.type !== FeedItemType.PROMO) {
-                      navigation.navigate('ArticleDetail', { id: feedItem.id });
+                      navigation.navigate('ArticleDetail', buildArticleParams(feedItem));
                     }
                   }}
                   onShare={() => onShare(feedItem)}

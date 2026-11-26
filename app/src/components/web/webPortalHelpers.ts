@@ -194,3 +194,91 @@ export function getFormattedHeaderDate(date = new Date()): string {
 
   return `${weekday}, ${month} ${day}${suffix}, ${year}`;
 }
+
+const SLUG_CACHE_STORAGE_KEY = 'postsapp_article_slug_map';
+const memorySlugToIdMap = new Map<string, string>();
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isUuid(value?: string | null): boolean {
+  return !!value && UUID_RE.test(value.trim());
+}
+
+/**
+ * Generates a clean, Unicode-friendly URL slug from an article title without exposing its ID.
+ */
+export function titleToSlug(title?: string | null): string {
+  if (!title) return '';
+  const cleaned = stripHtml(title)
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/['’`]/g, '')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '');
+  if (!cleaned) return '';
+  if (cleaned.length <= 90) return cleaned;
+  const trimmed = cleaned.slice(0, 90).replace(/-+[^-]*$/, '');
+  return trimmed || cleaned.slice(0, 90);
+}
+
+/**
+ * Caches a slug -> article ID mapping in memory and web localStorage for fast resolution & reloads.
+ */
+export function cacheArticleSlug(id?: string | null, title?: string | null): string {
+  const slug = titleToSlug(title);
+  if (!id || !slug) return slug;
+  memorySlugToIdMap.set(slug, id);
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const raw = window.localStorage.getItem(SLUG_CACHE_STORAGE_KEY);
+      const parsed: Record<string, string> = raw ? JSON.parse(raw) : {};
+      parsed[slug] = id;
+      const keys = Object.keys(parsed);
+      if (keys.length > 250) {
+        delete parsed[keys[0]];
+      }
+      window.localStorage.setItem(SLUG_CACHE_STORAGE_KEY, JSON.stringify(parsed));
+    } catch (_) {}
+  }
+  return slug;
+}
+
+export function getCachedArticleIdBySlug(slug?: string | null): string | null {
+  if (!slug) return null;
+  let normalized = slug.trim().toLowerCase();
+  try {
+    normalized = decodeURIComponent(slug).trim().toLowerCase();
+  } catch (_) {}
+  if (memorySlugToIdMap.has(normalized)) {
+    return memorySlugToIdMap.get(normalized) || null;
+  }
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const raw = window.localStorage.getItem(SLUG_CACHE_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed[normalized] === 'string') {
+          memorySlugToIdMap.set(normalized, parsed[normalized]);
+          return parsed[normalized];
+        }
+      }
+    } catch (_) {}
+  }
+  return null;
+}
+
+/**
+ * Builds ArticleDetail navigation params with a readable URL slug while keeping the ID internal.
+ */
+export function buildArticleParams(article: { id?: string | null; title?: string | null }): {
+  id: string;
+  slug: string;
+  title?: string;
+} {
+  const id = article?.id || '';
+  const slug = cacheArticleSlug(id, article?.title) || id;
+  return {
+    id,
+    slug,
+    ...(article?.title ? { title: article.title } : {}),
+  };
+}
