@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
@@ -40,6 +41,8 @@ export default function WebPageShell({
   onSearchSubmitOverride,
 }: WebPageShellProps) {
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 640;
   const { userProfile, isAuthenticated, logout } = useAuth();
   const { unreadCount } = useNotifications();
   const scrollRef = useRef<ScrollView>(null);
@@ -107,7 +110,6 @@ export default function WebPageShell({
   return (
     <ScrollView
       ref={scrollRef}
-      stickyHeaderIndices={[1]}
       style={styles.scroll}
       contentContainerStyle={styles.scrollContent}
       refreshControl={
@@ -141,7 +143,7 @@ export default function WebPageShell({
         onChangeFeedMode={(mode) => navigation.navigate('Home', { initialFeedMode: mode })}
       />
 
-      <View style={styles.bodyOuter}>
+      <View style={[styles.bodyOuter, isMobile && { paddingHorizontal: 12, paddingVertical: 14 }]}>
         <View style={[styles.bodyInner, { maxWidth }]}>
           {children}
         </View>

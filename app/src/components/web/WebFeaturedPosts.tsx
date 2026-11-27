@@ -24,12 +24,13 @@ export default function WebFeaturedPosts({
 }: WebFeaturedPostsProps) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
+  const isMobile = width < 640;
   const visibleItems = items.slice(0, 4);
 
   if (visibleItems.length === 0) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isMobile && { paddingHorizontal: 12, marginTop: 24 }]}>
       <View style={styles.headerRow}>
         <View style={styles.sectionHeadingRow}>
           <View style={styles.sectionDash} />
@@ -47,7 +48,7 @@ export default function WebFeaturedPosts({
             key={item.id}
             style={[
               styles.card,
-              isDesktop ? styles.cardDesktop : styles.cardTablet,
+              isDesktop ? styles.cardDesktop : isMobile ? styles.cardMobile : styles.cardTablet,
             ]}
             activeOpacity={0.88}
             onPress={() => onPressItem(item)}
@@ -147,6 +148,11 @@ const styles = StyleSheet.create({
     flexBasis: '47%',
     flexGrow: 1,
     minWidth: 260,
+  },
+  cardMobile: {
+    flexBasis: '100%',
+    width: '100%',
+    minWidth: 0,
   },
   thumbContainer: {
     width: '100%',

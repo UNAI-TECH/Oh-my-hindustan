@@ -1,7 +1,7 @@
 export type SeoLang = 'en' | 'ta';
 
 export const SITE_URL = (
-  process.env.EXPO_PUBLIC_SITE_URL || 'https://postsapp.com'
+  process.env.EXPO_PUBLIC_SITE_URL || 'https://web.postsapp.in'
 ).replace(/\/$/, '');
 
 export interface HreflangAlternate {

@@ -47,7 +47,8 @@ export default function ArticleDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
-  const isWebDesktop = Platform.OS === 'web' && width >= 768;
+  const isWeb = Platform.OS === 'web';
+  const isWebDesktop = isWeb && width >= 768;
   const routeId = route.params?.id;
   const routeSlug = route.params?.slug;
   const articleLookupKey = routeId || routeSlug || '';
@@ -903,16 +904,22 @@ export default function ArticleDetailScreen() {
                 style={{
                   position: 'relative',
                   marginTop: 8,
-                  minHeight: 240,
-                  maxHeight: 280,
-                  overflow: 'hidden',
+                  minHeight: 290,
                   borderRadius: 12,
                 }}
               >
                 <View
                   pointerEvents="none"
                   style={[
-                    { opacity: Platform.OS === 'web' ? 0.42 : 0.2 },
+                    {
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      overflow: 'hidden',
+                      opacity: Platform.OS === 'web' ? 0.42 : 0.2,
+                    },
                     Platform.OS === 'web'
                       ? ({ filter: 'blur(6px)', userSelect: 'none' } as any)
                       : null,
@@ -925,16 +932,12 @@ export default function ArticleDetailScreen() {
                 </View>
 
                 <LinearGradient
-                  colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.88)', '#FFFFFF']}
+                  colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.9)', '#FFFFFF']}
                   style={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
+                    minHeight: 290,
                     justifyContent: 'center',
                     alignItems: 'center',
-                    paddingHorizontal: 20,
+                    paddingHorizontal: isWebDesktop ? 20 : 12,
                     paddingVertical: 24,
                   }}
                 >
@@ -1088,6 +1091,59 @@ export default function ArticleDetailScreen() {
           </View>
         </View>
 
+        {/* Inline Engagement Bar (never overlaps paywall or footer) */}
+        <View style={{ paddingHorizontal: isWebDesktop ? 32 : 20, paddingBottom: 24 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              justifyContent: 'space-between',
+              gap: 10,
+              backgroundColor: '#F8FAFC',
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+            }}
+          >
+            <View style={styles.voteControls}>
+              <TouchableOpacity onPress={() => handleVote(1)}>
+                <Ionicons name="arrow-up" size={20} color={myVote === 1 ? colors.PrimaryRed : colors.Slate500} />
+              </TouchableOpacity>
+              <Text style={{ fontWeight: 'bold', marginHorizontal: 6, color: myVote === 1 ? colors.PrimaryRed : colors.Slate500 }}>
+                {formatVoteCount(upvotes)}
+              </Text>
+
+              <View style={{ width: 1, height: 16, backgroundColor: colors.Slate200, marginHorizontal: 4 }} />
+
+              <TouchableOpacity onPress={() => handleVote(-1)}>
+                <Ionicons name="arrow-down" size={20} color={myVote === -1 ? '#3B82F6' : colors.Slate500} />
+              </TouchableOpacity>
+              <Text style={{ fontWeight: 'bold', marginHorizontal: 6, color: myVote === -1 ? '#3B82F6' : colors.Slate500 }}>
+                {formatVoteCount(downvotes)}
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="eye-outline" size={18} color="gray" />
+                <Text style={{ marginLeft: 5, fontWeight: '700', color: 'gray', fontSize: 13 }}>{formatVoteCount(viewCount)}</Text>
+              </View>
+
+              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }} onPress={openCommentSheet}>
+                <Ionicons name="chatbubble-outline" size={18} color="gray" />
+                <Text style={{ marginLeft: 5, fontWeight: '700', color: 'gray', fontSize: 13 }}>{commentsCount}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={[styles.shareCircle, { width: 36, height: 36, borderRadius: 18 }]} onPress={onShare}>
+                <Ionicons name="share-social" size={17} color="white" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
         {/* Ad Placement 2: Above Related Posts */}
         <AdBanner />
 
@@ -1145,50 +1201,6 @@ export default function ArticleDetailScreen() {
           <ActivityIndicator size="small" color={colors.PrimaryRed} style={{ marginVertical: 24 }} />
         )}
     </>
-  );
-
-  const floatingActionBar = (
-      <View style={styles.fabContainer}>
-        <View style={[styles.fab, isWebDesktop && { maxWidth: 520 }]}>
-          <View style={styles.voteControls}>
-            <TouchableOpacity onPress={() => handleVote(1)}>
-              <Ionicons name="arrow-up" size={20} color={myVote === 1 ? colors.PrimaryRed : colors.Slate500} />
-            </TouchableOpacity>
-            <Text style={{ fontWeight: 'bold', marginHorizontal: 6, color: myVote === 1 ? colors.PrimaryRed : colors.Slate500 }}>
-              {formatVoteCount(upvotes)}
-            </Text>
-            
-            <View style={{ width: 1, height: 16, backgroundColor: colors.Slate200, marginHorizontal: 4 }} />
-            
-            <TouchableOpacity onPress={() => handleVote(-1)}>
-              <Ionicons name="arrow-down" size={20} color={myVote === -1 ? '#3B82F6' : colors.Slate500} />
-            </TouchableOpacity>
-            <Text style={{ fontWeight: 'bold', marginHorizontal: 6, color: myVote === -1 ? '#3B82F6' : colors.Slate500 }}>
-              {formatVoteCount(downvotes)}
-            </Text>
-          </View>
-          
-          <View style={styles.divider} />
-
-          <View style={styles.commentControl}>
-            <Ionicons name="eye-outline" size={20} color="gray" />
-            <Text style={{ marginLeft: 6, fontWeight: 'bold', color: 'gray' }}>{formatVoteCount(viewCount)}</Text>
-          </View>
-          
-          <View style={styles.divider} />
-          
-          <TouchableOpacity style={styles.commentControl} onPress={openCommentSheet}>
-            <Ionicons name="chatbubble-outline" size={20} color="gray" />
-            <Text style={{ marginLeft: 8, fontWeight: 'bold', color: 'gray' }}>{commentsCount}</Text>
-          </TouchableOpacity>
-          
-          <View style={styles.divider} />
-          
-          <TouchableOpacity style={styles.shareCircle} onPress={onShare}>
-            <Ionicons name="share-social" size={20} color="white" />
-          </TouchableOpacity>
-        </View>
-      </View>
   );
 
   const modalsBlock = (
@@ -1300,16 +1312,30 @@ export default function ArticleDetailScreen() {
     </>
   );
 
-  if (isWebDesktop) {
+  if (isWeb) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#F5F5F7', position: 'relative' }}>
+      <View style={{ flex: 1, backgroundColor: '#F5F5F7' }}>
         <WebPageShell maxWidth={920}>
-          <View style={styles.webTopBar}>
-            <TouchableOpacity style={styles.webBackBtn} onPress={() => navigation.goBack()}>
+          <View style={[styles.webTopBar, { flexWrap: 'wrap', gap: 8 }]}>
+            <TouchableOpacity style={styles.webBackBtn} onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')}>
               <Ionicons name="arrow-back" size={16} color="#111827" />
-              <Text style={styles.webBackText}>Back to Stories</Text>
+              <Text style={styles.webBackText}>{isWebDesktop ? 'Back to Stories' : 'Back'}</Text>
             </TouchableOpacity>
-            <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 4, padding: 2 }}>
+                <TouchableOpacity
+                  onPress={() => setSiteLang('en')}
+                  style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 3, backgroundColor: siteLang === 'en' ? '#D4191F' : 'transparent' }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: siteLang === 'en' ? '#FFFFFF' : '#374151' }}>EN</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setSiteLang('ta')}
+                  style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 3, backgroundColor: siteLang === 'ta' ? '#D4191F' : 'transparent' }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: siteLang === 'ta' ? '#FFFFFF' : '#374151' }}>தமிழ்</Text>
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity style={styles.webActionBtn} onPress={onShare}>
                 <Ionicons name="share-social-outline" size={16} color="#374151" />
                 <Text style={styles.webActionText}>Share</Text>
@@ -1326,9 +1352,7 @@ export default function ArticleDetailScreen() {
           <View style={styles.webArticleCard}>
             {articleBodyContent}
           </View>
-          <View style={{ height: 72 }} />
         </WebPageShell>
-        {floatingActionBar}
         {modalsBlock}
       </View>
     );
@@ -1364,11 +1388,10 @@ export default function ArticleDetailScreen() {
         </View>
       </View>
 
-      <ScrollView ref={scrollViewRef} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView ref={scrollViewRef} contentContainerStyle={{ paddingBottom: 24 }}>
         {articleBodyContent}
       </ScrollView>
 
-      {floatingActionBar}
       {modalsBlock}
     </SafeAreaView>
   );

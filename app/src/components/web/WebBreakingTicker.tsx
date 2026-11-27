@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FeedItem } from '../../types';
 
@@ -9,6 +9,8 @@ interface WebBreakingTickerProps {
 }
 
 export default function WebBreakingTicker({ items, onPressItem }: WebBreakingTickerProps) {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 640;
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -31,11 +33,11 @@ export default function WebBreakingTicker({ items, onPressItem }: WebBreakingTic
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isMobile && { paddingHorizontal: 12, marginTop: 12 }]}>
       <View style={styles.bar}>
-        <View style={styles.badge}>
+        <View style={[styles.badge, isMobile && { paddingHorizontal: 10, gap: 6 }]}>
           <View style={styles.badgeDot} />
-          <Text style={styles.badgeText}>BREAKING NEWS</Text>
+          <Text style={styles.badgeText}>{isMobile ? 'BREAKING' : 'BREAKING NEWS'}</Text>
         </View>
 
         <TouchableOpacity

@@ -53,7 +53,7 @@ export default function HomeFeedScreen() {
   const { userProfile, isAuthenticated, logout } = useAuth();
   const { unreadCount } = useNotifications();
   const { width } = useWindowDimensions();
-  const isWebDesktop = Platform.OS === 'web' && width >= 768;
+  const isWebDesktop = Platform.OS === 'web';
   const numColumns = width >= 768 ? 2 : 1;
   const maxWidth = width >= 768 ? 1024 : '100%';
   
@@ -431,14 +431,14 @@ export default function HomeFeedScreen() {
       webCategory !== 'HOME' || !!activeTag || webSearchQuery.trim().length > 0 || webFeedMode !== 'latest';
 
     return (
-      <ScrollView
-        ref={webScrollRef}
-        stickyHeaderIndices={[1]}
-        style={{ flex: 1, backgroundColor: '#F5F5F7' }}
-        contentContainerStyle={{ minHeight: '100%' }}
-      >
+      <View style={{ flex: 1, backgroundColor: '#F5F5F7' }}>
         <WebHeadSeo config={homeSeoConfig} />
-        <WebTopMasthead
+        <ScrollView
+          ref={webScrollRef}
+          style={{ flex: 1, backgroundColor: '#F5F5F7' }}
+          contentContainerStyle={{ minHeight: '100%' }}
+        >
+          <WebTopMasthead
           onSelectHome={() => {
             setWebCategory('HOME');
             setActiveTag(null);
@@ -567,6 +567,7 @@ export default function HomeFeedScreen() {
           />
         </View>
       </ScrollView>
+      </View>
     );
   }
 
@@ -613,7 +614,7 @@ export default function HomeFeedScreen() {
           data={feedWithAds}
           numColumns={numColumns}
           keyExtractor={(item, index) => `${(item as any).id}-${index}`}
-          contentContainerStyle={{ alignSelf: 'center', width: '100%', maxWidth, paddingHorizontal: 16, paddingBottom: 100 }}
+          contentContainerStyle={{ alignSelf: 'center', width: '100%', maxWidth, paddingHorizontal: 16, paddingBottom: 24 }}
           columnWrapperStyle={numColumns > 1 ? { gap: 12 } : undefined}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           onEndReached={loadMoreFeed}
@@ -670,7 +671,7 @@ export default function HomeFeedScreen() {
         />
       )}
 
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
+      <View>
         <AppBottomNavBar 
           currentRoute="Home" 
           onNavigate={(route) => navigation.navigate(route)} 

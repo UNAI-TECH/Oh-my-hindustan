@@ -87,13 +87,14 @@ export default function WebExpressPosts({
 }: WebExpressPostsProps) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
+  const isMobile = width < 768;
 
   const leadItem = expressOneItems[0] || null;
   const expressOneList = expressOneItems.slice(1, 5);
   const expressTwoList = expressTwoItems.slice(0, 4);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isMobile && { paddingHorizontal: 12, marginTop: 24 }]}>
       <View style={[styles.splitRow, !isDesktop && styles.splitRowTablet]}>
         {/* Express Posts 1 (~2/3 width) */}
         <View style={styles.leftTwoThirds}>
@@ -267,7 +268,7 @@ const styles = StyleSheet.create({
   rightOneThird: {
     flex: 1,
     width: '100%',
-    minWidth: 280,
+    minWidth: 0,
   },
   expressOneInner: {
     flexDirection: 'row',
@@ -420,7 +421,7 @@ const styles = StyleSheet.create({
   moreCard: {
     flexBasis: '31%',
     flexGrow: 1,
-    minWidth: 260,
+    minWidth: 0,
     backgroundColor: '#FFFFFF',
     borderRadius: 6,
     borderWidth: 1,

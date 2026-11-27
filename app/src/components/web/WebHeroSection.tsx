@@ -34,15 +34,16 @@ export default function WebHeroSection({
 }: WebHeroSectionProps) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
+  const isMobile = width < 768;
 
   const leadPick = editorsPicks[0] || null;
   const secondaryPicks = editorsPicks.slice(1, 3);
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.grid, !isDesktop && styles.gridTablet]}>
+    <View style={[styles.container, isMobile && { paddingHorizontal: 12, marginTop: 16 }]}>
+      <View style={[styles.grid, !isDesktop && styles.gridTablet, isMobile && { flexDirection: 'column', gap: 18 }]}>
         {/* Left Column: Editor's Picks */}
-        <View style={[styles.sideColumn, !isDesktop && styles.columnTabletHalf]}>
+        <View style={[styles.sideColumn, !isDesktop && styles.columnTabletHalf, isMobile && styles.columnMobileFull]}>
           <SectionHeading title="Editor's Picks" />
 
           {leadPick ? (
@@ -98,11 +99,18 @@ export default function WebHeroSection({
         </View>
 
         {/* Center Column: Main News */}
-        <View style={[styles.centerColumn, !isDesktop && styles.columnTabletFull, !isDesktop && ({ order: -1 } as any)]}>
+        <View
+          style={[
+            styles.centerColumn,
+            !isDesktop && styles.columnTabletFull,
+            isMobile && styles.columnMobileFull,
+            !isDesktop && ({ order: -1 } as any),
+          ]}
+        >
           <SectionHeading title="Main News" />
           {mainNews ? (
             <TouchableOpacity
-              style={styles.mainNewsCard}
+              style={[styles.mainNewsCard, isMobile && { minHeight: 300 }]}
               activeOpacity={0.92}
               onPress={() => onPressItem(mainNews)}
             >
@@ -230,6 +238,13 @@ const styles = StyleSheet.create({
   },
   columnTabletFull: {
     flexBasis: '100%',
+    minWidth: 0,
+  },
+  columnMobileFull: {
+    flexBasis: '100%',
+    width: '100%',
+    minWidth: 0,
+    flex: 0,
   },
   pickHeroCard: {
     height: 208,

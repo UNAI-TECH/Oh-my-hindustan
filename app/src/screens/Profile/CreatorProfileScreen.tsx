@@ -23,7 +23,7 @@ export default function CreatorProfileScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
-  const isWebDesktop = Platform.OS === 'web' && width >= 768;
+  const isWebDesktop = Platform.OS === 'web';
   const { authorId, authorName: paramAuthorName } = route.params || {};
   const { userProfile } = useAuth();
   const { lang } = useSiteLanguage();

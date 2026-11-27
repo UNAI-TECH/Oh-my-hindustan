@@ -252,7 +252,9 @@ const styles = StyleSheet.create({
   },
   brandCol: {
     flex: 1.3,
+    minWidth: 0,
     maxWidth: 380,
+    width: '100%',
   },
   brandDesc: {
     color: '#A3A3A3',
@@ -291,7 +293,9 @@ const styles = StyleSheet.create({
   },
   newsletterCol: {
     flex: 1.2,
+    minWidth: 0,
     maxWidth: 380,
+    width: '100%',
   },
   newsletterDesc: {
     color: '#A3A3A3',

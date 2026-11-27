@@ -51,6 +51,7 @@ export function WebTopMasthead({
 }: WebTopMastheadProps) {
   const { width } = useWindowDimensions();
   const isDesktopWide = width >= 1024;
+  const isMobile = width < 640;
   const { lang, setSiteLang } = useSiteLanguage();
   const { t } = useTranslation();
 
@@ -91,43 +92,53 @@ export function WebTopMasthead({
   return (
     <View style={styles.topWrapper}>
       {/* 1. Top Utility Bar */}
-      <View style={styles.utilityBar}>
+      <View style={[styles.utilityBar, isMobile && { paddingHorizontal: 12, paddingVertical: 6 }]}>
         <View style={styles.utilityInner}>
-          <View style={styles.utilityLeft}>
-            <Text style={styles.utilityDate}>{getFormattedHeaderDate()}</Text>
-            <View style={styles.utilityDivider} />
+          <View style={[styles.utilityLeft, isMobile && { gap: 8 }]}>
+            {!isMobile && (
+              <>
+                <Text style={styles.utilityDate}>{getFormattedHeaderDate()}</Text>
+                <View style={styles.utilityDivider} />
+              </>
+            )}
             <TouchableOpacity onPress={onScrollToNewsletter}>
               <Text style={styles.utilityLink}>{t('nav.subscribe', 'Subscribe')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'advertise' })}>
-              <Text style={styles.utilityLink}>{t('nav.advertise', 'Advertise')}</Text>
-            </TouchableOpacity>
+            {!isMobile && (
+              <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'advertise' })}>
+                <Text style={styles.utilityLink}>{t('nav.advertise', 'Advertise')}</Text>
+              </TouchableOpacity>
+            )}
             <View style={styles.editionPill}>
-              <Text style={styles.editionLabel}>{t('nav.edition', 'Edition')}: </Text>
+              {!isMobile && <Text style={styles.editionLabel}>{t('nav.edition', 'Edition')}: </Text>}
               <Text style={styles.editionValue}>{t('nav.all_india', 'All-India')}</Text>
             </View>
           </View>
 
-          <View style={styles.utilityRight}>
-            <View style={styles.socialGroup}>
-              <TouchableOpacity onPress={() => Linking.openURL('https://facebook.com')}>
-                <Ionicons name="logo-facebook" size={13} color="#A3A3A3" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => Linking.openURL('https://x.com')}>
-                <Ionicons name="logo-twitter" size={13} color="#A3A3A3" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => Linking.openURL('https://instagram.com')}>
-                <Ionicons name="logo-instagram" size={13} color="#A3A3A3" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => Linking.openURL('https://linkedin.com')}>
-                <Ionicons name="logo-linkedin" size={13} color="#A3A3A3" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => Linking.openURL('https://youtube.com')}>
-                <Ionicons name="logo-youtube" size={13} color="#A3A3A3" />
-              </TouchableOpacity>
-            </View>
+          <View style={[styles.utilityRight, isMobile && { gap: 8 }]}>
+            {!isMobile && (
+              <>
+                <View style={styles.socialGroup}>
+                  <TouchableOpacity onPress={() => Linking.openURL('https://facebook.com')}>
+                    <Ionicons name="logo-facebook" size={13} color="#A3A3A3" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => Linking.openURL('https://x.com')}>
+                    <Ionicons name="logo-twitter" size={13} color="#A3A3A3" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => Linking.openURL('https://instagram.com')}>
+                    <Ionicons name="logo-instagram" size={13} color="#A3A3A3" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => Linking.openURL('https://linkedin.com')}>
+                    <Ionicons name="logo-linkedin" size={13} color="#A3A3A3" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => Linking.openURL('https://youtube.com')}>
+                    <Ionicons name="logo-youtube" size={13} color="#A3A3A3" />
+                  </TouchableOpacity>
+                </View>
 
-            <View style={styles.utilityDivider} />
+                <View style={styles.utilityDivider} />
+              </>
+            )}
 
             <View style={styles.langSwitchWrap}>
               <TouchableOpacity
@@ -175,20 +186,24 @@ export function WebTopMasthead({
         colors={['#C4161C', '#9E1111']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
-        style={styles.masthead}
+        style={[styles.masthead, isMobile && { paddingVertical: 12, paddingHorizontal: 12 }]}
       >
         <View style={[styles.mastheadInner, !isDesktopWide && styles.mastheadInnerTablet]}>
           <TouchableOpacity
-            style={styles.brandCluster}
+            style={[styles.brandCluster, isMobile && { gap: 10 }]}
             activeOpacity={0.9}
             onPress={onSelectHome}
           >
-            <View style={styles.logoBadge}>
-              <PostsAppLogo variant="dark" size="md" />
+            <View style={[styles.logoBadge, isMobile && { paddingHorizontal: 10, paddingVertical: 6 }]}>
+              <PostsAppLogo variant="dark" size={isMobile ? 'sm' : 'md'} />
             </View>
-            <View style={styles.taglineBlock}>
-              <Text style={styles.taglineTitle}>NEWS  •  POLICY  •  IDEAS</Text>
-              <Text style={styles.taglineSub}>Independent Digital Magazine & Wire</Text>
+            <View style={[styles.taglineBlock, { flexShrink: 1 }]}>
+              <Text style={[styles.taglineTitle, isMobile && { fontSize: 10, letterSpacing: 1 }]} numberOfLines={1}>
+                NEWS  •  POLICY  •  IDEAS
+              </Text>
+              <Text style={[styles.taglineSub, isMobile && { fontSize: 11 }]} numberOfLines={1}>
+                Independent Digital Magazine & Wire
+              </Text>
             </View>
           </TouchableOpacity>
 
@@ -300,7 +315,10 @@ export function WebStickyNavBar({
 }: WebStickyNavBarProps) {
   const { lang } = useSiteLanguage();
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
+  const isMobileNav = width < 768;
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [livePosts, setLivePosts] = useState<any[]>([]);
   const [liveCreators, setLiveCreators] = useState<any[]>([]);
@@ -432,11 +450,11 @@ export function WebStickyNavBar({
   };
 
   return (
-    <View style={styles.stickyNav}>
+    <View style={[styles.stickyNav, isMobileNav && { paddingHorizontal: 10 }]}>
       <View style={styles.stickyNavInner}>
         <View style={styles.navLeft}>
           <TouchableOpacity
-            style={styles.hamburgerBtn}
+            style={[styles.hamburgerBtn, isMobileNav && { paddingRight: 10 }]}
             onPress={() => setDrawerOpen(true)}
             accessibilityLabel="Open navigation menu"
           >
@@ -453,10 +471,10 @@ export function WebStickyNavBar({
               return (
                 <TouchableOpacity
                   key={cat.key}
-                  style={[styles.navTab, isActive && styles.navTabActive]}
+                  style={[styles.navTab, isMobileNav && { paddingHorizontal: 10 }, isActive && styles.navTabActive]}
                   onPress={() => onSelectCategory(cat.key)}
                 >
-                  <Text style={[styles.navTabText, isActive && styles.navTabTextActive]}>
+                  <Text style={[styles.navTabText, isMobileNav && { fontSize: 11 }, isActive && styles.navTabTextActive]}>
                     {cat.label}
                   </Text>
                 </TouchableOpacity>
@@ -466,178 +484,230 @@ export function WebStickyNavBar({
         </View>
 
         <View style={styles.navRight}>
-          <View style={styles.searchContainer}>
-            <View style={[styles.searchBox, showLiveDropdown && styles.searchBoxFocused]}>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search news..."
-                placeholderTextColor="#9CA3AF"
-                value={searchQuery}
-                onChangeText={(q) => {
-                  onChangeSearch(q);
-                  setSearchFocused(true);
-                }}
-                onFocus={() => {
-                  if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
-                  setSearchFocused(true);
-                }}
-                onBlur={() => {
-                  blurTimerRef.current = setTimeout(() => setSearchFocused(false), 220);
-                }}
-                onSubmitEditing={() => {
-                  setSearchFocused(false);
-                  onSubmitSearch();
-                }}
-                returnKeyType="search"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => onChangeSearch('')}
-                  style={{ marginRight: 6 }}
-                  accessibilityLabel="Clear search"
-                >
-                  <Ionicons name="close-circle" size={15} color="#9CA3AF" />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                onPress={() => {
-                  setSearchFocused(false);
-                  onSubmitSearch();
-                }}
-              >
-                <Ionicons name="search" size={16} color="#9CA3AF" />
-              </TouchableOpacity>
-            </View>
-
-            {showLiveDropdown && (
-              <View style={styles.liveSearchDropdown}>
-                <View style={styles.liveSearchHeader}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <View style={styles.livePulseDot} />
-                    <Text style={styles.liveSearchTitle}>LIVE RESULTS</Text>
-                  </View>
-                  {liveSearching ? (
-                    <ActivityIndicator size="small" color="#D4191F" />
-                  ) : (
-                    <Text style={styles.liveSearchCount}>
-                      {livePosts.length + liveCreators.length} found
-                    </Text>
-                  )}
-                </View>
-
-                <ScrollView
-                  style={{ maxHeight: 340 }}
-                  keyboardShouldPersistTaps="handled"
-                  nestedScrollEnabled
-                >
-                  {liveCreators.length > 0 && (
-                    <View style={styles.liveSectionBlock}>
-                      <Text style={styles.liveSectionLabel}>CREATORS</Text>
-                      {liveCreators.map((c) => {
-                        const displayName = c.channel_name || c.username || 'Creator';
-                        return (
-                          <TouchableOpacity
-                            key={`live-c-${c.id}`}
-                            style={styles.liveResultRow}
-                            onPress={() => handleSelectLiveCreator(c)}
-                          >
-                            {c.avatarUrl ? (
-                              <Image source={{ uri: c.avatarUrl }} style={styles.liveCreatorAvatar} />
-                            ) : (
-                              <View style={[styles.liveCreatorAvatar, styles.liveThumbFallback]}>
-                                <Ionicons name="person" size={14} color="#D4191F" />
-                              </View>
-                            )}
-                            <View style={{ flex: 1 }}>
-                              <Text style={styles.liveResultTitle} numberOfLines={1}>
-                                {displayName}
-                              </Text>
-                              {c.username && (
-                                <Text style={styles.liveResultMeta}>@{c.username}</Text>
-                              )}
-                            </View>
-                            <Ionicons name="chevron-forward" size={14} color="#6B7280" />
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  )}
-
-                  {livePosts.length > 0 && (
-                    <View style={styles.liveSectionBlock}>
-                      <Text style={styles.liveSectionLabel}>STORIES</Text>
-                      {livePosts.map((post) => {
-                        const catLabel =
-                          post.category === 'custom' && post.custom_category
-                            ? post.custom_category
-                            : post.category || 'NEWS';
-                        const authorLabel =
-                          post.author?.channel_name || post.author?.username || 'PostsApp';
-                        return (
-                          <TouchableOpacity
-                            key={`live-p-${post.id}`}
-                            style={styles.liveResultRow}
-                            onPress={() => handleSelectLivePost(post)}
-                          >
-                            {post.thumbnail ? (
-                              <Image source={{ uri: post.thumbnail }} style={styles.livePostThumb} />
-                            ) : (
-                              <View style={[styles.livePostThumb, styles.liveThumbFallback]}>
-                                <Ionicons name="newspaper-outline" size={16} color="#9CA3AF" />
-                              </View>
-                            )}
-                            <View style={{ flex: 1 }}>
-                              <Text style={styles.livePostCat} numberOfLines={1}>
-                                {String(catLabel).toUpperCase()}
-                              </Text>
-                              <Text style={styles.liveResultTitle} numberOfLines={2}>
-                                {post.title}
-                              </Text>
-                              <Text style={styles.liveResultMeta} numberOfLines={1}>
-                                {authorLabel}
-                              </Text>
-                            </View>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  )}
-
-                  {!liveSearching && livePosts.length === 0 && liveCreators.length === 0 && (
-                    <View style={styles.liveEmptyState}>
-                      <Ionicons name="search-outline" size={22} color="#6B7280" />
-                      <Text style={styles.liveEmptyText}>
-                        No matching stories found for "{searchQuery.trim()}"
-                      </Text>
-                    </View>
-                  )}
-                </ScrollView>
-
-                <TouchableOpacity
-                  style={styles.liveFooterBtn}
-                  onPress={() => {
+          {isMobileNav ? (
+            <TouchableOpacity
+              onPress={() => setMobileSearchOpen((v) => !v)}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 6,
+                backgroundColor: mobileSearchOpen ? '#D4191F' : '#2A2A2A',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              accessibilityLabel="Toggle search"
+            >
+              <Ionicons name={mobileSearchOpen ? 'close' : 'search'} size={17} color="#FFFFFF" />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.searchContainer}>
+              <View style={[styles.searchBox, showLiveDropdown && styles.searchBoxFocused]}>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search news..."
+                  placeholderTextColor="#9CA3AF"
+                  value={searchQuery}
+                  onChangeText={(q) => {
+                    onChangeSearch(q);
+                    setSearchFocused(true);
+                  }}
+                  onFocus={() => {
                     if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+                    setSearchFocused(true);
+                  }}
+                  onBlur={() => {
+                    blurTimerRef.current = setTimeout(() => setSearchFocused(false), 220);
+                  }}
+                  onSubmitEditing={() => {
+                    setSearchFocused(false);
+                    onSubmitSearch();
+                  }}
+                  returnKeyType="search"
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => onChangeSearch('')}
+                    style={{ marginRight: 6 }}
+                    accessibilityLabel="Clear search"
+                  >
+                    <Ionicons name="close-circle" size={15} color="#9CA3AF" />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  onPress={() => {
                     setSearchFocused(false);
                     onSubmitSearch();
                   }}
                 >
-                  <Text style={styles.liveFooterBtnText}>
-                    View all results for "{searchQuery.trim()}" →
-                  </Text>
+                  <Ionicons name="search" size={16} color="#9CA3AF" />
                 </TouchableOpacity>
               </View>
-            )}
-          </View>
 
-          <TouchableOpacity
-            style={styles.watchOnlineBtn}
-            onPress={onPressWatchOnline}
-          >
-            <Ionicons name="play" size={11} color="#FFFFFF" />
-            <Text style={styles.watchOnlineText}>{t('nav.watch_online', 'WATCH ONLINE')}</Text>
-          </TouchableOpacity>
+              {showLiveDropdown && (
+                <View style={styles.liveSearchDropdown}>
+                  <View style={styles.liveSearchHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={styles.livePulseDot} />
+                      <Text style={styles.liveSearchTitle}>LIVE RESULTS</Text>
+                    </View>
+                    {liveSearching ? (
+                      <ActivityIndicator size="small" color="#D4191F" />
+                    ) : (
+                      <Text style={styles.liveSearchCount}>
+                        {livePosts.length + liveCreators.length} found
+                      </Text>
+                    )}
+                  </View>
+
+                  <ScrollView
+                    style={{ maxHeight: 340 }}
+                    keyboardShouldPersistTaps="handled"
+                    nestedScrollEnabled
+                  >
+                    {liveCreators.length > 0 && (
+                      <View style={styles.liveSectionBlock}>
+                        <Text style={styles.liveSectionLabel}>CREATORS</Text>
+                        {liveCreators.map((c) => {
+                          const displayName = c.channel_name || c.username || 'Creator';
+                          return (
+                            <TouchableOpacity
+                              key={`live-c-${c.id}`}
+                              style={styles.liveResultRow}
+                              onPress={() => handleSelectLiveCreator(c)}
+                            >
+                              {c.avatarUrl ? (
+                                <Image source={{ uri: c.avatarUrl }} style={styles.liveCreatorAvatar} />
+                              ) : (
+                                <View style={[styles.liveCreatorAvatar, styles.liveThumbFallback]}>
+                                  <Ionicons name="person" size={14} color="#D4191F" />
+                                </View>
+                              )}
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.liveResultTitle} numberOfLines={1}>
+                                  {displayName}
+                                </Text>
+                                {c.username && (
+                                  <Text style={styles.liveResultMeta}>@{c.username}</Text>
+                                )}
+                              </View>
+                              <Ionicons name="chevron-forward" size={14} color="#6B7280" />
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    )}
+
+                    {livePosts.length > 0 && (
+                      <View style={styles.liveSectionBlock}>
+                        <Text style={styles.liveSectionLabel}>STORIES</Text>
+                        {livePosts.map((post) => {
+                          const catLabel =
+                            post.category === 'custom' && post.custom_category
+                              ? post.custom_category
+                              : post.category || 'NEWS';
+                          const authorLabel =
+                            post.author?.channel_name || post.author?.username || 'PostsApp';
+                          return (
+                            <TouchableOpacity
+                              key={`live-p-${post.id}`}
+                              style={styles.liveResultRow}
+                              onPress={() => handleSelectLivePost(post)}
+                            >
+                              {post.thumbnail ? (
+                                <Image source={{ uri: post.thumbnail }} style={styles.livePostThumb} />
+                              ) : (
+                                <View style={[styles.livePostThumb, styles.liveThumbFallback]}>
+                                  <Ionicons name="newspaper-outline" size={16} color="#9CA3AF" />
+                                </View>
+                              )}
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.livePostCat} numberOfLines={1}>
+                                  {String(catLabel).toUpperCase()}
+                                </Text>
+                                <Text style={styles.liveResultTitle} numberOfLines={2}>
+                                  {post.title}
+                                </Text>
+                                <Text style={styles.liveResultMeta} numberOfLines={1}>
+                                  {authorLabel}
+                                </Text>
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    )}
+
+                    {!liveSearching && livePosts.length === 0 && liveCreators.length === 0 && (
+                      <View style={styles.liveEmptyState}>
+                        <Ionicons name="search-outline" size={22} color="#6B7280" />
+                        <Text style={styles.liveEmptyText}>
+                          No matching stories found for "{searchQuery.trim()}"
+                        </Text>
+                      </View>
+                    )}
+                  </ScrollView>
+
+                  <TouchableOpacity
+                    style={styles.liveFooterBtn}
+                    onPress={() => {
+                      if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+                      setSearchFocused(false);
+                      onSubmitSearch();
+                    }}
+                  >
+                    <Text style={styles.liveFooterBtnText}>
+                      View all results for "{searchQuery.trim()}" →
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+
+          {!isMobileNav && (
+            <TouchableOpacity
+              style={styles.watchOnlineBtn}
+              onPress={onPressWatchOnline}
+            >
+              <Ionicons name="play" size={11} color="#FFFFFF" />
+              <Text style={styles.watchOnlineText}>{t('nav.watch_online', 'WATCH ONLINE')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
+
+      {isMobileNav && mobileSearchOpen && (
+        <View style={{ paddingBottom: 10, paddingTop: 4 }}>
+          <View style={[styles.searchBox, { width: '100%' }]}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search news, topics, creators..."
+              placeholderTextColor="#9CA3AF"
+              value={searchQuery}
+              onChangeText={onChangeSearch}
+              onSubmitEditing={() => {
+                setMobileSearchOpen(false);
+                onSubmitSearch();
+              }}
+              returnKeyType="search"
+              autoFocus
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => onChangeSearch('')} style={{ marginRight: 8 }}>
+                <Ionicons name="close-circle" size={16} color="#9CA3AF" />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={() => {
+                setMobileSearchOpen(false);
+                onSubmitSearch();
+              }}
+            >
+              <Ionicons name="search" size={17} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Slide-over Sidebar Drawer */}
       <Modal
@@ -656,43 +726,53 @@ export function WebStickyNavBar({
             </View>
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 12 }}>
-              {Platform.OS !== 'web' && (
-                <>
-                  <Text style={styles.drawerSectionTitle}>NAVIGATION</Text>
-                  {[
-                    { label: 'Home Portal', icon: 'home-outline', route: 'Home' },
-                    { label: 'Explore Creators', icon: 'compass-outline', route: 'Explore' },
-                    { label: '24h Stories', icon: 'aperture-outline', route: 'StoryFeed' },
-                    { label: 'Saved Library', icon: 'bookmark-outline', route: 'Library' },
-                    { label: 'Search All', icon: 'search-outline', route: 'Search' },
-                    {
-                      label: unreadNotifications > 0 ? `Notifications (${unreadNotifications})` : 'Notifications',
-                      icon: 'notifications-outline',
-                      route: 'Notifications',
-                    },
-                    { label: 'My Profile', icon: 'person-outline', route: 'Profile' },
-                    { label: 'Settings', icon: 'settings-outline', route: 'Settings' },
-                  ].map((item) => (
-                    <TouchableOpacity
-                      key={item.route}
-                      style={styles.drawerItem}
-                      onPress={() => {
-                        setDrawerOpen(false);
-                        if (item.route === 'Home') {
-                          onSelectCategory('HOME');
-                        } else {
-                          onNavigate(item.route);
-                        }
-                      }}
-                    >
-                      <Ionicons name={item.icon as any} size={18} color="#D1D5DB" />
-                      <Text style={styles.drawerItemText}>{item.label}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </>
-              )}
+              <Text style={styles.drawerSectionTitle}>NAVIGATION</Text>
+              {[
+                { label: 'Home Portal', icon: 'home-outline', route: 'Home' },
+                { label: 'Explore Creators', icon: 'compass-outline', route: 'Explore' },
+                { label: 'Creators Directory', icon: 'people-outline', route: 'CreatorsDirectory' },
+                { label: '24h Stories', icon: 'aperture-outline', route: 'StoryFeed' },
+                { label: 'Saved Library', icon: 'bookmark-outline', route: 'Library' },
+                { label: 'Search All', icon: 'search-outline', route: 'Search' },
+                {
+                  label: unreadNotifications > 0 ? `Notifications (${unreadNotifications})` : 'Notifications',
+                  icon: 'notifications-outline',
+                  route: 'Notifications',
+                },
+                { label: 'My Profile', icon: 'person-outline', route: 'Profile' },
+                { label: 'Settings', icon: 'settings-outline', route: 'Settings' },
+                { label: 'About PostsApp', icon: 'information-circle-outline', route: 'StaticInfo', params: { pageKey: 'about' } },
+                { label: 'Advertise', icon: 'megaphone-outline', route: 'StaticInfo', params: { pageKey: 'advertise' } },
+              ].map((item: any) => (
+                <TouchableOpacity
+                  key={`${item.route}-${item.label}`}
+                  style={styles.drawerItem}
+                  onPress={() => {
+                    setDrawerOpen(false);
+                    if (item.route === 'Home') {
+                      onSelectCategory('HOME');
+                    } else {
+                      onNavigate(item.route, item.params);
+                    }
+                  }}
+                >
+                  <Ionicons name={item.icon as any} size={18} color="#D1D5DB" />
+                  <Text style={styles.drawerItemText}>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
 
-              <Text style={[styles.drawerSectionTitle, { marginTop: Platform.OS === 'web' ? 4 : 20 }]}>FEED FILTERS</Text>
+              <TouchableOpacity
+                style={styles.drawerItem}
+                onPress={() => {
+                  setDrawerOpen(false);
+                  onPressWatchOnline();
+                }}
+              >
+                <Ionicons name="logo-youtube" size={18} color="#EF4444" />
+                <Text style={styles.drawerItemText}>{t('nav.watch_online', 'Watch Online')}</Text>
+              </TouchableOpacity>
+
+              <Text style={[styles.drawerSectionTitle, { marginTop: 20 }]}>FEED FILTERS</Text>
               {(
                 [
                   { key: 'latest', label: t('common.latest', 'Latest') },

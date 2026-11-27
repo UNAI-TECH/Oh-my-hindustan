@@ -28,7 +28,7 @@ export default function SearchScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { width } = useWindowDimensions();
-  const isWebDesktop = Platform.OS === 'web' && width >= 768;
+  const isWebDesktop = Platform.OS === 'web';
   const { feedItems } = useFeed();
   const { lang } = useSiteLanguage();
   const initialTagParam = route.params?.initialTag ? String(route.params.initialTag).replace(/^#/, '') : '';

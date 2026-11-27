@@ -34,7 +34,7 @@ export function getSupabaseConfig(appRoot) {
   loadEnvFile(path.join(appRoot, '.env'));
   const supabaseUrl = (process.env.EXPO_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
   const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
-  const siteUrl = (process.env.EXPO_PUBLIC_SITE_URL || 'https://postsapp.com').replace(/\/$/, '');
+  const siteUrl = (process.env.EXPO_PUBLIC_SITE_URL || 'https://web.postsapp.in').replace(/\/$/, '');
   return { supabaseUrl, supabaseAnonKey, siteUrl };
 }
 
