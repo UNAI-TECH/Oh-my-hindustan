@@ -7,7 +7,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "build:web": "expo export --platform web"
+    "build:web": "expo export --platform web && node scripts/generate-seo-and-prerender.mjs",
+    "start:web": "node server/expo-web-server.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/pt-sans": "^0.4.1",

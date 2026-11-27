@@ -19,12 +19,15 @@ import LibraryScreen from '../screens/Other/LibraryScreen';
 import ArticleDetailScreen from '../screens/Main/ArticleDetailScreen';
 import ProfileScreen from '../screens/Profile/ProfileScreen';
 import CreatorProfileScreen from '../screens/Profile/CreatorProfileScreen';
+import CreatorsDirectoryScreen from '../screens/Profile/CreatorsDirectoryScreen';
 import NotificationScreen from '../screens/Other/NotificationScreen';
 import InterestsSelectionScreen from '../screens/Other/InterestsSelectionScreen';
 import SettingsScreen from '../screens/Other/SettingsScreen';
 import PersonalDetailsScreen from '../screens/Other/PersonalDetailsScreen';
 import PrivacySecurityScreen from '../screens/Other/PrivacySecurityScreen';
 import SearchScreen from '../screens/Other/SearchScreen';
+import StaticInfoScreen from '../screens/Other/StaticInfoScreen';
+import NotFoundScreen from '../screens/Other/NotFoundScreen';
 import StoryFeedScreen from '../screens/Main/StoryFeedScreen';
 import StoryViewerScreen from '../screens/Main/StoryViewerScreen';
 
@@ -47,9 +50,9 @@ const Stack = createNativeStackNavigator();
 
 export default function RootNavigator() {
   return (
-    <Stack.Navigator 
-      id="MainStack" 
-      initialRouteName="Splash" 
+    <Stack.Navigator
+      id="MainStack"
+      initialRouteName="Splash"
       screenOptions={{ headerShown: false, animation: 'fade' }}
     >
       {/* Auth Flow */}
@@ -63,25 +66,28 @@ export default function RootNavigator() {
       <Stack.Screen name="TopicSelection" component={TopicSelectionScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="ProfileImageUpload" component={ProfileImageUploadScreen} options={{ animation: 'slide_from_right' }} />
 
-      {/* Main Tabs Equivalent Screens */}
+      {/* Main Public & Reader Screens */}
       <Stack.Screen name="Home" component={HomeFeedScreen} />
       <Stack.Screen name="Explore" component={ExploreScreen} />
       <Stack.Screen name="StoryFeed" component={StoryFeedScreen} />
       <Stack.Screen name="Library" component={LibraryScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
 
-      {/* Details & Other Screens */}
+      {/* Details & Discovery Screens */}
       <Stack.Screen name="ArticleDetail" component={ArticleDetailScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="StoryViewer" component={StoryViewerScreen} options={{ animation: 'fade' }} />
       <Stack.Screen name="CreatorProfile" component={CreatorProfileScreen} />
+      <Stack.Screen name="CreatorsDirectory" component={CreatorsDirectoryScreen} />
       <Stack.Screen name="Notifications" component={NotificationScreen} />
       <Stack.Screen name="InterestsSelection" component={InterestsSelectionScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="PrivacySecurity" component={PrivacySecurityScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="Search" component={SearchScreen} />
-      
-      {/* Creator Studio Screens */}
+      <Stack.Screen name="StaticInfo" component={StaticInfoScreen} />
+      <Stack.Screen name="NotFound" component={NotFoundScreen} />
+
+      {/* Legacy Creator Studio Screens */}
       <Stack.Screen name="CreatorDashboard" component={CreatorDashboardScreen} />
       <Stack.Screen name="CreatorAnalytics" component={CreatorAnalyticsScreen} />
       <Stack.Screen name="ContentEditor" component={ContentEditorScreen} options={{ animation: 'slide_from_bottom' }} />
@@ -92,7 +98,7 @@ export default function RootNavigator() {
       <Stack.Screen name="CreatorSubtitles" component={CreatorSubtitlesScreen} />
       <Stack.Screen name="CreatorFeedback" component={CreatorFeedbackScreen} />
 
-      {/* Admin Dashboard Screens */}
+      {/* Legacy Admin Screens */}
       <Stack.Screen name="AdminOverview" component={AdminOverviewScreen} />
       <Stack.Screen name="AdminMonetization" component={AdminMonetizationScreen} />
     </Stack.Navigator>

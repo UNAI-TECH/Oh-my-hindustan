@@ -14,18 +14,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { setAppLanguage } from '../../lib/i18n';
 
 const LANGUAGES = [
   { code: 'en', name: 'English', nativeName: 'English', icon: '🇬🇧' },
-  { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', icon: '🇮🇳' },
   { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்', icon: '🏛️' },
-  { code: 'te', name: 'Telugu', nativeName: 'తెలుగు', icon: '🌾' },
-  { code: 'bn', name: 'Bengali', nativeName: 'বাংলা', icon: '🌸' },
-  { code: 'mr', name: 'Marathi', nativeName: 'मराठी', icon: '🏔️' },
-  { code: 'kn', name: 'Kannada', nativeName: 'ಕನ್ನಡ', icon: '🌿' },
-  { code: 'ml', name: 'Malayalam', nativeName: 'മലയാളം', icon: '🌴' },
-  { code: 'gu', name: 'Gujarati', nativeName: 'ગુજરાતી', icon: '🦁' },
-  { code: 'pa', name: 'Punjabi', nativeName: 'ਪੰਜਾਬੀ', icon: '🌾' },
+  { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी (Legacy)', icon: '🇮🇳' },
 ];
 
 export default function LanguageSelectionScreen() {
@@ -42,6 +36,7 @@ export default function LanguageSelectionScreen() {
     if (!selectedLanguage) return;
     setErrorMsg(null);
     try {
+      await setAppLanguage(selectedLanguage);
       await updateOnboardingProfile({ language: selectedLanguage });
       navigation.navigate('TopicSelection');
     } catch (e: any) {

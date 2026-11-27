@@ -4,6 +4,7 @@ import { FeedItem, FeedItemType } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
+import { useSiteLanguage } from './SiteLanguageContext';
 import { withRetry } from '../utils/networkUtils';
 import { formatCardExcerpt, cacheArticleSlug, titleToSlug } from '../components/web/webPortalHelpers';
 
@@ -16,9 +17,9 @@ interface FeedContextProps {
   isRefreshing: boolean;
   error: string | null;
   hasMore: boolean;
-  sortBy: 'latest' | 'trending';
-  setSortBy: (sort: 'latest' | 'trending') => void;
-  fetchArticle: (id: string) => Promise<void>;
+  sortBy: 'latest' | 'trending' | 'popular';
+  setSortBy: (sort: 'latest' | 'trending' | 'popular') => void;
+  fetchArticle: (id: string, preferredLang?: 'en' | 'ta') => Promise<void>;
   fetchHomeFeed: (showLoading?: boolean, reset?: boolean) => Promise<void>;
   loadMoreFeed: () => Promise<void>;
   refreshFeed: () => void;
@@ -68,30 +69,56 @@ const mapPostType = (type: string): FeedItemType => {
 };
 
 export const mapPostToFeedItem = (post: any): FeedItem => {
-  if (post?.id && post?.title) {
-    cacheArticleSlug(post.id, post.title);
+  const effectiveSlug = post?.slug || (post?.title ? titleToSlug(post.title) : null);
+  if (post?.id && (effectiveSlug || post?.title)) {
+    cacheArticleSlug(post.id, effectiveSlug || post.title);
   }
   return {
     id: post.id,
     type: mapPostType(post.type),
     title: post.title,
     subtitle: post.subtitle || "PostsApp",
+    short_description: post.short_description || null,
+    language: (post.language === 'ta' ? 'ta' : 'en'),
+    slug: effectiveSlug,
     authorName: post.author?.channel_name || post.author?.username || "Creator",
+    authorUsername: post.author?.username || null,
     authorImage: post.author?.avatarUrl || "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&q=80&w=800",
     authorId: post.authorId || post.author?.id || null,
+    author: post.author || null,
     thumbnail: post.thumbnail || post.mediaUrl || null,
+    featured_image_alt: post.featured_image_alt || null,
+    featured_image_caption: post.featured_image_caption || null,
+    featured_image_credit: post.featured_image_credit || null,
     category: post.category || "General",
-    timestamp: formatTimeAgo(post.createdAt),
+    timestamp: formatTimeAgo(post.published_at || post.createdAt),
+    published_at: post.published_at || post.createdAt,
+    updatedAt: post.updatedAt || null,
+    createdAt: post.createdAt || null,
     votes: post.voteCount || 0,
     upvoteCount: post.upvoteCount || 0,
     downvoteCount: post.downvoteCount || 0,
     comments: post.commentCount || 0,
     viewCount: post.viewCount || 0,
-    excerpt: formatCardExcerpt(post.content, 160) || null,
+    excerpt: post.short_description || formatCardExcerpt(post.content, 160) || null,
     content: post.content,
-    videoDuration: post.video_duration || null,
+    content_json: post.content_json || null,
+    videoDuration: post.video_duration || post.videoDuration || null,
     videoUrl: post.videoUrl || post.video_url || null,
-    isTrending: post.is_trending || false,
+    isTrending: post.isTrending || post.is_trending || false,
+    is_breaking: post.is_breaking || false,
+    is_featured: post.is_featured || false,
+    is_editors_pick: post.is_editors_pick || false,
+    reading_time_minutes: post.reading_time_minutes || 1,
+    translation_group_id: post.translation_group_id || null,
+    translations: post.translations || [],
+    seo_title: post.seo_title || null,
+    seo_description: post.seo_description || null,
+    canonical_url: post.canonical_url || null,
+    og_title: post.og_title || null,
+    og_description: post.og_description || null,
+    og_image: post.og_image || null,
+    robots_index: post.robots_index !== false,
     ads_enabled: post.ads_enabled || false,
     ad_breaks: Array.isArray(post.ad_breaks) ? post.ad_breaks : null,
     authorNameCustom: post.author_name || null,
@@ -111,14 +138,15 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
-  const [sortBy, setSortByState] = useState<'latest' | 'trending'>('latest');
+  const [sortBy, setSortByState] = useState<'latest' | 'trending' | 'popular'>('latest');
   const [error, setError] = useState<string | null>(null);
   const { userProfile } = useAuth();
+  const { lang } = useSiteLanguage();
   const isFetchingRef = useRef(false);
 
   const saveToCache = async (data: FeedItem[]) => {
     try {
-      await AsyncStorage.setItem(FEED_CACHE_KEY, JSON.stringify(data));
+      await AsyncStorage.setItem(`${FEED_CACHE_KEY}_${lang}`, JSON.stringify(data));
     } catch (e) {
       console.error('Failed to save feed cache', e);
     }
@@ -126,7 +154,7 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
 
   const loadFromCache = async () => {
     try {
-      const cached = await AsyncStorage.getItem(FEED_CACHE_KEY);
+      const cached = await AsyncStorage.getItem(`${FEED_CACHE_KEY}_${lang}`);
       if (cached) {
         setFeedItems(JSON.parse(cached));
       }
@@ -135,7 +163,7 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const setSortBy = (sort: 'latest' | 'trending') => {
+  const setSortBy = (sort: 'latest' | 'trending' | 'popular') => {
     setSortByState(sort);
     setPage(1);
     setFeedItems([]);
@@ -150,9 +178,8 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
     try {
       if (reset && showLoading && feedItems.length === 0) await loadFromCache();
       
-      // withRetry: automatically retries up to 3 times on network failures (mobile data)
       const response = await withRetry(
-        () => AppApi.getHomeFeed(targetPage, 15, sortBy),
+        () => AppApi.getHomeFeed(targetPage, 25, sortBy, lang),
         3,
         1000,
       );
@@ -201,6 +228,12 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    setFeedItems([]);
+    setPage(1);
+    fetchHomeFeed(true, true);
+  }, [lang]);
+
+  useEffect(() => {
     fetchHomeFeed(page === 1, page === 1);
   }, [page, sortBy]);
 
@@ -213,7 +246,7 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const fetchArticle = async (idOrSlug: string) => {
+  const fetchArticle = async (idOrSlug: string, preferredLang?: 'en' | 'ta') => {
     setIsLoading(true);
     try {
       let decodedSlug = idOrSlug;
@@ -223,18 +256,17 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
       const normalizedSlug = decodedSlug.trim().toLowerCase();
 
       const localItem = feedItems.find(
-        it => it.id === idOrSlug || titleToSlug(it.title) === normalizedSlug
+        it => it.id === idOrSlug || it.slug === normalizedSlug || titleToSlug(it.title) === normalizedSlug
       );
       if (localItem) {
-        cacheArticleSlug(localItem.id, localItem.title);
+        cacheArticleSlug(localItem.id, localItem.slug || localItem.title);
         setSelectedArticle(localItem);
-        // Stale-while-revalidate: Fetch fresh data silently for flags like ads_enabled
         AppApi.getPost(localItem.id).then(freshResponse => {
            if (freshResponse) setSelectedArticle(toFeedItem(freshResponse));
         }).catch(() => {});
       } else {
         setSelectedArticle(null);
-        const response = await AppApi.getPostByIdOrSlug(idOrSlug);
+        const response = await AppApi.getPostByIdOrSlug(idOrSlug, preferredLang || lang);
         if (response) {
           setSelectedArticle(toFeedItem(response));
         } else {
@@ -266,46 +298,7 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
         }
       }, 300);
 
-      // Create notification if the current user follows the post author
-      if (payload?.new && userProfile?.id && payload.eventType === 'INSERT') {
-        try {
-          const newPost = payload.new;
-          const authorId = newPost.authorId;
-          if (!authorId || authorId === userProfile.id) return;
-
-          // Check if current user follows this author
-          const { data: followData } = await supabase
-            .from('Follow')
-            .select('id')
-            .eq('followerId', userProfile.id)
-            .eq('followingId', authorId)
-            .maybeSingle();
-
-          if (followData) {
-            // Get author name for the notification
-            const { data: authorData } = await supabase
-              .from('User')
-              .select('username, channel_name')
-              .eq('id', authorId)
-              .maybeSingle();
-
-            const authorName = authorData?.channel_name || authorData?.username || 'A creator you follow';
-            const { generateUUID } = await import('../utils/uuid');
-
-            await supabase.from('Notification').insert({
-              id: generateUUID(),
-              userId: userProfile.id,
-              type: 'NEW_POST',
-              title: `${authorName} published a new post`,
-              message: newPost.title || 'Check out their latest content!',
-              targetId: newPost.id,
-              createdAt: new Date().toISOString(),
-            });
-          }
-        } catch (e) {
-          console.warn('[FEED] Notification creation error:', e);
-        }
-      }
+      // Note: Follow notifications are dispatched server-side via DB trigger + notify-followers Edge Function
     });
 
     const userChannel = supabase.channel('feed-user-updates')

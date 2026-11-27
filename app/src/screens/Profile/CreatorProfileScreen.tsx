@@ -11,8 +11,11 @@ import { AppApi } from '../../api/services';
 import { generateUUID } from '../../utils/uuid';
 import CustomModal from '../../components/CustomModal';
 import WebPageShell from '../../components/web/WebPageShell';
-import { formatCardExcerpt, buildArticleParams } from '../../components/web/webPortalHelpers';
+import { formatCardExcerpt, buildArticleParams, isUuid } from '../../components/web/webPortalHelpers';
 import { useInteraction } from '../../context/InteractionContext';
+import { useSiteLanguage } from '../../context/SiteLanguageContext';
+import WebHeadSeo from '../../seo/WebHeadSeo';
+import { SITE_URL } from '../../seo/seoUtils';
 
 export default function CreatorProfileScreen() {
   const { colors } = useAppTheme();
@@ -23,6 +26,7 @@ export default function CreatorProfileScreen() {
   const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { authorId, authorName: paramAuthorName } = route.params || {};
   const { userProfile } = useAuth();
+  const { lang } = useSiteLanguage();
 
   const [creator, setCreator] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
@@ -37,22 +41,32 @@ export default function CreatorProfileScreen() {
     isLoginPrompt?: boolean;
   }>({ visible: false, title: '', message: '', isError: false });
   
+  const resolvedAuthorId = creator?.id || (authorId && isUuid(String(authorId)) ? String(authorId) : null);
   const { follows, toggleFollow } = useInteraction();
-  const isFollowed = !!follows[authorId];
+  const isFollowed = !!(resolvedAuthorId && follows[resolvedAuthorId]);
 
 
   const fetchCreatorData = React.useCallback(async () => {
     if (!authorId) { setLoading(false); return; }
     try {
-      // Fetch creator profile
-      const { data: user } = await supabase.from('User').select('*').eq('id', authorId).single();
-      setCreator(user);
+      const lookupVal = decodeURIComponent(String(authorId)).trim();
+      const { data: user } = isUuid(lookupVal)
+        ? await supabase.from('User').select('*').eq('id', lookupVal).maybeSingle()
+        : await supabase.from('User').select('*').eq('username', lookupVal).maybeSingle();
+      setCreator(user || null);
+      if (!user?.id) {
+        setPosts([]);
+        setPostCount(0);
+        setFollowerCount(0);
+        return;
+      }
 
-      // Fetch posts by this creator
+      // Fetch published posts by this creator
       const { data: creatorPosts } = await supabase
         .from('Post')
         .select('*, Vote(type), Comment(id, content), PostView(id)')
-        .eq('authorId', authorId)
+        .eq('authorId', user.id)
+        .eq('status', 'PUBLISHED')
         .or('is_active.eq.true,is_active.is.null')
         .order('createdAt', { ascending: false });
         
@@ -69,7 +83,7 @@ export default function CreatorProfileScreen() {
           upvotes: votes.filter((v: any) => v.type === 1).length,
           downvotes: votes.filter((v: any) => v.type === -1).length,
           realComments: allC.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length,
-          viewCount: p.PostView ? p.PostView.length : 0,
+          viewCount: Math.max(p.views_count || 0, p.PostView ? p.PostView.length : 0),
         };
       });
       
@@ -77,7 +91,7 @@ export default function CreatorProfileScreen() {
       setPostCount(mappedPosts.length);
 
       // Fetch follower count
-      const { count } = await supabase.from('Follow').select('id', { count: 'exact', head: true }).eq('followingId', authorId);
+      const { count } = await supabase.from('Follow').select('id', { count: 'exact', head: true }).eq('followingId', user.id);
       setFollowerCount(count || 0);
     } catch (e) {
       console.warn('Failed to fetch creator data:', e);
@@ -91,7 +105,7 @@ export default function CreatorProfileScreen() {
   }, [fetchCreatorData]);
 
   React.useEffect(() => {
-    if (!authorId) return;
+    if (!resolvedAuthorId) return;
     let timer: NodeJS.Timeout;
     const handleChanges = () => {
       clearTimeout(timer);
@@ -101,19 +115,19 @@ export default function CreatorProfileScreen() {
     };
 
     const channel = supabase
-      .channel(`creator_profile_${authorId}_interactions`)
+      .channel(`creator_profile_${resolvedAuthorId}_interactions`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'Vote' }, handleChanges)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'Comment' }, handleChanges)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'Follow', filter: `followingId=eq.${authorId}` }, handleChanges)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'Post', filter: `authorId=eq.${authorId}` }, handleChanges)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'User', filter: `id=eq.${authorId}` }, handleChanges)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Follow', filter: `followingId=eq.${resolvedAuthorId}` }, handleChanges)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Post', filter: `authorId=eq.${resolvedAuthorId}` }, handleChanges)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'User', filter: `id=eq.${resolvedAuthorId}` }, handleChanges)
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
       clearTimeout(timer);
     };
-  }, [authorId, fetchCreatorData]);
+  }, [resolvedAuthorId, fetchCreatorData]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -122,7 +136,7 @@ export default function CreatorProfileScreen() {
   );
 
   const handleFollow = async () => {
-    if (!userProfile?.id || !authorId) { 
+    if (!userProfile?.id || !resolvedAuthorId) { 
       setModalConfig({
         visible: true,
         title: 'Login Required',
@@ -134,10 +148,41 @@ export default function CreatorProfileScreen() {
     }
     
     setFollowerCount(c => isFollowed ? Math.max(0, c - 1) : c + 1);
-    await toggleFollow(authorId);
+    await toggleFollow(resolvedAuthorId);
   };
 
   const displayName = creator?.channel_name || creator?.username || paramAuthorName || 'Creator';
+
+  const creatorSeoConfig = React.useMemo(() => {
+    if (Platform.OS !== 'web' || !creator) return null;
+    const handle = creator.username || creator.id;
+    const canonicalUrl = `${SITE_URL}/${lang}/creator/${encodeURIComponent(handle)}`;
+    const bioText = creator.bio || `${displayName} on PostsApp`;
+    return {
+      title: `${displayName} | PostsApp`,
+      description: bioText,
+      canonicalUrl,
+      lang,
+      ogType: 'profile' as const,
+      ogImage: creator.avatarUrl || `${SITE_URL}/assets/icon.png`,
+      alternates: [
+        { hreflang: 'en', href: `${SITE_URL}/en/creator/${encodeURIComponent(handle)}` },
+        { hreflang: 'ta', href: `${SITE_URL}/ta/creator/${encodeURIComponent(handle)}` },
+        { hreflang: 'x-default', href: `${SITE_URL}/en/creator/${encodeURIComponent(handle)}` },
+      ],
+      jsonLd: [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'Person',
+          name: displayName,
+          ...(creator.username ? { alternateName: `@${creator.username}` } : {}),
+          description: bioText,
+          url: canonicalUrl,
+          ...(creator.avatarUrl ? { image: creator.avatarUrl } : {}),
+        },
+      ],
+    };
+  }, [creator, displayName, lang]);
 
   useEffect(() => {
     if (displayName) {
@@ -283,6 +328,7 @@ export default function CreatorProfileScreen() {
   if (isWebDesktop) {
     return (
       <WebPageShell maxWidth={960}>
+        <WebHeadSeo config={creatorSeoConfig} />
         <View style={styles.webCardContainer}>
           <View style={styles.webTopBar}>
             <TouchableOpacity style={styles.webBackBtn} onPress={() => navigation.goBack()}>

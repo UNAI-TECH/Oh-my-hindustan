@@ -97,21 +97,34 @@ export const AuthApi = {
 /**
  * Application API - Supabase direct queries with real-time support
  */
+const POST_SELECT_FIELDS = 'id, title, subtitle, short_description, content, content_json, type, language, slug, category, custom_category, thumbnail, featured_image_alt, featured_image_caption, featured_image_credit, authorId, createdAt, updatedAt, published_at, videoDuration, videoUrl, isTrending, trending_score, is_breaking, is_featured, is_editors_pick, views_count, likes_count, comments_count, reading_time_minutes, author_name, author_position, hashtags, translation_group_id, seo_title, seo_description, canonical_url, og_title, og_description, og_image, robots_index, ads_enabled, ad_breaks, author:User!authorId(id, username, avatarUrl, channel_name), Vote:Vote(type), Comment:Comment(id, content), PostView:PostView(id)';
+
 export const AppApi = {
-  getHomeFeed: async (page = 1, limit = 20, sortBy: 'latest' | 'trending' = 'latest') => {
+  getHomeFeed: async (
+    page = 1,
+    limit = 20,
+    sortBy: 'latest' | 'trending' | 'popular' = 'latest',
+    language?: 'en' | 'ta' | 'all'
+  ) => {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
     let query = supabase
       .from('Post')
-      .select('id, title, content, type, thumbnail, category, custom_category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, trending_score, author_name, author_position, hashtags, ads_enabled, ad_breaks, author:User!authorId(id, username, avatarUrl, channel_name), Vote:Vote(type), Comment:Comment(id, content), PostView:PostView(id)', { count: 'exact' })
+      .select(POST_SELECT_FIELDS, { count: 'exact' })
+      .eq('status', 'PUBLISHED')
       .or('is_active.eq.true,is_active.is.null');
 
-    // Filter out inactive content is crucial for public views
+    if (language && language !== 'all') {
+      query = query.eq('language', language);
+    }
+
     if (sortBy === 'trending') {
-      query = query.order('trending_score', { ascending: false });
+      query = query.order('trending_score', { ascending: false }).order('published_at', { ascending: false });
+    } else if (sortBy === 'popular') {
+      query = query.order('views_count', { ascending: false }).order('likes_count', { ascending: false });
     } else {
-      query = query.order('createdAt', { ascending: false });
+      query = query.order('published_at', { ascending: false, nullsFirst: false }).order('createdAt', { ascending: false });
     }
 
     const { data, error, count } = await query.range(from, to);
@@ -123,22 +136,30 @@ export const AppApi = {
       const allComments = post.Comment || [];
       const upvotes = votes.filter((v: any) => v.type === 1).length;
       const downvotes = votes.filter((v: any) => v.type === -1).length;
-      const realComments = allComments.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length;
+      const realComments = Math.max(post.comments_count || 0, allComments.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length);
       const reposts = allComments.filter((c: any) => c.content === '[SYSTEM_REPOST]').length;
-      const viewCount = post.PostView ? post.PostView.length : 0;
+      const viewCount = Math.max(post.views_count || 0, post.PostView ? post.PostView.length : 0);
 
-      // Handle custom category display name
-      const displayCategory = post.category === 'custom' && post.custom_category 
-        ? post.custom_category 
+      const displayCategory = post.category === 'custom' && post.custom_category
+        ? post.custom_category
         : (post.category || 'General');
 
       return {
         id: post.id,
         title: post.title,
+        subtitle: post.subtitle,
+        short_description: post.short_description || null,
         body: post.content,
+        content: post.content,
+        content_json: post.content_json || null,
         type: post.type,
+        language: (post.language === 'ta' ? 'ta' : 'en') as 'en' | 'ta',
+        slug: post.slug || null,
         mediaUrl: post.thumbnail,
         thumbnail: post.thumbnail,
+        featured_image_alt: post.featured_image_alt || null,
+        featured_image_caption: post.featured_image_caption || null,
+        featured_image_credit: post.featured_image_credit || null,
         authorId: post.authorId,
         voteCount: upvotes - downvotes,
         upvoteCount: upvotes,
@@ -150,11 +171,22 @@ export const AppApi = {
         category: displayCategory,
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
-        content: post.content,
-        subtitle: post.subtitle,
+        published_at: post.published_at || post.createdAt,
         videoDuration: post.videoDuration,
         videoUrl: post.videoUrl || null,
         isTrending: post.isTrending,
+        is_breaking: post.is_breaking || false,
+        is_featured: post.is_featured || false,
+        is_editors_pick: post.is_editors_pick || false,
+        reading_time_minutes: post.reading_time_minutes || 1,
+        translation_group_id: post.translation_group_id || null,
+        seo_title: post.seo_title || null,
+        seo_description: post.seo_description || null,
+        canonical_url: post.canonical_url || null,
+        og_title: post.og_title || null,
+        og_description: post.og_description || null,
+        og_image: post.og_image || null,
+        robots_index: post.robots_index !== false,
         ads_enabled: post.ads_enabled || false,
         ad_breaks: post.ad_breaks || null,
         author_name: post.author_name || null,
@@ -185,8 +217,9 @@ export const AppApi = {
   getPost: async (id: string) => {
     const { data: post, error } = await supabase
       .from('Post')
-      .select('id, title, content, type, thumbnail, category, custom_category, authorId, createdAt, updatedAt, subtitle, videoDuration, videoUrl, isTrending, author_name, author_position, hashtags, ads_enabled, ad_breaks, author:User!authorId(id, username, avatarUrl, channel_name), Vote:Vote(type), Comment:Comment(id, content, userId, createdAt), PostView:PostView(id)')
+      .select(POST_SELECT_FIELDS)
       .eq('id', id)
+      .eq('status', 'PUBLISHED')
       .or('is_active.eq.true,is_active.is.null')
       .single();
 
@@ -196,12 +229,29 @@ export const AppApi = {
     const allComments = post.Comment || [];
     const upvotes = votes.filter((v: any) => v.type === 1).length;
     const downvotes = votes.filter((v: any) => v.type === -1).length;
-    const realComments = allComments.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length;
+    const realComments = Math.max(post.comments_count || 0, allComments.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length);
     const reposts = allComments.filter((c: any) => c.content === '[SYSTEM_REPOST]').length;
-    const viewCount = post.PostView ? post.PostView.length : 0;
+    const viewCount = Math.max(post.views_count || 0, post.PostView ? post.PostView.length : 0);
 
-    const displayCategory = post.category === 'custom' && post.custom_category 
-      ? post.custom_category 
+    let translations: Array<{ id: string; title: string; language: 'en' | 'ta'; slug: string }> = [];
+    if (post.translation_group_id) {
+      const { data: siblings } = await supabase
+        .from('Post')
+        .select('id, title, language, slug')
+        .eq('translation_group_id', post.translation_group_id)
+        .eq('status', 'PUBLISHED')
+        .or('is_active.eq.true,is_active.is.null')
+        .neq('id', post.id);
+      translations = (siblings || []).map((s: any) => ({
+        id: s.id,
+        title: s.title,
+        language: s.language === 'ta' ? 'ta' : 'en',
+        slug: s.slug || s.id,
+      }));
+    }
+
+    const displayCategory = post.category === 'custom' && post.custom_category
+      ? post.custom_category
       : (post.category || 'General');
 
     return {
@@ -209,7 +259,14 @@ export const AppApi = {
       title: post.title,
       body: post.content,
       content: post.content,
+      content_json: post.content_json || null,
       type: post.type,
+      language: (post.language === 'ta' ? 'ta' : 'en') as 'en' | 'ta',
+      slug: post.slug || null,
+      short_description: post.short_description || null,
+      featured_image_alt: post.featured_image_alt || null,
+      featured_image_caption: post.featured_image_caption || null,
+      featured_image_credit: post.featured_image_credit || null,
       mediaUrl: post.thumbnail,
       thumbnail: post.thumbnail,
       authorId: post.authorId,
@@ -226,11 +283,22 @@ export const AppApi = {
       videoUrl: post.videoUrl || null,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
+      published_at: post.published_at || post.createdAt,
+      translation_group_id: post.translation_group_id || null,
+      seo_title: post.seo_title || null,
+      seo_description: post.seo_description || null,
+      canonical_url: post.canonical_url || null,
+      og_title: post.og_title || null,
+      og_description: post.og_description || null,
+      og_image: post.og_image || null,
+      robots_index: post.robots_index !== false,
+      reading_time_minutes: post.reading_time_minutes || 1,
       ads_enabled: post.ads_enabled || false,
       ad_breaks: post.ad_breaks || null,
       author_name: post.author_name || null,
       author_position: post.author_position || null,
       hashtags: post.hashtags || null,
+      translations,
       author: post.author ? {
         id: (Array.isArray(post.author) ? post.author[0]?.id : (post.author as any).id),
         username: (Array.isArray(post.author) ? post.author[0]?.username : (post.author as any).username) || 'Creator',
@@ -245,7 +313,7 @@ export const AppApi = {
     };
   },
 
-  resolvePostIdBySlug: async (slug: string): Promise<string | null> => {
+  resolvePostIdBySlug: async (slug: string, preferredLang?: 'en' | 'ta'): Promise<string | null> => {
     if (!slug) return null;
     if (isUuid(slug)) return slug;
 
@@ -257,45 +325,137 @@ export const AppApi = {
     const cachedId = getCachedArticleIdBySlug(cleanSlug);
     if (cachedId) return cachedId;
 
-    const { data, error } = await supabase
+    // 1. Direct database-indexed slug resolution (prefers matching language if provided)
+    if (preferredLang) {
+      const { data: exactLang } = await supabase
+        .from('Post')
+        .select('id, slug, title')
+        .eq('language', preferredLang)
+        .eq('slug', cleanSlug)
+        .eq('status', 'PUBLISHED')
+        .or('is_active.eq.true,is_active.is.null')
+        .maybeSingle();
+      if (exactLang?.id) {
+        cacheArticleSlug(exactLang.id, exactLang.slug || exactLang.title);
+        return exactLang.id;
+      }
+    }
+
+    const { data: anyLangSlug } = await supabase
       .from('Post')
-      .select('id, title')
+      .select('id, slug, title')
+      .eq('slug', cleanSlug)
+      .eq('status', 'PUBLISHED')
+      .or('is_active.eq.true,is_active.is.null')
+      .limit(1)
+      .maybeSingle();
+
+    if (anyLangSlug?.id) {
+      cacheArticleSlug(anyLangSlug.id, anyLangSlug.slug || anyLangSlug.title);
+      return anyLangSlug.id;
+    }
+
+    // 2. Fallback match for legacy title-derived slugs without persisted DB slug
+    const { data } = await supabase
+      .from('Post')
+      .select('id, title, slug')
+      .eq('status', 'PUBLISHED')
       .or('is_active.eq.true,is_active.is.null')
       .order('createdAt', { ascending: false })
-      .limit(500);
+      .limit(200);
 
-    if (error || !data) return null;
+    if (!data) return null;
 
     const exactMatch = data.find((p: any) => titleToSlug(p.title) === cleanSlug);
     if (exactMatch) {
-      cacheArticleSlug(exactMatch.id, exactMatch.title);
+      cacheArticleSlug(exactMatch.id, exactMatch.slug || exactMatch.title);
       return exactMatch.id;
-    }
-
-    if (cleanSlug.length > 12) {
-      const prefixMatch = data.find((p: any) => {
-        const s = titleToSlug(p.title);
-        return s && (s.startsWith(cleanSlug) || cleanSlug.startsWith(s));
-      });
-      if (prefixMatch) {
-        cacheArticleSlug(prefixMatch.id, prefixMatch.title);
-        return prefixMatch.id;
-      }
     }
 
     return null;
   },
 
-  getPostByIdOrSlug: async (idOrSlug: string) => {
+  getPostByIdOrSlug: async (idOrSlug: string, preferredLang?: 'en' | 'ta') => {
     if (!idOrSlug) throw new Error('Missing article identifier');
     if (isUuid(idOrSlug)) {
       return AppApi.getPost(idOrSlug);
     }
-    const resolvedId = await AppApi.resolvePostIdBySlug(idOrSlug);
+    const resolvedId = await AppApi.resolvePostIdBySlug(idOrSlug, preferredLang);
     if (resolvedId) {
       return AppApi.getPost(resolvedId);
     }
-    return AppApi.getPost(idOrSlug);
+    throw new Error('Article unavailable');
+  },
+
+  searchArticlesRpc: async (params: {
+    query?: string;
+    language?: 'en' | 'ta' | null;
+    categorySlug?: string | null;
+    type?: string | null;
+    authorId?: string | null;
+    sort?: 'relevance' | 'latest' | 'popular' | 'trending';
+    limit?: number;
+    offset?: number;
+  }) => {
+    const { data, error } = await supabase.rpc('search_articles', {
+      p_query: params.query || null,
+      p_language: params.language ?? null,
+      p_category_slug: params.categorySlug || null,
+      p_type: params.type || null,
+      p_author_id: params.authorId || null,
+      p_date_from: null,
+      p_date_to: null,
+      p_sort: params.sort || (params.query ? 'relevance' : 'latest'),
+      p_limit: params.limit || 20,
+      p_offset: params.offset || 0,
+    });
+    if (error) throw error;
+    const rows = (data || []) as any[];
+    return {
+      items: rows,
+      total: rows[0]?.total_count ? Number(rows[0].total_count) : 0,
+    };
+  },
+
+  getBilingualCategories: async () => {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, name_en, name_ta, slug_en, slug_ta, description_en, description_ta, display_order, nav_visible, home_visible')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true })
+      .order('name_en', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  },
+
+  getPopularTags: async (limit = 16) => {
+    const { data, error } = await supabase
+      .from('tags')
+      .select('id, name_en, name_ta, slug_en, slug_ta')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return data || [];
+  },
+
+  getHomepageConfig: async (language: 'en' | 'ta') => {
+    const { data, error } = await supabase
+      .from('homepage_config')
+      .select('*')
+      .eq('language', language)
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+    if (error) return [];
+    return data || [];
+  },
+
+  getSiteSettingsMap: async (): Promise<Record<string, any>> => {
+    const { data } = await supabase.from('site_settings').select('key, value');
+    const out: Record<string, any> = {};
+    (data || []).forEach((r: any) => {
+      out[r.key] = r.value;
+    });
+    return out;
   },
 
   getNotifications: async (page = 1, limit = 20) => {

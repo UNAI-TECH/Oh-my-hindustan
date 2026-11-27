@@ -6,6 +6,7 @@ import * as Linking from 'expo-linking';
 
 import RootNavigator from './src/navigation/RootNavigator';
 import { AuthProvider } from './src/context/AuthContext';
+import { SiteLanguageProvider } from './src/context/SiteLanguageContext';
 import { FeedProvider } from './src/context/FeedContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import { InteractionProvider } from './src/context/InteractionContext';
@@ -19,6 +20,27 @@ const CATEGORY_SLUGS = new Set([
   'watch-online',
   'science-and-tech',
 ]);
+
+const STATIC_PAGE_KEYS = new Set([
+  'about',
+  'contact',
+  'editorial-policy',
+  'corrections-policy',
+  'privacy-policy',
+  'terms',
+  'advertise',
+]);
+
+function getActiveLocaleFromBrowser(): 'en' | 'ta' {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const p = window.location.pathname || '';
+    if (p === '/ta' || p.startsWith('/ta/')) return 'ta';
+    if (p === '/en' || p.startsWith('/en/')) return 'en';
+    const m = document.cookie.match(/(?:^|;\s*)postsapp_lang=(en|ta)/);
+    if (m?.[1] === 'ta') return 'ta';
+  }
+  return 'en';
+}
 
 const linking: any = {
   prefixes: [
@@ -37,6 +59,7 @@ const linking: any = {
         },
       },
       CreatorProfile: 'creator/:authorId',
+      CreatorsDirectory: 'creators',
       ArticleDetail: {
         path: 'article/:slug',
         parse: {
@@ -68,41 +91,121 @@ const linking: any = {
       Settings: 'settings',
       PersonalDetails: 'settings/details',
       PrivacySecurity: 'settings/privacy',
+      StaticInfo: 'info/:pageKey',
+      NotFound: '*',
       CreatorDashboard: 'studio',
       CreatorAnalytics: 'studio/analytics',
       ContentEditor: 'studio/editor',
       CreatorContent: 'studio/content',
       CreatorComments: 'studio/comments',
-      CreatorSubtitles: 'studio/subtitles',
-      CreatorEarn: 'studio/earn',
       CreatorSettings: 'studio/settings',
       CreatorFeedback: 'studio/feedback',
       AdminOverview: 'admin',
-      AdminMonetization: 'admin/economics',
       Splash: 'splash',
     },
   },
   getStateFromPath(path: string, options: any) {
-    const cleanPath = path.split('?')[0].replace(/^\/+|\/+$/g, '');
-    if (!cleanPath) {
-      return { routes: [{ name: 'Home', params: { initialCategory: 'HOME' } }] };
-    }
     const queryIndex = path.indexOf('?');
     const querySuffix = queryIndex >= 0 ? path.slice(queryIndex) : '';
-    if (CATEGORY_SLUGS.has(cleanPath.toLowerCase())) {
-      return getStateFromPath(`category/${cleanPath.toLowerCase()}${querySuffix}`, options);
+    const queryParams = new URLSearchParams(querySuffix.startsWith('?') ? querySuffix.slice(1) : '');
+
+    let rawPath = (queryIndex >= 0 ? path.slice(0, queryIndex) : path).replace(/^\/+|\/+$/g, '');
+    let routeLang: 'en' | 'ta' | undefined;
+
+    if (rawPath === 'en' || rawPath.startsWith('en/')) {
+      routeLang = 'en';
+      rawPath = rawPath === 'en' ? '' : rawPath.slice(3);
+    } else if (rawPath === 'ta' || rawPath.startsWith('ta/')) {
+      routeLang = 'ta';
+      rawPath = rawPath === 'ta' ? '' : rawPath.slice(3);
     }
-    return getStateFromPath(path, options);
+
+    if (!rawPath) {
+      return { routes: [{ name: 'Home', params: { initialCategory: 'HOME', ...(routeLang ? { lang: routeLang } : {}) } }] };
+    }
+
+    const lower = rawPath.toLowerCase();
+
+    if (lower === 'latest' || lower === 'trending' || lower === 'most-read') {
+      const mode = lower === 'most-read' ? 'popular' : lower;
+      return {
+        routes: [{ name: 'Home', params: { initialCategory: 'HOME', initialFeedMode: mode, ...(routeLang ? { lang: routeLang } : {}) } }],
+      };
+    }
+
+    if (lower.startsWith('tag/')) {
+      const tagSlug = decodeURIComponent(rawPath.slice(4));
+      return {
+        routes: [{ name: 'Search', params: { initialTag: tagSlug, ...(routeLang ? { lang: routeLang } : {}) } }],
+      };
+    }
+
+    if (lower === 'search') {
+      return {
+        routes: [{
+          name: 'Search',
+          params: {
+            initialQuery: queryParams.get('q') || '',
+            initialTag: queryParams.get('tag') || '',
+            initialSort: queryParams.get('sort') || '',
+            ...(routeLang ? { lang: routeLang } : {}),
+          },
+        }],
+      };
+    }
+
+    if (STATIC_PAGE_KEYS.has(lower)) {
+      return {
+        routes: [{ name: 'StaticInfo', params: { pageKey: lower, ...(routeLang ? { lang: routeLang } : {}) } }],
+      };
+    }
+
+    if (lower === 'creators') {
+      return { routes: [{ name: 'CreatorsDirectory', params: { ...(routeLang ? { lang: routeLang } : {}) } }] };
+    }
+
+    if (CATEGORY_SLUGS.has(lower)) {
+      return getStateFromPath(`category/${lower}${querySuffix}`, options);
+    }
+
+    const normalizedTarget = querySuffix ? `${rawPath}${querySuffix}` : rawPath;
+    const state = getStateFromPath(normalizedTarget, options);
+    if (state && routeLang) {
+      const routes = state.routes.map((r: any) => ({ ...r, params: { ...(r.params || {}), lang: routeLang } }));
+      return { ...state, routes };
+    }
+    return state;
   },
   getPathFromState(state: any, options: any) {
+    const activeRoute = state?.routes?.[state.index ?? state.routes.length - 1];
+    const paramLang = activeRoute?.params?.lang;
+    const lang: 'en' | 'ta' = paramLang === 'ta' || paramLang === 'en' ? paramLang : getActiveLocaleFromBrowser();
+
+    if (activeRoute?.name === 'StaticInfo' && activeRoute?.params?.pageKey) {
+      return `/${lang}/${activeRoute.params.pageKey}`;
+    }
+    if (activeRoute?.name === 'CreatorsDirectory') {
+      return `/${lang}/creators`;
+    }
+    if (activeRoute?.name === 'Search') {
+      const p = activeRoute.params || {};
+      if (p.initialTag) return `/${lang}/tag/${encodeURIComponent(p.initialTag)}`;
+      if (p.initialQuery) return `/${lang}/search?q=${encodeURIComponent(p.initialQuery)}`;
+      return `/${lang}/search`;
+    }
+
     const resolved = getPathFromState(state, options);
-    if (resolved === '/category/home' || resolved === '/category') {
-      return '/';
+    if (resolved === '/category/home' || resolved === '/category' || resolved === '/') {
+      return `/${lang}`;
     }
     if (resolved.startsWith('/article/')) {
-      return resolved.split('?')[0];
+      const clean = resolved.split('?')[0];
+      return `/${lang}${clean}`;
     }
-    return resolved;
+    if (resolved.startsWith('/en/') || resolved.startsWith('/ta/') || resolved === '/en' || resolved === '/ta') {
+      return resolved;
+    }
+    return `/${lang}${resolved.startsWith('/') ? resolved : `/${resolved}`}`;
   },
 };
 
@@ -113,52 +216,56 @@ const ROUTE_PAGE_TITLES: Record<string, string> = {
   Library: 'Saved Library | PostsApp',
   Notifications: 'Notifications | PostsApp',
   CreatorProfile: 'Creator Profile | PostsApp',
+  CreatorsDirectory: 'Creators Directory | PostsApp',
   Profile: 'My Profile | PostsApp',
   Settings: 'Settings | PostsApp',
   Login: 'Sign In | PostsApp',
   SignUp: 'Create Account | PostsApp',
+  NotFound: 'Page Not Found | PostsApp',
 };
 
 export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <InteractionProvider>
-          <FeedProvider>
-            <NotificationProvider>
-              <NavigationContainer
-                ref={navigationRef}
-                linking={linking}
-                documentTitle={{
-                  formatter: (options, route) => {
-                    if (options?.title) {
-                      return options.title.includes('PostsApp')
-                        ? options.title
-                        : `${options.title} | PostsApp`;
-                    }
-                    if (route?.name === 'ArticleDetail') {
-                      const params = (route.params || {}) as { title?: string };
-                      return params.title ? `${params.title} | PostsApp` : 'PostsApp';
-                    }
-                    if (route?.name === 'Home') {
-                      const cat = ((route.params || {}) as { initialCategory?: string }).initialCategory;
-                      if (cat && cat !== 'HOME') return `${cat} | PostsApp`;
-                      return ROUTE_PAGE_TITLES.Home;
-                    }
-                    if (route?.name === 'CreatorProfile') {
-                      const authorName = ((route.params || {}) as { authorName?: string }).authorName;
-                      return authorName ? `${authorName} | PostsApp` : ROUTE_PAGE_TITLES.CreatorProfile;
-                    }
-                    return (route?.name && ROUTE_PAGE_TITLES[route.name]) || 'PostsApp';
-                  },
-                }}
-              >
-                <RootNavigator />
-                <StatusBar style="auto" />
-              </NavigationContainer>
-            </NotificationProvider>
-          </FeedProvider>
-        </InteractionProvider>
+        <SiteLanguageProvider>
+          <InteractionProvider>
+            <FeedProvider>
+              <NotificationProvider>
+                <NavigationContainer
+                  ref={navigationRef}
+                  linking={linking}
+                  documentTitle={{
+                    formatter: (options, route) => {
+                      if (options?.title) {
+                        return options.title.includes('PostsApp')
+                          ? options.title
+                          : `${options.title} | PostsApp`;
+                      }
+                      if (route?.name === 'ArticleDetail') {
+                        const params = (route.params || {}) as { title?: string };
+                        return params.title ? `${params.title} | PostsApp` : 'PostsApp';
+                      }
+                      if (route?.name === 'Home') {
+                        const cat = ((route.params || {}) as { initialCategory?: string }).initialCategory;
+                        if (cat && cat !== 'HOME') return `${cat} | PostsApp`;
+                        return ROUTE_PAGE_TITLES.Home;
+                      }
+                      if (route?.name === 'CreatorProfile') {
+                        const authorName = ((route.params || {}) as { authorName?: string }).authorName;
+                        return authorName ? `${authorName} | PostsApp` : ROUTE_PAGE_TITLES.CreatorProfile;
+                      }
+                      return (route?.name && ROUTE_PAGE_TITLES[route.name]) || 'PostsApp';
+                    },
+                  }}
+                >
+                  <RootNavigator />
+                  <StatusBar style="auto" />
+                </NavigationContainer>
+              </NotificationProvider>
+            </FeedProvider>
+          </InteractionProvider>
+        </SiteLanguageProvider>
       </AuthProvider>
     </ThemeProvider>
   );

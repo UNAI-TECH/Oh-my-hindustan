@@ -11,48 +11,80 @@
     "search": "Search",
     "apply": "Apply",
     "close": "Close",
-    "soon": "Soon"
+    "soon": "Soon",
+    "read_more": "Read Full Story",
+    "share": "Share",
+    "bookmark": "Saved",
+    "save_story": "Save",
+    "follow": "Follow",
+    "following": "Following",
+    "latest": "Latest",
+    "trending": "Trending",
+    "most_read": "Most Read",
+    "articles": "Articles",
+    "videos": "Videos",
+    "all": "All",
+    "views": "views",
+    "likes": "likes",
+    "comments": "Comments",
+    "no_results": "No matching stories found",
+    "minute_read": "min read"
   },
   "nav": {
-    "home": "Home",
-    "explore": "Explore",
+    "home": "HOME",
+    "explore": "EXPLORE",
     "studio": "Creative Studio",
     "profile": "Profile",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "watch_online": "WATCH ONLINE",
+    "sign_in": "Sign In",
+    "saved": "Saved",
+    "subscribe": "Subscribe",
+    "advertise": "Advertise",
+    "edition": "Edition",
+    "all_india": "All-India",
+    "language": "Language",
+    "switch_to_tamil": "தமிழ்",
+    "switch_to_english": "English"
   },
-  "monetization": {
-    "title": "Monetization",
-    "subtitle": "Creator Earnings",
-    "total_earnings": "Total Earnings",
-    "available_balance": "Available Balance",
-    "ad_revenue": "Ad Revenue Sharing",
-    "sponsorships": "Sponsorship Matches",
-    "premium_content": "Premium Content",
-    "withdraw": "Withdraw Funds",
-    "status": "Monetization Status",
-    "active": "Active",
-    "pending": "Pending",
-    "eligible": "Eligible",
-    "ineligible": "Ineligible",
-    "how_it_works": "How it works",
-    "coming_soon_desc": "We're building a comprehensive monetization program for creators. Stay tuned for ad revenue sharing, sponsorships, and premium content features."
+  "editorial": {
+    "breaking_news": "BREAKING NEWS",
+    "editors_picks": "EDITOR'S PICKS",
+    "featured_stories": "FEATURED STORIES",
+    "latest_dispatches": "LATEST DISPATCHES",
+    "popular_tags": "POPULAR TAGS",
+    "also_in_other_lang": "தமிழில் படிக்க (Read in Tamil)",
+    "related_posts": "Related Posts",
+    "no_articles_in_lang": "No published stories available in this edition yet.",
+    "article_unavailable": "Article Unavailable",
+    "article_unavailable_desc": "This article may have been archived, removed, or moved to another URL."
+  },
+  "search": {
+    "placeholder": "Search news, topics, creators...",
+    "all_languages": "All Languages",
+    "sort_relevance": "Relevance",
+    "sort_latest": "Latest",
+    "sort_trending": "Trending",
+    "sort_popular": "Most Read"
+  },
+  "footer": {
+    "about": "About Us",
+    "contact": "Contact Newsroom",
+    "editorial_policy": "Editorial Policy",
+    "corrections_policy": "Corrections Policy",
+    "privacy_policy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "advertise": "Advertise With Us",
+    "creators": "Creators Directory"
   },
   "ads": {
     "sponsored": "Sponsored",
     "learn_more": "Learn More"
   },
-  "creator_studio": {
-    "welcome": "Welcome back",
-    "overview": "Creator Dashboard overview",
-    "quick_create": "Quick Create",
-    "recent_content": "Recent Content",
-    "analytics": "Analytics",
-    "content": "Content",
-    "comments": "Comments",
-    "subtitles": "Subtitles",
-    "earn": "Earn",
-    "settings": "Settings",
-    "feedback": "Send Feedback",
-    "logout": "Logout"
+  "auth": {
+    "sign_in": "Sign In",
+    "sign_up": "Create Account",
+    "sign_out": "Log Out",
+    "delete_account": "Delete My Account"
   }
 }

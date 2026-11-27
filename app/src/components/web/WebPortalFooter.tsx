@@ -1,19 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Linking,
   useWindowDimensions,
 } from 'react-native';
 import PostsAppLogo from '../PostsAppLogo';
 import { FOOTER_CATEGORIES } from './webPortalHelpers';
 import { supabase } from '../../lib/supabaseClient';
+import { AppApi } from '../../api/services';
+import { useSiteLanguage } from '../../context/SiteLanguageContext';
+import { useTranslation } from 'react-i18next';
+import { SITE_URL } from '../../seo/seoUtils';
 
 interface WebPortalFooterProps {
   onSelectCategory: (category: string) => void;
-  onNavigate: (route: string) => void;
+  onNavigate: (route: string, params?: any) => void;
 }
 
 export default function WebPortalFooter({
@@ -22,13 +27,37 @@ export default function WebPortalFooter({
 }: WebPortalFooterProps) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 960;
+  const { lang } = useSiteLanguage();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [dbCategories, setDbCategories] = useState<Array<{ key: string; label: string }>>([]);
 
-  const leftCategories = FOOTER_CATEGORIES.slice(0, 4);
-  const rightCategories = FOOTER_CATEGORIES.slice(4);
+  useEffect(() => {
+    AppApi.getBilingualCategories()
+      .then((rows) => {
+        const visible = (rows || []).filter((c: any) => c.nav_visible !== false && c.name_en);
+        if (visible.length > 0) {
+          setDbCategories(
+            visible.slice(0, 10).map((c: any) => ({
+              key: String(c.name_en).toUpperCase(),
+              label: lang === 'ta' ? (c.name_ta || c.name_en) : c.name_en,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+  }, [lang]);
+
+  const footerCatList =
+    dbCategories.length > 0
+      ? dbCategories
+      : FOOTER_CATEGORIES.map((c) => ({ key: c.toUpperCase(), label: c }));
+  const mid = Math.ceil(footerCatList.length / 2);
+  const leftCategories = footerCatList.slice(0, mid);
+  const rightCategories = footerCatList.slice(mid);
 
   const handleJoin = async () => {
     const trimmed = email.trim().toLowerCase();
@@ -77,22 +106,22 @@ export default function WebPortalFooter({
               <View style={styles.categoryList}>
                 {leftCategories.map((cat) => (
                   <TouchableOpacity
-                    key={cat}
+                    key={cat.key}
                     style={styles.categoryLinkBtn}
-                    onPress={() => onSelectCategory(cat.toUpperCase())}
+                    onPress={() => onSelectCategory(cat.key)}
                   >
-                    <Text style={styles.categoryLinkText}>{cat}</Text>
+                    <Text style={styles.categoryLinkText}>{cat.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
               <View style={styles.categoryList}>
                 {rightCategories.map((cat) => (
                   <TouchableOpacity
-                    key={cat}
+                    key={cat.key}
                     style={styles.categoryLinkBtn}
-                    onPress={() => onSelectCategory(cat.toUpperCase())}
+                    onPress={() => onSelectCategory(cat.key)}
                   >
-                    <Text style={styles.categoryLinkText}>{cat}</Text>
+                    <Text style={styles.categoryLinkText}>{cat.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -146,17 +175,45 @@ export default function WebPortalFooter({
             © {new Date().getFullYear()} PostsApp Digital Media. All rights reserved.
           </Text>
 
-          <View style={styles.bottomLinks}>
-            <TouchableOpacity onPress={() => onNavigate('Settings')}>
-              <Text style={styles.bottomLinkText}>Advertise</Text>
+          <View style={[styles.bottomLinks, { flexWrap: 'wrap' }]}>
+            <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'about' })}>
+              <Text style={styles.bottomLinkText}>{t('footer.about', 'About Us')}</Text>
             </TouchableOpacity>
             <Text style={styles.bottomDot}>•</Text>
-            <TouchableOpacity onPress={() => onNavigate('Profile')}>
-              <Text style={styles.bottomLinkText}>Membership</Text>
+            <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'contact' })}>
+              <Text style={styles.bottomLinkText}>{t('footer.contact', 'Contact')}</Text>
             </TouchableOpacity>
             <Text style={styles.bottomDot}>•</Text>
-            <TouchableOpacity onPress={() => onNavigate('PrivacySecurity')}>
-              <Text style={styles.bottomLinkText}>Editorial Policy</Text>
+            <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'editorial-policy' })}>
+              <Text style={styles.bottomLinkText}>{t('footer.editorial_policy', 'Editorial Policy')}</Text>
+            </TouchableOpacity>
+            <Text style={styles.bottomDot}>•</Text>
+            <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'corrections-policy' })}>
+              <Text style={styles.bottomLinkText}>{t('footer.corrections_policy', 'Corrections')}</Text>
+            </TouchableOpacity>
+            <Text style={styles.bottomDot}>•</Text>
+            <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'privacy-policy' })}>
+              <Text style={styles.bottomLinkText}>{t('footer.privacy_policy', 'Privacy Policy')}</Text>
+            </TouchableOpacity>
+            <Text style={styles.bottomDot}>•</Text>
+            <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'terms' })}>
+              <Text style={styles.bottomLinkText}>{t('footer.terms', 'Terms')}</Text>
+            </TouchableOpacity>
+            <Text style={styles.bottomDot}>•</Text>
+            <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'advertise' })}>
+              <Text style={styles.bottomLinkText}>{t('footer.advertise', 'Advertise')}</Text>
+            </TouchableOpacity>
+            <Text style={styles.bottomDot}>•</Text>
+            <TouchableOpacity onPress={() => onNavigate('CreatorsDirectory')}>
+              <Text style={styles.bottomLinkText}>{t('footer.creators', 'Creators')}</Text>
+            </TouchableOpacity>
+            <Text style={styles.bottomDot}>•</Text>
+            <TouchableOpacity onPress={() => Linking.openURL(`${SITE_URL}/${lang}/rss.xml`)}>
+              <Text style={styles.bottomLinkText}>RSS</Text>
+            </TouchableOpacity>
+            <Text style={styles.bottomDot}>•</Text>
+            <TouchableOpacity onPress={() => Linking.openURL(`${SITE_URL}/sitemap.xml`)}>
+              <Text style={styles.bottomLinkText}>Sitemap</Text>
             </TouchableOpacity>
           </View>
         </View>

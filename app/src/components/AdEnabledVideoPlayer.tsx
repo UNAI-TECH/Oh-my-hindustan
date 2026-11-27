@@ -167,13 +167,7 @@ export default function AdEnabledVideoPlayer({
 
   const trackRevenue = useCallback(async (ad: Ad) => {
     try {
-      await supabase
-        .from('video_ads')
-        .update({
-          views: (ad as any).views ? (ad as any).views + 1 : 1,
-          revenue: Number((ad as any).revenue || 0) + Number(ad.revenue_per_view || 0),
-        })
-        .eq('id', ad.id);
+      await supabase.rpc('track_video_ad_view', { p_video_ad_id: ad.id });
     } catch { /* silent */ }
   }, []);
 

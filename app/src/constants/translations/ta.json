@@ -1,0 +1,90 @@
+{
+  "common": {
+    "brand_name": "PostsApp",
+    "loading": "ஏற்றுகிறது...",
+    "error": "பிழை",
+    "success": "வெற்றி",
+    "back": "பின்செல்",
+    "save": "சேமி",
+    "cancel": "ரத்து செய்",
+    "confirm": "உறுதிப்படுத்து",
+    "search": "தேடு",
+    "apply": "பயன்படுத்து",
+    "close": "மூடு",
+    "soon": "விரைவில்",
+    "read_more": "மேலும் படிக்க",
+    "share": "பகிர்",
+    "bookmark": "சேமிக்கப்பட்டது",
+    "save_story": "சேமி",
+    "follow": "பின்தொடர்",
+    "following": "பின்தொடர்கிறீர்கள்",
+    "latest": "சமீபத்தியவை",
+    "trending": "பிரபலமானவை",
+    "most_read": "அதிகம் வாசித்தவை",
+    "articles": "கட்டுரைகள்",
+    "videos": "வீடியோக்கள்",
+    "all": "அனைத்தும்",
+    "views": "பார்வைகள்",
+    "likes": "விருப்பங்கள்",
+    "comments": "கருத்துகள்",
+    "no_results": "பொருந்தும் செய்திகள் எதுவும் இல்லை",
+    "minute_read": "நிமிட வாசிப்பு"
+  },
+  "nav": {
+    "home": "முகப்பு",
+    "explore": "ஆராய்க",
+    "studio": "படைப்பாளர் தளம்",
+    "profile": "சுயவிவரம்",
+    "notifications": "அறிவிப்புகள்",
+    "watch_online": "நேரலை வீடியோ",
+    "sign_in": "உள்நுழைக",
+    "saved": "சேமித்தவை",
+    "subscribe": "சந்தா",
+    "advertise": "விளம்பரம்",
+    "edition": "பதிப்பு",
+    "all_india": "அகில இந்திய",
+    "language": "மொழி",
+    "switch_to_tamil": "தமிழ்",
+    "switch_to_english": "English"
+  },
+  "editorial": {
+    "breaking_news": "முக்கிய செய்திகள்",
+    "editors_picks": "ஆசிரியர் தேர்வு",
+    "featured_stories": "சிறப்புச் செய்திகள்",
+    "latest_dispatches": "அண்மைச் செய்திகள்",
+    "popular_tags": "பிரபல குறிச்சொற்கள்",
+    "also_in_other_lang": "Read in English (ஆங்கிலத்தில் படிக்க)",
+    "related_posts": "தொடர்புடைய செய்திகள்",
+    "no_articles_in_lang": "இந்தப் பதிப்பில் இன்னும் செய்திகள் வெளியிடப்படவில்லை.",
+    "article_unavailable": "கட்டுரை கிடைக்கவில்லை",
+    "article_unavailable_desc": "இக்கட்டுரை நீக்கப்பட்டிருக்கலாம் அல்லது காப்பகப்படுத்தப்பட்டிருக்கலாம்."
+  },
+  "search": {
+    "placeholder": "செய்திகள், தலைப்புகள், எழுத்தாளர்களைத் தேடுங்கள்...",
+    "all_languages": "அனைத்து மொழிகளும்",
+    "sort_relevance": "பொருத்தம்",
+    "sort_latest": "சமீபத்தியவை",
+    "sort_trending": "பிரபலமானவை",
+    "sort_popular": "அதிகம் வாசித்தவை"
+  },
+  "footer": {
+    "about": "எங்களைப் பற்றி",
+    "contact": "தொடர்பு கொள்ள",
+    "editorial_policy": "ஆசிரியர் கொள்கை",
+    "corrections_policy": "திருத்தக் கொள்கை",
+    "privacy_policy": "தனியுரிமைக் கொள்கை",
+    "terms": "சேவை விதிமுறைகள்",
+    "advertise": "விளம்பரம் செய்ய",
+    "creators": "படைப்பாளர்கள்"
+  },
+  "ads": {
+    "sponsored": "விளம்பரம்",
+    "learn_more": "மேலும் அறிய"
+  },
+  "auth": {
+    "sign_in": "உள்நுழைக",
+    "sign_up": "பதிவு செய்க",
+    "sign_out": "வெளியேறு",
+    "delete_account": "கணக்கை நீக்கு"
+  }
+}

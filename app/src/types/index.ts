@@ -14,16 +14,24 @@ export interface FeedItem {
   type: FeedItemType;
   title: string;
   subtitle?: string | null;
+  short_description?: string | null;
   authorName?: string | null;
   authorImage?: string | null;
   authorId?: string | null;
+  authorUsername?: string | null;
   authorNameCustom?: string | null;
   authorPosition?: string | null;
   author_name?: string | null;
   author_position?: string | null;
   hashtags?: string[] | null;
   thumbnail?: string | null;
+  featured_image_alt?: string | null;
+  featured_image_caption?: string | null;
+  featured_image_credit?: string | null;
   timestamp?: string | null;
+  published_at?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
   votes?: number | null;
   upvoteCount?: number;
   downvoteCount?: number;
@@ -34,13 +42,34 @@ export interface FeedItem {
   videoDuration?: string | null;
   videoUrl?: string | null;
   content?: string | null;
+  content_json?: any;
   quote?: string | null;
+  language?: 'en' | 'ta';
+  slug?: string | null;
+  translation_group_id?: string | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  canonical_url?: string | null;
+  og_title?: string | null;
+  og_description?: string | null;
+  og_image?: string | null;
+  robots_index?: boolean;
   isTrending?: boolean;
+  is_breaking?: boolean;
+  is_featured?: boolean;
+  is_editors_pick?: boolean;
+  reading_time_minutes?: number;
   ads_enabled?: boolean;
   ad_breaks?: { type: string; time: number }[] | null;
+  translations?: Array<{ id: string; title: string; language: 'en' | 'ta'; slug: string }>;
+  author?: {
+    id: string;
+    username: string;
+    channel_name?: string | null;
+    avatarUrl?: string | null;
+  } | null;
 }
 
-// Retrofit API Interfaces ported to TypeScript
 export interface AuthResponse {
   access_token: string;
   user: UserProfileResponse;
@@ -83,7 +112,7 @@ export interface PostResponse {
   id: string;
   title: string;
   body?: string | null;
-  type: string; // 'blog', 'news', 'video'
+  type: string;
   media_url?: string | null;
   author_id: string;
   community_id: string;

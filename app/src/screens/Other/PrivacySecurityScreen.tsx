@@ -7,6 +7,7 @@ import { useAppTheme } from '../../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomModal from '../../components/CustomModal';
 import WebPageShell from '../../components/web/WebPageShell';
+import { supabase } from '../../lib/supabaseClient';
 
 export default function PrivacySecurityScreen() {
   const { colors } = useAppTheme();
@@ -99,6 +100,45 @@ export default function PrivacySecurityScreen() {
           <TouchableOpacity style={styles.actionRow} onPress={handleClearSearchHistory}>
             <Ionicons name="trash-outline" size={22} color={colors.PrimaryRed} />
             <Text style={styles.actionText}>Clear Search History</Text>
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity
+            style={styles.actionRow}
+            onPress={() => {
+              setModalConfig({
+                visible: true,
+                title: 'Delete Account Permanently',
+                message: 'This will deactivate your account, anonymize personal credentials, and sign you out. This cannot be undone.',
+                isError: true,
+                primaryButtonText: 'Delete Account',
+                secondaryButtonText: 'Cancel',
+                onSecondaryPress: () => setModalConfig(prev => ({ ...prev, visible: false })),
+                onPrimaryPress: async () => {
+                  try {
+                    const { error } = await supabase.functions.invoke('account-lifecycle', {
+                      body: { action: 'deleteAccount' },
+                    });
+                    if (error) throw error;
+                    await supabase.auth.signOut();
+                    setModalConfig({ visible: false, title: '', message: '', isError: false });
+                  } catch (e: any) {
+                    setModalConfig({
+                      visible: true,
+                      title: 'Deletion Failed',
+                      message: e?.message || 'Unable to delete account right now.',
+                      isError: true,
+                      primaryButtonText: 'OK',
+                      secondaryButtonText: undefined,
+                      onSecondaryPress: undefined,
+                      onPrimaryPress: undefined,
+                    });
+                  }
+                },
+              });
+            }}
+          >
+            <Ionicons name="warning-outline" size={22} color="#DC2626" />
+            <Text style={[styles.actionText, { color: '#DC2626', fontWeight: '700' }]}>Delete My Account</Text>
           </TouchableOpacity>
         </View>
     </>

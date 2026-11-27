@@ -19,6 +19,10 @@ import PostsAppLogo from '../PostsAppLogo';
 import { AdData } from '../AdCard';
 import { supabase } from '../../lib/supabaseClient';
 import { openExternalUrl } from '../../utils/openExternalUrl';
+import { useTranslation } from 'react-i18next';
+import { useSiteLanguage } from '../../context/SiteLanguageContext';
+import { getOrCreateVisitorId } from '../../utils/visitorId';
+import { AppApi } from '../../api/services';
 import {
   WEB_NAV_CATEGORIES,
   POPULAR_TAGS,
@@ -47,6 +51,21 @@ export function WebTopMasthead({
 }: WebTopMastheadProps) {
   const { width } = useWindowDimensions();
   const isDesktopWide = width >= 1024;
+  const { lang, setSiteLang } = useSiteLanguage();
+  const { t } = useTranslation();
+
+  const handleSwitchLang = (target: 'en' | 'ta') => {
+    setSiteLang(target);
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const p = window.location.pathname || '/';
+      if (p === '/' || p === '/en' || p === '/ta' || p.startsWith('/en/') || p.startsWith('/ta/')) {
+        if (!p.includes('/article/')) {
+          const nextPath = p === '/' ? `/${target}` : p.replace(/^\/(en|ta)(\/|$)/, `/${target}$2`);
+          window.history.replaceState(null, '', nextPath + window.location.search);
+        }
+      }
+    }
+  };
 
   const handleAdClick = () => {
     if (!leaderboardAd) {
@@ -59,10 +78,13 @@ export function WebTopMasthead({
 
     void (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const [{ data: { session } }, visitorId] = await Promise.all([
+          supabase.auth.getSession(),
+          getOrCreateVisitorId(),
+        ]);
         await supabase.rpc('track_ad_click', {
           p_ad_id: leaderboardAd.id,
-          p_user_id: session?.user?.id || 'anonymous',
+          p_user_id: session?.user?.id || visitorId,
         });
       } catch (_) {}
     })();
@@ -77,14 +99,14 @@ export function WebTopMasthead({
             <Text style={styles.utilityDate}>{getFormattedHeaderDate()}</Text>
             <View style={styles.utilityDivider} />
             <TouchableOpacity onPress={onScrollToNewsletter}>
-              <Text style={styles.utilityLink}>Subscribe</Text>
+              <Text style={styles.utilityLink}>{t('nav.subscribe', 'Subscribe')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => onNavigate(isAuthenticated ? 'Settings' : 'Login')}>
-              <Text style={styles.utilityLink}>Advertise</Text>
+            <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'advertise' })}>
+              <Text style={styles.utilityLink}>{t('nav.advertise', 'Advertise')}</Text>
             </TouchableOpacity>
             <View style={styles.editionPill}>
-              <Text style={styles.editionLabel}>Edition: </Text>
-              <Text style={styles.editionValue}>All-India</Text>
+              <Text style={styles.editionLabel}>{t('nav.edition', 'Edition')}: </Text>
+              <Text style={styles.editionValue}>{t('nav.all_india', 'All-India')}</Text>
             </View>
           </View>
 
@@ -109,12 +131,29 @@ export function WebTopMasthead({
 
             <View style={styles.utilityDivider} />
 
+            <View style={styles.langSwitchWrap}>
+              <TouchableOpacity
+                style={[styles.langBtn, lang === 'en' && styles.langBtnActive]}
+                onPress={() => handleSwitchLang('en')}
+              >
+                <Text style={[styles.langBtnText, lang === 'en' && styles.langBtnTextActive]}>EN</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.langBtn, lang === 'ta' && styles.langBtnActive]}
+                onPress={() => handleSwitchLang('ta')}
+              >
+                <Text style={[styles.langBtnText, lang === 'ta' && styles.langBtnTextActive]}>தமிழ்</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.utilityDivider} />
+
             <TouchableOpacity
               style={styles.savedBtn}
               onPress={() => onNavigate(isAuthenticated ? 'Library' : 'Login')}
             >
               <Ionicons name="star" size={12} color="#E5E7EB" />
-              <Text style={styles.savedLabel}>Saved</Text>
+              <Text style={styles.savedLabel}>{t('nav.saved', 'Saved')}</Text>
               <View style={styles.savedBadge}>
                 <Text style={styles.savedBadgeText}>{savedCount}</Text>
               </View>
@@ -126,7 +165,7 @@ export function WebTopMasthead({
             >
               <Ionicons name="person-circle-outline" size={15} color="#E5E7EB" />
               <Text style={styles.authUtilityText}>
-                {isAuthenticated ? (userProfile?.username || 'Account') : 'Sign In'}
+                {isAuthenticated ? (userProfile?.username || t('nav.profile', 'Account')) : t('nav.sign_in', 'Sign In')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -243,8 +282,8 @@ interface WebStickyNavBarProps {
   unreadNotifications: number;
   isAuthenticated: boolean;
   onLogout: () => Promise<void>;
-  feedMode: 'latest' | 'trending' | 'articles' | 'videos';
-  onChangeFeedMode: (mode: 'latest' | 'trending' | 'articles' | 'videos') => void;
+  feedMode: 'latest' | 'trending' | 'popular' | 'articles' | 'videos';
+  onChangeFeedMode: (mode: 'latest' | 'trending' | 'popular' | 'articles' | 'videos') => void;
 }
 
 export function WebStickyNavBar({
@@ -261,13 +300,40 @@ export function WebStickyNavBar({
   feedMode,
   onChangeFeedMode,
 }: WebStickyNavBarProps) {
+  const { lang } = useSiteLanguage();
+  const { t } = useTranslation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [livePosts, setLivePosts] = useState<any[]>([]);
   const [liveCreators, setLiveCreators] = useState<any[]>([]);
   const [liveSearching, setLiveSearching] = useState(false);
   const [liveRefreshTick, setLiveRefreshTick] = useState(0);
+  const [dbCategories, setDbCategories] = useState<any[]>([]);
   const blurTimerRef = useRef<any>(null);
+
+  useEffect(() => {
+    AppApi.getBilingualCategories()
+      .then((cats) => setDbCategories(cats || []))
+      .catch(() => {});
+  }, []);
+
+  const navCategories = React.useMemo(() => {
+    const homeItem = { key: 'HOME', label: t('nav.home', 'HOME') };
+    const visible = dbCategories.filter((c) => c.nav_visible !== false && c.name_en);
+    if (visible.length > 0) {
+      return [
+        homeItem,
+        ...visible.map((c) => ({
+          key: String(c.name_en).toUpperCase(),
+          label: lang === 'ta' ? (c.name_ta || c.name_en) : String(c.name_en).toUpperCase(),
+        })),
+      ];
+    }
+    return WEB_NAV_CATEGORIES.map((c) => ({
+      key: c,
+      label: c === 'HOME' ? t('nav.home', 'HOME') : c,
+    }));
+  }, [dbCategories, lang, t]);
 
   useEffect(() => {
     const trimmed = searchQuery.trim();
@@ -284,14 +350,23 @@ export function WebStickyNavBar({
 
     const timer = setTimeout(async () => {
       try {
-        const [postsRes, creatorsRes] = await Promise.all([
-          supabase
-            .from('Post')
-            .select('id, title, type, category, custom_category, thumbnail, createdAt, author:User!authorId(id, username, channel_name)')
-            .or('is_active.eq.true,is_active.is.null')
-            .or(`title.ilike.%${safeQ}%,category.ilike.%${safeQ}%,content.ilike.%${safeQ}%`)
-            .order('createdAt', { ascending: false })
-            .limit(6),
+        const [rpcRes, creatorsRes] = await Promise.all([
+          AppApi.searchArticlesRpc({
+            query: trimmed,
+            language: lang,
+            sort: 'relevance',
+            limit: 6,
+          }).catch(async () => {
+            const fallback = await supabase
+              .from('Post')
+              .select('id, slug, title, type, category, custom_category, thumbnail, createdAt, author:User!authorId(id, username, channel_name)')
+              .eq('status', 'PUBLISHED')
+              .or('is_active.eq.true,is_active.is.null')
+              .or(`title.ilike.%${safeQ}%,category.ilike.%${safeQ}%,content.ilike.%${safeQ}%`)
+              .order('createdAt', { ascending: false })
+              .limit(6);
+            return { items: fallback.data || [], total: 0 };
+          }),
           supabase
             .from('User')
             .select('id, username, channel_name, "avatarUrl", role')
@@ -301,7 +376,15 @@ export function WebStickyNavBar({
         ]);
 
         if (!cancelled) {
-          setLivePosts(postsRes.data || []);
+          const normalizedPosts = (rpcRes.items || []).map((p: any) => ({
+            ...p,
+            author: p.author || {
+              id: p.author_id || p.authorId,
+              username: p.author_username || 'PostsApp',
+              channel_name: p.author_name || p.author_username,
+            },
+          }));
+          setLivePosts(normalizedPosts);
           setLiveCreators(creatorsRes.data || []);
         }
       } catch (_) {
@@ -318,7 +401,7 @@ export function WebStickyNavBar({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [searchQuery, liveRefreshTick]);
+  }, [searchQuery, liveRefreshTick, lang]);
 
   // Keep open search results synced in real time when posts are created or updated
   useEffect(() => {
@@ -367,16 +450,16 @@ export function WebStickyNavBar({
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.navCategories}
           >
-            {WEB_NAV_CATEGORIES.map((cat) => {
-              const isActive = activeCategory.toUpperCase() === cat;
+            {navCategories.map((cat) => {
+              const isActive = activeCategory.toUpperCase() === cat.key;
               return (
                 <TouchableOpacity
-                  key={cat}
+                  key={cat.key}
                   style={[styles.navTab, isActive && styles.navTabActive]}
-                  onPress={() => onSelectCategory(cat)}
+                  onPress={() => onSelectCategory(cat.key)}
                 >
                   <Text style={[styles.navTabText, isActive && styles.navTabTextActive]}>
-                    {cat}
+                    {cat.label}
                   </Text>
                 </TouchableOpacity>
               );
@@ -553,7 +636,7 @@ export function WebStickyNavBar({
             onPress={onPressWatchOnline}
           >
             <Ionicons name="play" size={11} color="#FFFFFF" />
-            <Text style={styles.watchOnlineText}>WATCH ONLINE</Text>
+            <Text style={styles.watchOnlineText}>{t('nav.watch_online', 'WATCH ONLINE')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -614,10 +697,11 @@ export function WebStickyNavBar({
               <Text style={[styles.drawerSectionTitle, { marginTop: Platform.OS === 'web' ? 4 : 20 }]}>FEED FILTERS</Text>
               {(
                 [
-                  { key: 'latest', label: 'For you (Latest)' },
-                  { key: 'trending', label: 'Trending Stories' },
-                  { key: 'articles', label: 'Articles Only' },
-                  { key: 'videos', label: 'Videos & Debates' },
+                  { key: 'latest', label: t('common.latest', 'Latest') },
+                  { key: 'trending', label: t('common.trending', 'Trending') },
+                  { key: 'popular', label: t('common.most_read', 'Most Read') },
+                  { key: 'articles', label: t('common.articles', 'Articles') },
+                  { key: 'videos', label: t('common.videos', 'Videos') },
                 ] as const
               ).map((m) => (
                 <TouchableOpacity
@@ -690,24 +774,50 @@ export function WebPopularTagsBar({
   activeTag: string | null;
   onSelectTag: (tag: string) => void;
 }) {
+  const { lang } = useSiteLanguage();
+  const { t } = useTranslation();
+  const [dbTags, setDbTags] = useState<Array<{ key: string; label: string }>>([]);
+
+  useEffect(() => {
+    AppApi.getPopularTags(14)
+      .then((rows) => {
+        if (rows && rows.length > 0) {
+          setDbTags(
+            rows.map((r: any) => {
+              const rawName = (lang === 'ta' ? (r.name_ta || r.name_en) : r.name_en) || r.slug_en;
+              const normalized = `#${String(r.slug_en || r.name_en || rawName).replace(/^#/, '')}`;
+              const display = rawName.startsWith('#') ? rawName : `#${rawName}`;
+              return { key: normalized, label: display };
+            })
+          );
+        }
+      })
+      .catch(() => {});
+  }, [lang]);
+
+  const tagsToRender =
+    dbTags.length > 0
+      ? dbTags
+      : POPULAR_TAGS.map((tg) => ({ key: tg, label: tg }));
+
   return (
     <View style={styles.tagsBar}>
       <View style={styles.tagsInner}>
         <View style={styles.tagsLabelWrap}>
           <View style={styles.tagsDot} />
-          <Text style={styles.tagsLabel}>Popular Tags</Text>
+          <Text style={styles.tagsLabel}>{t('editorial.popular_tags', 'Popular Tags')}</Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tagsList}>
-          {POPULAR_TAGS.map((tag) => {
-            const isSelected = activeTag === tag;
+          {tagsToRender.map((tag) => {
+            const isSelected = activeTag === tag.key;
             return (
               <TouchableOpacity
-                key={tag}
+                key={tag.key}
                 style={styles.tagItem}
-                onPress={() => onSelectTag(tag)}
+                onPress={() => onSelectTag(tag.key)}
               >
                 <Text style={[styles.tagText, isSelected && styles.tagTextActive]}>
-                  {tag}
+                  {tag.label}
                 </Text>
               </TouchableOpacity>
             );
@@ -818,6 +928,30 @@ const styles = StyleSheet.create({
     color: '#E5E7EB',
     fontSize: 12,
     fontWeight: '600',
+  },
+  langSwitchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#262626',
+    borderRadius: 4,
+    padding: 2,
+    gap: 2,
+  },
+  langBtn: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 3,
+  },
+  langBtnActive: {
+    backgroundColor: '#D4191F',
+  },
+  langBtnText: {
+    color: '#A3A3A3',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  langBtnTextActive: {
+    color: '#FFFFFF',
   },
   masthead: {
     paddingVertical: 18,

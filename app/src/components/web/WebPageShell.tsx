@@ -149,7 +149,7 @@ export default function WebPageShell({
 
       <WebPortalFooter
         onSelectCategory={handleSelectCategory}
-        onNavigate={(route) => navigation.navigate(route)}
+        onNavigate={(route, params) => navigation.navigate(route, params)}
       />
     </ScrollView>
   );

@@ -774,23 +774,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const cleanUsername = username.toLowerCase().replace(/[^a-z0-9_]/g, '');
       if (cleanUsername.length < 3) return { available: false, suggestions: [] };
 
-      // 1. Check existing users
-      const { data: userData, error: userError } = await supabase
-        .from('User')
-        .select('username')
-        .eq('username', cleanUsername)
-        .limit(1);
+      // Check availability via SECURITY DEFINER RPC across both User and creator_requests
+      const { data: isAvailable, error: rpcError } = await supabase
+        .rpc('check_username_available', { p_username: cleanUsername });
 
-      // 2. Check pending creator requests
-      const { data: creatorData, error: creatorError } = await supabase
-        .from('creator_requests')
-        .select('username')
-        .eq('username', cleanUsername)
-        .limit(1);
-
-      if (userError || creatorError) throw userError || creatorError;
-
-      const isAvailable = (!userData || userData.length === 0) && (!creatorData || creatorData.length === 0);
+      if (rpcError) throw rpcError;
 
       if (isAvailable) return { available: true, suggestions: [] };
 

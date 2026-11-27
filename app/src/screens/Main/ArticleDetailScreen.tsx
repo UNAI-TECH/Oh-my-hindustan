@@ -9,26 +9,25 @@ import { FeedItemType } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { generateUUID } from '../../utils/uuid';
-import RenderHtml, { defaultHTMLElementModels, HTMLContentModel } from 'react-native-render-html';
-import { WebView } from 'react-native-webview';
 import CustomModal from '../../components/CustomModal';
 import { useInteraction } from '../../context/InteractionContext';
 import { AppApi } from '../../api/services';
 import AdBanner from '../../components/AdBanner';
 import AdEnabledVideoPlayer from '../../components/AdEnabledVideoPlayer';
 import WebPageShell from '../../components/web/WebPageShell';
+import ArticleBodyRenderer from '../../components/ArticleBodyRenderer';
+import WebHeadSeo from '../../seo/WebHeadSeo';
+import { buildArticleSeoConfig, SITE_URL } from '../../seo/seoUtils';
+import { useSiteLanguage } from '../../context/SiteLanguageContext';
+import { useTranslation } from 'react-i18next';
+import { openExternalUrl } from '../../utils/openExternalUrl';
 import {
   buildArticleParams,
   cacheArticleSlug,
+  categoryToSlug,
   isUuid,
   titleToSlug,
 } from '../../components/web/webPortalHelpers';
-
-const customHTMLElementModels = {
-  font: defaultHTMLElementModels.span.extend({
-    contentModel: HTMLContentModel.mixed
-  })
-};
 
 const formatVoteCount = (n: number): string => {
   if (n >= 10000) {
@@ -45,9 +44,13 @@ export default function ArticleDetailScreen() {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const isWebDesktop = Platform.OS === 'web' && width >= 768;
-  const { id: routeId, slug: routeSlug } = route.params || {};
+  const routeId = route.params?.id;
+  const routeSlug = route.params?.slug;
   const articleLookupKey = routeId || routeSlug || '';
   const { userProfile } = useAuth();
+  const { lang: siteLang, setSiteLang, formatDate } = useSiteLanguage();
+  const { t } = useTranslation();
+  const preferredRouteLang = route.params?.lang === 'ta' || route.params?.lang === 'en' ? route.params.lang : siteLang;
   
   const { selectedArticle, isLoading, fetchArticle } = useFeed();
 
@@ -137,10 +140,10 @@ export default function ArticleDetailScreen() {
     setRelatedPosts([]);
     setIsReady(false);
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    if (articleLookupKey) fetchArticle(articleLookupKey);
+    if (articleLookupKey) fetchArticle(articleLookupKey, preferredRouteLang);
     const timer = setTimeout(() => setIsReady(true), 150);
     return () => clearTimeout(timer);
-  }, [articleLookupKey]);
+  }, [articleLookupKey, preferredRouteLang]);
 
   useEffect(() => {
     if (!selectedArticle?.title) return;
@@ -211,17 +214,21 @@ export default function ArticleDetailScreen() {
 
   useEffect(() => {
     const logView = async () => {
-      if (!id || !userProfile?.id) return;
+      if (!id) return;
       try {
-        // Prevent duplicate views client-side check and execute
-        const { data } = await supabase.from('PostView').select('id').eq('postId', id).eq('userId', userProfile.id).limit(1);
-        if (!data || data.length === 0) {
-          await supabase.from('PostView').insert({
-            id: generateUUID(),
-            postId: id,
-            userId: userProfile.id
-          });
+        let visitorKey = userProfile?.id || '';
+        if (!visitorKey && typeof window !== 'undefined' && window.localStorage) {
+          visitorKey = window.localStorage.getItem('postsapp_visitor_id') || '';
+          if (!visitorKey) {
+            visitorKey = `anon_${generateUUID()}`;
+            window.localStorage.setItem('postsapp_visitor_id', visitorKey);
+          }
         }
+        if (!visitorKey) visitorKey = `session_${generateUUID()}`;
+        await supabase.rpc('record_post_view', {
+          p_post_id: id,
+          p_visitor_key: visitorKey,
+        });
       } catch (e) {
         console.warn('PostView log error');
       }
@@ -463,14 +470,18 @@ export default function ArticleDetailScreen() {
     try {
       const currentCategory = selectedArticle?.category;
       const currentAuthorId = postAuthorId || selectedArticle?.authorId;
+      const articleLang = selectedArticle?.language || 'en';
 
       let posts: any[] = [];
 
-      // Fetch by same category
+      // Fetch by same category and language
       if (currentCategory) {
         const { data: catPosts } = await supabase
           .from('Post')
-          .select('id, title, thumbnail, category, createdAt, authorId, author:User!authorId(username, avatarUrl)')
+          .select('id, slug, title, thumbnail, category, language, createdAt, authorId, author:User!authorId(username, avatarUrl)')
+          .eq('status', 'PUBLISHED')
+          .eq('language', articleLang)
+          .or('is_active.eq.true,is_active.is.null')
           .eq('category', currentCategory)
           .neq('id', id)
           .order('createdAt', { ascending: false })
@@ -482,7 +493,10 @@ export default function ArticleDetailScreen() {
       if (currentAuthorId && posts.length < 6) {
         const { data: authorPosts } = await supabase
           .from('Post')
-          .select('id, title, thumbnail, category, createdAt, authorId, author:User!authorId(username, avatarUrl)')
+          .select('id, slug, title, thumbnail, category, language, createdAt, authorId, author:User!authorId(username, avatarUrl)')
+          .eq('status', 'PUBLISHED')
+          .eq('language', articleLang)
+          .or('is_active.eq.true,is_active.is.null')
           .eq('authorId', currentAuthorId)
           .neq('id', id)
           .order('createdAt', { ascending: false })
@@ -494,7 +508,10 @@ export default function ArticleDetailScreen() {
       if (posts.length < 6) {
         const { data: recentPosts } = await supabase
           .from('Post')
-          .select('id, title, thumbnail, category, createdAt, authorId, author:User!authorId(username, avatarUrl)')
+          .select('id, slug, title, thumbnail, category, language, createdAt, authorId, author:User!authorId(username, avatarUrl)')
+          .eq('status', 'PUBLISHED')
+          .eq('language', articleLang)
+          .or('is_active.eq.true,is_active.is.null')
           .neq('id', id)
           .order('createdAt', { ascending: false })
           .limit(6);
@@ -522,112 +539,173 @@ export default function ArticleDetailScreen() {
   }, [selectedArticle, fetchRelatedPosts]);
 
   const APP_DOWNLOAD_URL = 'https://play.google.com/store/apps/details?id=com.unai.antigravity';
+  const shareUrl = React.useMemo(() => {
+    const shareLang = selectedArticle?.language || 'en';
+    const shareSlug = selectedArticle?.slug || titleToSlug(selectedArticle?.title) || id || '';
+    const origin =
+      Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.location.origin
+        : SITE_URL;
+    return `${origin}/${shareLang}/article/${encodeURIComponent(shareSlug)}`;
+  }, [selectedArticle?.language, selectedArticle?.slug, selectedArticle?.title, id]);
+
   const onShare = useCallback(async () => {
     try {
       const shareTitle = selectedArticle?.title || 'Check this out';
-      const shareSlug = titleToSlug(selectedArticle?.title) || id;
-      const origin =
-        Platform.OS === 'web' && typeof window !== 'undefined'
-          ? window.location.origin
-          : 'https://postsapp.com';
       await Share.share({
-        message: `${shareTitle}\n\nRead more on PostsApp:\n${origin}/article/${shareSlug}\n\nDownload the app: ${APP_DOWNLOAD_URL}`,
+        message: `${shareTitle}\n\nRead more on PostsApp:\n${shareUrl}\n\nDownload the app: ${APP_DOWNLOAD_URL}`,
       });
     } catch (e) {}
-  }, [selectedArticle?.title, id]);
+  }, [selectedArticle?.title, shareUrl]);
 
-  // Memoize HTML styles to prevent re-renders
-  const htmlTagsStyles = React.useMemo(() => ({
-    body: {
-      color: colors.DarkText,
-      fontSize: 16,
-      lineHeight: 24,
-    },
-    p: {
-      color: colors.DarkText,
-      fontSize: 16,
-      lineHeight: 28,
-      marginBottom: 20,
-    },
-    b: { fontWeight: 'bold' as const },
-    strong: { fontWeight: 'bold' as const },
-    i: { fontStyle: 'italic' as const },
-    em: { fontStyle: 'italic' as const },
-    u: { textDecorationLine: 'underline' as const },
-    blockquote: {
-      borderLeftWidth: 4,
-      borderLeftColor: '#e5e7eb',
-      backgroundColor: '#f9fafb',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      fontStyle: 'italic' as const,
-      marginVertical: 16,
-      borderRadius: 4,
-    },
-    ul: { marginVertical: 12, paddingLeft: 10 },
-    ol: { marginVertical: 12, paddingLeft: 10 },
-    li: { marginBottom: 8 }
-  }), [colors.DarkText]); // Only depend on the specific color used
+  const handleCopyShareLink = useCallback(async () => {
+    try {
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+        setModalConfig({ visible: true, title: 'Link Copied', message: 'Article URL copied to clipboard.', isError: false });
+      } else {
+        await Share.share({ message: shareUrl });
+      }
+    } catch (_) {}
+  }, [shareUrl]);
 
-  const renderers = React.useMemo(() => ({
-    font: (props: any) => {
-      const { tnode } = props;
-      const attributes = tnode.attributes;
-      const fontSizeMap: Record<string, number> = {
-        '1': 10, '2': 13, '3': 16, '4': 18, '5': 24, '6': 32, '7': 48
+  const articleSeoConfig = React.useMemo(() => {
+    if (Platform.OS !== 'web') return null;
+    if (!selectedArticle) {
+      if (isLoading) return null;
+      return {
+        title: 'Article Unavailable | PostsApp',
+        description: t('editorial.article_unavailable_desc', 'This article may have been archived, removed, or moved to another URL.'),
+        canonicalUrl: `${SITE_URL}/${siteLang}`,
+        lang: siteLang,
+        robots: 'noindex, follow',
       };
-      
-      const customStyle: any = {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-      };
-      
-      if (attributes.size && fontSizeMap[attributes.size]) {
-        customStyle.fontSize = fontSizeMap[attributes.size];
-        customStyle.lineHeight = fontSizeMap[attributes.size] * 1.4;
-      }
-      if (attributes.color) {
-        customStyle.color = attributes.color;
-      }
-      if (attributes.face) {
-        if (attributes.face.includes('Georgia')) customStyle.fontFamily = Platform.OS === 'ios' ? 'Georgia' : 'serif';
-        else if (attributes.face.includes('Courier')) customStyle.fontFamily = Platform.OS === 'ios' ? 'Courier' : 'monospace';
-        else if (attributes.face.includes('Times')) customStyle.fontFamily = Platform.OS === 'ios' ? 'Times New Roman' : 'serif';
-        else if (attributes.face.includes('Arial')) customStyle.fontFamily = Platform.OS === 'ios' ? 'Arial' : 'sans-serif';
-      }
-
-      return (
-        <Text style={customStyle}>
-          {props.children}
-        </Text>
-      );
     }
-  }), []); 
-
-  const baseStyle = React.useMemo(() => ({
-    color: colors.DarkText,
-    fontSize: 16
-  }), [colors.DarkText]);
+    return buildArticleSeoConfig({
+      article: selectedArticle,
+      translations: selectedArticle.translations || [],
+      categorySlug: categoryToSlug(selectedArticle.category),
+      categoryName: selectedArticle.category,
+    });
+  }, [selectedArticle, isLoading, siteLang, t]);
 
   // Early returns — AFTER all hooks
   if (isLoading && !selectedArticle) {
+    if (isWebDesktop) {
+      return (
+        <WebPageShell maxWidth={920}>
+          <View style={{ paddingVertical: 80, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.PrimaryRed} />
+          </View>
+        </WebPageShell>
+      );
+    }
     return <View style={styles.center}><ActivityIndicator size="large" color={colors.PrimaryRed} /></View>;
   }
   if (!selectedArticle) {
-    return <View style={styles.center}><Text>Content not found</Text></View>;
+    const unavailableContent = (
+      <View style={[styles.center, { padding: 32, minHeight: 360 }]}>
+        <WebHeadSeo config={articleSeoConfig} />
+        <Ionicons name="newspaper-outline" size={56} color="#9CA3AF" />
+        <Text style={{ fontSize: 22, fontWeight: '800', color: '#111827', marginTop: 14, textAlign: 'center' }}>
+          {t('editorial.article_unavailable', 'Article Unavailable')}
+        </Text>
+        <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 8, textAlign: 'center', maxWidth: 420 }}>
+          {t('editorial.article_unavailable_desc', 'This article may have been archived, removed, or moved to another URL.')}
+        </Text>
+        <TouchableOpacity
+          style={{ marginTop: 20, backgroundColor: colors.PrimaryRed, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 6 }}
+          onPress={() => navigation.navigate('Home', { initialCategory: 'home' })}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14 }}>Go to Home Feed</Text>
+        </TouchableOpacity>
+      </View>
+    );
+    return isWebDesktop ? <WebPageShell maxWidth={920}>{unavailableContent}</WebPageShell> : unavailableContent;
   }
 
   const { title, category, authorName, authorImage, subtitle, thumbnail, type, content, excerpt, quote, authorNameCustom, authorPosition, hashtags } = selectedArticle;
   const isFollowing = postAuthorId ? !!follows[postAuthorId] : false;
   const relatedCardStyle = isWebDesktop ? styles.relatedCardWeb : { width: (width - 48) / 2 };
+  const publishedDateStr = formatDate(selectedArticle.published_at || selectedArticle.createdAt);
+  const updatedDateStr =
+    selectedArticle.updatedAt && selectedArticle.updatedAt !== (selectedArticle.published_at || selectedArticle.createdAt)
+      ? formatDate(selectedArticle.updatedAt)
+      : null;
 
   const articleBodyContent = (
     <>
+      <WebHeadSeo config={articleSeoConfig} />
       <View style={isWebDesktop ? { padding: 32 } : { padding: 24 }}>
-          <View style={styles.categoryPill}>
-            <Text style={styles.categoryText}>{category || 'POLICY ANALYSIS'}</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 16 }}>
+            <TouchableOpacity
+              style={[styles.categoryPill, { marginBottom: 0 }]}
+              onPress={() => navigation.navigate('Home', { initialCategory: categoryToSlug(category || 'general') })}
+            >
+              <Text style={styles.categoryText}>{category || 'POLICY ANALYSIS'}</Text>
+            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              {selectedArticle.reading_time_minutes ? (
+                <Text style={{ fontSize: 12, color: colors.Slate500, fontWeight: '600' }}>
+                  {selectedArticle.reading_time_minutes} {t('common.minute_read', 'min read')}
+                </Text>
+              ) : null}
+              {publishedDateStr ? (
+                <Text style={{ fontSize: 12, color: colors.Slate400 }}>
+                  {publishedDateStr}
+                </Text>
+              ) : null}
+            </View>
           </View>
-          <Text style={[styles.title, isWebDesktop && { fontSize: 34, lineHeight: 42 }]}>{title}</Text>
+
+          <Text style={[styles.title, isWebDesktop && { fontSize: 34, lineHeight: 42 }, { marginBottom: 14 }]}>{title}</Text>
+
+          {selectedArticle.short_description ? (
+            <Text style={{ fontSize: 16, lineHeight: 24, color: colors.Slate500, marginBottom: 18 }}>
+              {selectedArticle.short_description}
+            </Text>
+          ) : null}
+
+          {updatedDateStr ? (
+            <Text style={{ fontSize: 11, color: colors.Slate400, marginBottom: 16 }}>
+              Updated: {updatedDateStr}
+            </Text>
+          ) : null}
+
+          {selectedArticle.translations && selectedArticle.translations.length > 0 && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
+              {selectedArticle.translations.map((tr) => (
+                <TouchableOpacity
+                  key={tr.id}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    backgroundColor: '#FEF2F2',
+                    borderWidth: 1,
+                    borderColor: '#FECACA',
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 6,
+                  }}
+                  onPress={() => {
+                    setSiteLang(tr.language);
+                    navigation.navigate('ArticleDetail', {
+                      id: tr.id,
+                      slug: tr.slug,
+                      title: tr.title,
+                      lang: tr.language,
+                    });
+                  }}
+                >
+                  <Ionicons name="language-outline" size={16} color={colors.PrimaryRed} />
+                  <Text style={{ color: colors.PrimaryRed, fontWeight: '700', fontSize: 13 }}>
+                    {tr.language === 'ta' ? 'தமிழில் படிக்க (Read in Tamil)' : 'Read in English'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
           {(authorNameCustom || authorPosition || selectedArticle.author_name || selectedArticle.author_position) && (
             <View style={{ marginBottom: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
               {(authorNameCustom || selectedArticle.author_name) && (
@@ -676,7 +754,11 @@ export default function ArticleDetailScreen() {
             </View>
             ) : (
               <View style={{ width: '100%', aspectRatio: 16/9 }}>
-                <Image source={{ uri: thumbnail }} style={{ flex: 1 }} />
+                <Image
+                  source={{ uri: thumbnail }}
+                  style={{ flex: 1 }}
+                  accessibilityLabel={selectedArticle.featured_image_alt || title}
+                />
                 {type === FeedItemType.VIDEO && (
                   <View style={styles.playOverlay}>
                     <View style={styles.playButton}>
@@ -686,41 +768,82 @@ export default function ArticleDetailScreen() {
                 )}
               </View>
             )}
+            {(selectedArticle.featured_image_caption || selectedArticle.featured_image_credit) && (
+              <View style={{ paddingHorizontal: isWebDesktop ? 32 : 24, paddingTop: 8 }}>
+                {selectedArticle.featured_image_caption ? (
+                  <Text style={{ fontSize: 12, color: colors.Slate500 }}>{selectedArticle.featured_image_caption}</Text>
+                ) : null}
+                {selectedArticle.featured_image_credit ? (
+                  <Text style={{ fontSize: 11, color: colors.Slate400, marginTop: 2 }}>Credit: {selectedArticle.featured_image_credit}</Text>
+                ) : null}
+              </View>
+            )}
           </View>
         )}
 
         {/* Mid-Roll Ad Overlay is handled by AdEnabledVideoPlayer */}
 
         <View style={{ padding: isWebDesktop ? 32 : 24, minHeight: 100 }}>
-          <RenderHtml
-            contentWidth={Math.min(width, 920) - (isWebDesktop ? 64 : 48)}
-            source={{ html: selectedArticle.content || selectedArticle.excerpt || "" }}
-            tagsStyles={htmlTagsStyles}
-            renderers={renderers}
-            customHTMLElementModels={customHTMLElementModels}
-            baseStyle={baseStyle}
-            enableExperimentalBRCollapsing={true}
-            enableExperimentalGhostLinesPrevention={true}
+          <ArticleBodyRenderer
+            contentJson={selectedArticle.content_json}
+            contentHtml={selectedArticle.content || selectedArticle.excerpt || ''}
+            language={selectedArticle.language || 'en'}
           />
         </View>
         
         {((hashtags && hashtags.length > 0) || (selectedArticle.hashtags && selectedArticle.hashtags.length > 0)) && (
-          <View style={{ paddingHorizontal: isWebDesktop ? 32 : 24, paddingBottom: 32, marginTop: -8 }}>
+          <View style={{ paddingHorizontal: isWebDesktop ? 32 : 24, paddingBottom: 24, marginTop: -8 }}>
             <View style={{ height: 1, backgroundColor: '#F1F5F9', marginBottom: 16 }} />
             <Text style={{ color: colors.Slate400, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
               Post Hashtags
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               {(hashtags || selectedArticle.hashtags).map((tag: string, idx: number) => (
-                <View key={idx} style={{ backgroundColor: '#Fef2f2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#fee2e2' }}>
+                <TouchableOpacity
+                  key={idx}
+                  style={{ backgroundColor: '#Fef2f2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#fee2e2' }}
+                  onPress={() => navigation.navigate('Search', { initialTag: tag })}
+                >
                   <Text style={{ color: colors.PrimaryRed, fontSize: 14, fontWeight: '700' }}>
-                    #{tag}
+                    #{String(tag).replace(/^#/, '')}
                   </Text>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           </View>
         )}
+
+        {/* Quick Social Share Bar */}
+        <View style={{ paddingHorizontal: isWebDesktop ? 32 : 24, paddingBottom: 24 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.Slate500, marginRight: 4 }}>{t('common.share', 'Share')}:</Text>
+            <TouchableOpacity
+              style={styles.webActionBtn}
+              onPress={() => openExternalUrl(`https://api.whatsapp.com/send?text=${encodeURIComponent(`${title} ${shareUrl}`)}`)}
+            >
+              <Ionicons name="logo-whatsapp" size={14} color="#16A34A" />
+              <Text style={styles.webActionText}>WhatsApp</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.webActionBtn}
+              onPress={() => openExternalUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(shareUrl)}`)}
+            >
+              <Ionicons name="logo-twitter" size={14} color="#111827" />
+              <Text style={styles.webActionText}>X</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.webActionBtn}
+              onPress={() => openExternalUrl(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(title)}`)}
+            >
+              <Ionicons name="paper-plane-outline" size={14} color="#0284C7" />
+              <Text style={styles.webActionText}>Telegram</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.webActionBtn} onPress={handleCopyShareLink}>
+              <Ionicons name="link-outline" size={14} color="#374151" />
+              <Text style={styles.webActionText}>Copy Link</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Ad Placement 2: Above Related Posts */}
         <AdBanner />

@@ -2,7 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabaseClient';
+import { generateUUID } from '../utils/uuid';
 import { useAppTheme } from '../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import { openExternalUrl } from '../utils/openExternalUrl';
@@ -37,9 +39,17 @@ export default function AdCard({ ad }: AdCardProps) {
     void (async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        let actorId = session?.user?.id || '';
+        if (!actorId) {
+          actorId = (await AsyncStorage.getItem('postsapp_visitor_id')) || '';
+          if (!actorId) {
+            actorId = `anon_${generateUUID()}`;
+            await AsyncStorage.setItem('postsapp_visitor_id', actorId);
+          }
+        }
         await supabase.rpc('track_ad_click', {
           p_ad_id: ad.id,
-          p_user_id: session?.user?.id || 'anonymous',
+          p_user_id: actorId,
         });
       } catch (err) {
         console.warn('Ad click tracking failed:', err);

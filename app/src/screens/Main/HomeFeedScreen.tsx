@@ -33,6 +33,10 @@ import {
   buildArticleParams,
 } from '../../components/web/webPortalHelpers';
 import { openExternalUrl } from '../../utils/openExternalUrl';
+import { useSiteLanguage } from '../../context/SiteLanguageContext';
+import { getOrCreateVisitorId } from '../../utils/visitorId';
+import WebHeadSeo from '../../seo/WebHeadSeo';
+import { buildHomeSeoConfig } from '../../seo/seoUtils';
 
 const AD_MARKER = '__AD_PLACEHOLDER__';
 const APP_DOWNLOAD_URL = 'https://play.google.com/store/apps/details?id=com.unai.antigravity';
@@ -44,6 +48,7 @@ export default function HomeFeedScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { t } = useTranslation();
+  const { lang } = useSiteLanguage();
   const { feedItems, isLoading, isRefreshing, refreshFeed, loadMoreFeed, hasMore, sortBy, setSortBy } = useFeed();
   const { userProfile, isAuthenticated, logout } = useAuth();
   const { unreadCount } = useNotifications();
@@ -58,12 +63,17 @@ export default function HomeFeedScreen() {
   const [webCategory, setWebCategory] = useState(() => slugToCategory(route.params?.initialCategory));
   const [webSearchQuery, setWebSearchQuery] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
-  const [webFeedMode, setWebFeedMode] = useState<'latest' | 'trending' | 'articles' | 'videos'>('latest');
+  const [webFeedMode, setWebFeedMode] = useState<'latest' | 'trending' | 'popular' | 'articles' | 'videos'>('latest');
   const [categoryPoolItems, setCategoryPoolItems] = useState<FeedItem[]>([]);
   const [categorySyncTick, setCategorySyncTick] = useState(0);
+  const [homepageConfig, setHomepageConfig] = useState<any[]>([]);
   const webScrollRef = useRef<ScrollView>(null);
   const loggedLeaderboardAdId = useRef<string | null>(null);
   const tabs = ['For you', 'Trending', 'Headlines', 'Articles', 'Videos'];
+
+  React.useEffect(() => {
+    AppApi.getHomepageConfig(lang).then(setHomepageConfig).catch(() => {});
+  }, [lang]);
 
   React.useEffect(() => {
     const initCat = route.params?.initialCategory;
@@ -76,6 +86,7 @@ export default function HomeFeedScreen() {
     if (initMode) {
       setWebFeedMode(initMode);
       if (initMode === 'trending') setSortBy('trending');
+      else if (initMode === 'popular') setSortBy('popular');
       else if (initMode === 'latest') setSortBy('latest');
     }
   }, [route.params?.initialCategory, route.params?.initialFeedMode]);
@@ -193,11 +204,14 @@ export default function HomeFeedScreen() {
       // Check if the item is an ad
       if (item.item?.__isAd && item.isViewable) {
         try {
-          const { data: { session } } = await supabase.auth.getSession();
+          const [{ data: { session } }, visitorId] = await Promise.all([
+            supabase.auth.getSession(),
+            getOrCreateVisitorId(),
+          ]);
           // Log impression via high-performance RPC (handles budget logic atomically)
           await supabase.rpc('track_ad_impression', {
             p_ad_id: item.item.id,
-            p_user_id: session?.user?.id || 'anonymous'
+            p_user_id: session?.user?.id || visitorId,
           });
         } catch (err) {
           console.warn('Ad impression tracking failed:', err);
@@ -291,9 +305,18 @@ export default function HomeFeedScreen() {
 
   const webSections = useMemo(() => {
     const pool = filteredWebItems;
-    const breakingItems = pool.slice(0, 5);
-    const mainNews = pool.find((it) => !!it.thumbnail) || pool[0] || null;
+    const breakingFlagged = pool.filter((it) => it.is_breaking);
+    const breakingItems = (breakingFlagged.length > 0 ? breakingFlagged : pool).slice(0, 5);
+
+    const featuredFlagged = pool.filter((it) => it.is_featured);
+    const mainNews =
+      featuredFlagged.find((it) => !!it.thumbnail) ||
+      pool.find((it) => !!it.thumbnail) ||
+      featuredFlagged[0] ||
+      pool[0] ||
+      null;
     const withoutMain = pool.filter((it) => it.id !== mainNews?.id);
+
     const trendingNow = [...pool]
       .sort(
         (a, b) =>
@@ -304,12 +327,20 @@ export default function HomeFeedScreen() {
       )
       .slice(0, 4);
 
-    const editorsPicks = withoutMain.slice(0, 3);
+    const editorsFlagged = withoutMain.filter((it) => it.is_editors_pick);
+    const editorsPicks =
+      editorsFlagged.length >= 3
+        ? editorsFlagged.slice(0, 3)
+        : [...editorsFlagged, ...withoutMain.filter((it) => !it.is_editors_pick)].slice(0, 3);
+
     const usedIds = new Set<string>([
       ...(mainNews ? [mainNews.id] : []),
       ...editorsPicks.map((i) => i.id),
     ]);
-    const remainingForFeatured = pool.filter((it) => !usedIds.has(it.id));
+    const remainingForFeatured = [
+      ...featuredFlagged.filter((it) => !usedIds.has(it.id)),
+      ...pool.filter((it) => !usedIds.has(it.id) && !it.is_featured),
+    ];
     const featuredItems =
       remainingForFeatured.length >= 4
         ? remainingForFeatured.slice(0, 4)
@@ -335,6 +366,21 @@ export default function HomeFeedScreen() {
     };
   }, [filteredWebItems]);
 
+  const homeSeoConfig = useMemo(
+    () => (Platform.OS === 'web' ? buildHomeSeoConfig(lang) : null),
+    [lang]
+  );
+
+  const isSectionVisible = React.useCallback(
+    (sectionKey: string) => {
+      if (!homepageConfig || homepageConfig.length === 0) return true;
+      const hasAnySection = homepageConfig.some((c) => c.section_key);
+      if (!hasAnySection) return true;
+      return homepageConfig.some((c) => c.section_key === sectionKey);
+    },
+    [homepageConfig]
+  );
+
   const leaderboardAd = activeAds[0] ? { ...activeAds[0], __isAd: true as const } : null;
 
   React.useEffect(() => {
@@ -343,10 +389,13 @@ export default function HomeFeedScreen() {
     loggedLeaderboardAdId.current = leaderboardAd.id;
     (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const [{ data: { session } }, visitorId] = await Promise.all([
+          supabase.auth.getSession(),
+          getOrCreateVisitorId(),
+        ]);
         await supabase.rpc('track_ad_impression', {
           p_ad_id: leaderboardAd.id,
-          p_user_id: session?.user?.id || 'anonymous',
+          p_user_id: session?.user?.id || visitorId,
         });
       } catch (_) {}
     })();
@@ -364,9 +413,10 @@ export default function HomeFeedScreen() {
     setWebCategory('HOME');
   };
 
-  const handleWebFeedMode = (mode: 'latest' | 'trending' | 'articles' | 'videos') => {
+  const handleWebFeedMode = (mode: 'latest' | 'trending' | 'popular' | 'articles' | 'videos') => {
     setWebFeedMode(mode);
     if (mode === 'trending') setSortBy('trending');
+    else if (mode === 'popular') setSortBy('popular');
     else if (mode === 'latest') setSortBy('latest');
   };
 
@@ -387,6 +437,7 @@ export default function HomeFeedScreen() {
         style={{ flex: 1, backgroundColor: '#F5F5F7' }}
         contentContainerStyle={{ minHeight: '100%' }}
       >
+        <WebHeadSeo config={homeSeoConfig} />
         <WebTopMasthead
           onSelectHome={() => {
             setWebCategory('HOME');
@@ -471,10 +522,12 @@ export default function HomeFeedScreen() {
             </View>
           ) : (
             <>
-              <WebBreakingTicker
-                items={webSections.breakingItems}
-                onPressItem={handleWebPressItem}
-              />
+              {isSectionVisible('breaking_ticker') && (
+                <WebBreakingTicker
+                  items={webSections.breakingItems}
+                  onPressItem={handleWebPressItem}
+                />
+              )}
 
               <WebHeroSection
                 editorsPicks={webSections.editorsPicks}
@@ -483,28 +536,32 @@ export default function HomeFeedScreen() {
                 onPressItem={handleWebPressItem}
               />
 
-              <WebFeaturedPosts
-                items={webSections.featuredItems}
-                onPressItem={handleWebPressItem}
-                onPressViewAll={() => navigation.navigate('Explore')}
-              />
+              {isSectionVisible('featured_stories') && (
+                <WebFeaturedPosts
+                  items={webSections.featuredItems}
+                  onPressItem={handleWebPressItem}
+                  onPressViewAll={() => navigation.navigate('Explore')}
+                />
+              )}
 
-              <WebExpressPosts
-                expressOneItems={webSections.expressOneItems}
-                expressTwoItems={webSections.expressTwoItems}
-                extraItems={webSections.extraItems}
-                activeAds={activeAds}
-                onPressItem={handleWebPressItem}
-                hasMore={hasMore}
-                isLoading={isLoading}
-                onLoadMore={loadMoreFeed}
-              />
+              {isSectionVisible('latest_dispatches') && (
+                <WebExpressPosts
+                  expressOneItems={webSections.expressOneItems}
+                  expressTwoItems={webSections.expressTwoItems}
+                  extraItems={webSections.extraItems}
+                  activeAds={activeAds}
+                  onPressItem={handleWebPressItem}
+                  hasMore={hasMore}
+                  isLoading={isLoading}
+                  onLoadMore={loadMoreFeed}
+                />
+              )}
             </>
           )}
 
           <WebPortalFooter
             onSelectCategory={handleWebSelectCategory}
-            onNavigate={(route) => navigation.navigate(route)}
+            onNavigate={(route, params) => navigation.navigate(route, params)}
           />
         </View>
       </ScrollView>
@@ -513,6 +570,7 @@ export default function HomeFeedScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <WebHeadSeo config={homeSeoConfig} />
       <MainHeader />
 
       <View style={styles.tabsContainer}>

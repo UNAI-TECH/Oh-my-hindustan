@@ -9,6 +9,10 @@ import { formatCardExcerpt, buildArticleParams } from '../../components/web/webP
 import { FeedItemType, FeedItem } from '../../types';
 import { useFeed } from '../../context/FeedContext';
 import { supabase } from '../../lib/supabaseClient';
+import { AppApi } from '../../api/services';
+import { useSiteLanguage } from '../../context/SiteLanguageContext';
+import WebHeadSeo from '../../seo/WebHeadSeo';
+import { SITE_URL } from '../../seo/seoUtils';
 
 interface CreatorResult {
   id: string;
@@ -26,13 +30,23 @@ export default function SearchScreen() {
   const { width } = useWindowDimensions();
   const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { feedItems } = useFeed();
-  const [searchQuery, setSearchQuery] = useState(route.params?.initialQuery || '');
+  const { lang } = useSiteLanguage();
+  const initialTagParam = route.params?.initialTag ? String(route.params.initialTag).replace(/^#/, '') : '';
+  const [searchQuery, setSearchQuery] = useState(route.params?.initialQuery || initialTagParam || '');
+  const [langFilter, setLangFilter] = useState<'all' | 'en' | 'ta'>(lang);
+  const [sortFilter, setSortFilter] = useState<'relevance' | 'latest' | 'trending' | 'popular'>(
+    route.params?.initialSort === 'trending' || route.params?.initialSort === 'popular'
+      ? route.params.initialSort
+      : 'relevance'
+  );
 
   useEffect(() => {
     if (typeof route.params?.initialQuery === 'string') {
       setSearchQuery(route.params.initialQuery);
+    } else if (typeof route.params?.initialTag === 'string') {
+      setSearchQuery(route.params.initialTag.replace(/^#/, ''));
     }
-  }, [route.params?.initialQuery]);
+  }, [route.params?.initialQuery, route.params?.initialTag]);
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [creators, setCreators] = useState<CreatorResult[]>([]);
   const [remotePosts, setRemotePosts] = useState<FeedItem[]>([]);
@@ -40,10 +54,10 @@ export default function SearchScreen() {
   const [liveSyncTick, setLiveSyncTick] = useState(0);
   const filters = ['All', 'Creators', 'News', 'Blogs', 'Videos'];
 
-  // Live Supabase search for both creators and published posts
+  // Live Supabase search via search_articles RPC for posts + creator lookup
   useEffect(() => {
     const q = searchQuery.trim();
-    if (q.length < 1) {
+    if (q.length < 1 && sortFilter === 'relevance') {
       setCreators([]);
       setRemotePosts([]);
       return;
@@ -54,7 +68,16 @@ export default function SearchScreen() {
     const timeoutId = setTimeout(async () => {
       setSearchingCreators(true);
       try {
-        const [creatorRes, postRes] = await Promise.all([
+        const rpcType =
+          selectedFilter === 'News'
+            ? 'NEWS'
+            : selectedFilter === 'Blogs'
+            ? 'BLOG'
+            : selectedFilter === 'Videos'
+            ? 'VIDEO'
+            : null;
+
+        const [creatorRes, rpcRes] = await Promise.all([
           q.length >= 2
             ? supabase
                 .from('User')
@@ -63,33 +86,46 @@ export default function SearchScreen() {
                 .or(`username.ilike.%${safeQ}%,channel_name.ilike.%${safeQ}%`)
                 .limit(10)
             : Promise.resolve({ data: [], error: null }),
-          supabase
-            .from('Post')
-            .select('id, title, content, type, thumbnail, category, custom_category, createdAt, author:User!authorId(id, username, channel_name, avatarUrl)')
-            .or('is_active.eq.true,is_active.is.null')
-            .or(`title.ilike.%${safeQ}%,category.ilike.%${safeQ}%,content.ilike.%${safeQ}%`)
-            .order('createdAt', { ascending: false })
-            .limit(20),
+          AppApi.searchArticlesRpc({
+            query: q || undefined,
+            language: langFilter === 'all' ? null : langFilter,
+            type: rpcType,
+            sort: q ? sortFilter : sortFilter === 'relevance' ? 'latest' : sortFilter,
+            limit: 24,
+          }).catch(async () => {
+            const fallback = await supabase
+              .from('Post')
+              .select('id, slug, title, content, type, language, thumbnail, category, custom_category, createdAt, author:User!authorId(id, username, channel_name, avatarUrl)')
+              .eq('status', 'PUBLISHED')
+              .or('is_active.eq.true,is_active.is.null')
+              .or(`title.ilike.%${safeQ}%,category.ilike.%${safeQ}%,content.ilike.%${safeQ}%`)
+              .order('createdAt', { ascending: false })
+              .limit(20);
+            return { items: fallback.data || [], total: 0 };
+          }),
         ]);
 
         if (cancelled) return;
         if (creatorRes.error) console.warn('Creator search error:', creatorRes.error);
         setCreators(creatorRes.data || []);
 
-        const mappedPosts: FeedItem[] = (postRes.data || []).map((p: any) => ({
+        const mappedPosts: FeedItem[] = (rpcRes.items || []).map((p: any) => ({
           id: p.id,
+          slug: p.slug || null,
+          language: p.language === 'ta' ? 'ta' : 'en',
           type: (p.type as FeedItemType) || FeedItemType.NEWS,
           title: p.title,
           subtitle: 'PostsApp',
-          authorName: p.author?.channel_name || p.author?.username || 'Creator',
-          authorImage: p.author?.avatarUrl || '',
-          authorId: p.author?.id || null,
+          authorName: p.author_name || p.author?.channel_name || p.author?.username || p.author_username || 'Creator',
+          authorImage: p.author_avatar || p.author?.avatarUrl || '',
+          authorId: p.author_id || p.author?.id || null,
           thumbnail: p.thumbnail || null,
           category: p.category === 'custom' && p.custom_category ? p.custom_category : (p.category || 'General'),
           timestamp: '',
-          votes: 0,
+          votes: p.upvote_count || 0,
           comments: 0,
-          excerpt: formatCardExcerpt(p.content, 160) || null,
+          viewCount: p.views_count || 0,
+          excerpt: p.short_description || formatCardExcerpt(p.content, 160) || null,
           content: p.content,
         }));
         setRemotePosts(mappedPosts);
@@ -104,7 +140,7 @@ export default function SearchScreen() {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [searchQuery, liveSyncTick]);
+  }, [searchQuery, langFilter, sortFilter, selectedFilter, liveSyncTick]);
 
   // Keep search screen synced when posts change in Supabase
   useEffect(() => {
@@ -146,6 +182,19 @@ export default function SearchScreen() {
   }, [searchQuery, selectedFilter, feedItems, remotePosts]);
 
   const showCreators = selectedFilter === 'All' || selectedFilter === 'Creators';
+  const searchSeoConfig = useMemo(
+    () =>
+      Platform.OS === 'web'
+        ? {
+            title: searchQuery.trim() ? `Search: ${searchQuery.trim()} | PostsApp` : 'Search | PostsApp',
+            description: 'Search English and Tamil news, policy analyses, videos, and creators on PostsApp.',
+            canonicalUrl: `${SITE_URL}/${lang}/search`,
+            lang,
+            robots: 'noindex, follow',
+          }
+        : null,
+    [searchQuery, lang]
+  );
 
   if (isWebDesktop) {
     return (
@@ -154,6 +203,7 @@ export default function SearchScreen() {
         initialSearch={searchQuery}
         onSearchSubmitOverride={(q) => setSearchQuery(q)}
       >
+        <WebHeadSeo config={searchSeoConfig} />
         <View style={styles.webSearchCard}>
           <View style={styles.webSearchRow}>
             <Ionicons name="search" size={20} color={colors.PrimaryRed} />
@@ -172,7 +222,7 @@ export default function SearchScreen() {
             )}
           </View>
 
-          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 14, alignItems: 'center' }}>
             {filters.map(filter => (
               <TouchableOpacity
                 key={filter}
@@ -181,6 +231,43 @@ export default function SearchScreen() {
               >
                 <Text style={[styles.webFilterText, selectedFilter === filter && styles.webFilterTextActive]}>
                   {filter}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <View style={{ width: 1, height: 18, backgroundColor: '#E5E7EB', marginHorizontal: 4 }} />
+            {(
+              [
+                { key: 'all', label: 'All Lang' },
+                { key: 'en', label: 'EN' },
+                { key: 'ta', label: 'தமிழ்' },
+              ] as const
+            ).map((lf) => (
+              <TouchableOpacity
+                key={lf.key}
+                onPress={() => setLangFilter(lf.key)}
+                style={[styles.webFilterChip, langFilter === lf.key && styles.webFilterChipActive]}
+              >
+                <Text style={[styles.webFilterText, langFilter === lf.key && styles.webFilterTextActive]}>
+                  {lf.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <View style={{ width: 1, height: 18, backgroundColor: '#E5E7EB', marginHorizontal: 4 }} />
+            {(
+              [
+                { key: 'relevance', label: 'Relevance' },
+                { key: 'latest', label: 'Latest' },
+                { key: 'trending', label: 'Trending' },
+                { key: 'popular', label: 'Most Read' },
+              ] as const
+            ).map((sf) => (
+              <TouchableOpacity
+                key={sf.key}
+                onPress={() => setSortFilter(sf.key)}
+                style={[styles.webFilterChip, sortFilter === sf.key && styles.webFilterChipActive]}
+              >
+                <Text style={[styles.webFilterText, sortFilter === sf.key && styles.webFilterTextActive]}>
+                  {sf.label}
                 </Text>
               </TouchableOpacity>
             ))}

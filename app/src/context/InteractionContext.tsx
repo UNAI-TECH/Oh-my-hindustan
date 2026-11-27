@@ -43,7 +43,7 @@ export const InteractionProvider = ({ children }: { children: ReactNode }) => {
     if (!userProfile?.id) return;
     try {
       const [{ data: votes }, { data: followsData }] = await Promise.all([
-        supabase.from('Vote').select('postId').eq('userId', userProfile.id).eq('type', 'UP'),
+        supabase.from('Vote').select('postId').eq('userId', userProfile.id).eq('type', 1),
         supabase.from('Follow').select('followingId').eq('followerId', userProfile.id)
       ]);
 
@@ -131,7 +131,7 @@ export const InteractionProvider = ({ children }: { children: ReactNode }) => {
              id: generateUUID(),
              userId: userProfile.id, 
              postId,
-             type: 'UP',
+             type: 1,
              createdAt: new Date().toISOString()
           }, { onConflict: 'userId,postId' });
           
