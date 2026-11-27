@@ -113,6 +113,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   }, [isAuthenticated]);
 
   const registerForPushNotificationsAsync = async () => {
+    if (Platform.OS === 'web') return null;
     if (!Device.isDevice) {
       console.log('Must use physical device for Push Notifications');
       return null;
@@ -144,12 +145,16 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       const enabledByCache = val !== null ? val === 'true' : true;
       setNotificationsEnabledState(enabledByCache);
       
-      if (enabledByCache && isAuthenticated) {
+      if (Platform.OS !== 'web' && enabledByCache && isAuthenticated) {
         registerForPushNotificationsAsync().then(token => {
           if (token) AppApi.registerDevice(token, Device.modelName || 'Mobile Device', Platform.OS);
         });
       }
     });
+
+    if (Platform.OS === 'web') {
+      return;
+    }
 
     const handleNotificationResponse = (response: Notifications.NotificationResponse) => {
       console.log('[NOTIFY] Handling notification response:', response);
@@ -158,11 +163,13 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     };
 
     // Check for initial notification (cold start)
-    Notifications.getLastNotificationResponseAsync().then(response => {
-      if (response) {
-        handleNotificationResponse(response);
-      }
-    });
+    Notifications.getLastNotificationResponseAsync()
+      .then(response => {
+        if (response) {
+          handleNotificationResponse(response);
+        }
+      })
+      .catch(() => {});
 
     const notificationListener = Notifications.addNotificationReceivedListener(notification => {
       fetchNotifications();

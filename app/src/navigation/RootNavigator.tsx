@@ -1,4 +1,5 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 // Auth Screens
@@ -54,6 +55,16 @@ export default function RootNavigator() {
       id="MainStack"
       initialRouteName="Splash"
       screenOptions={{ headerShown: false, animation: 'fade' }}
+      screenListeners={{
+        state: () => {
+          if (Platform.OS === 'web' && typeof document !== 'undefined') {
+            const active = document.activeElement as HTMLElement | null;
+            if (active && typeof active.blur === 'function' && active !== document.body) {
+              active.blur();
+            }
+          }
+        },
+      }}
     >
       {/* Auth Flow */}
       <Stack.Screen name="Splash" component={SplashScreen} />

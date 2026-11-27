@@ -443,19 +443,35 @@ export const AppApi = {
       .from('homepage_config')
       .select('*')
       .eq('language', language)
-      .eq('is_active', true)
-      .order('display_order', { ascending: true });
-    if (error) return [];
-    return data || [];
+      .maybeSingle();
+    if (error) return null;
+    return data || null;
   },
 
   getSiteSettingsMap: async (): Promise<Record<string, any>> => {
-    const { data } = await supabase.from('site_settings').select('key, value');
-    const out: Record<string, any> = {};
-    (data || []).forEach((r: any) => {
-      out[r.key] = r.value;
-    });
-    return out;
+    const { data, error } = await supabase
+      .from('site_settings')
+      .select('*')
+      .eq('id', 1)
+      .maybeSingle();
+    if (error || !data) return {};
+    return {
+      raw: data,
+      site_name: data.general?.siteName,
+      tagline_en: data.general?.tagline_en,
+      tagline_ta: data.general?.tagline_ta,
+      contact_email: data.contact?.email,
+      page_about_en: data.legal?.about_en,
+      page_about_ta: data.legal?.about_ta,
+      'page_privacy-policy_en': data.legal?.privacy_en,
+      'page_privacy-policy_ta': data.legal?.privacy_ta,
+      page_terms_en: data.legal?.terms_en,
+      page_terms_ta: data.legal?.terms_ta,
+      'page_editorial-policy_en': data.legal?.editorialPolicy_en,
+      'page_editorial-policy_ta': data.legal?.editorialPolicy_ta,
+      'page_corrections-policy_en': data.legal?.correctionsPolicy_en,
+      'page_corrections-policy_ta': data.legal?.correctionsPolicy_ta,
+    };
   },
 
   getNotifications: async (page = 1, limit = 20) => {

@@ -122,3 +122,51 @@ export function resolveArticleHtml(contentJson?: any, contentHtml?: string | nul
   }
   return sanitizeRawHtml(contentHtml || '');
 }
+
+/**
+ * Splits article HTML into an initial readable teaser for guests and a masked
+ * continuation block rendered behind the sign-in paywall overlay.
+ */
+export function splitHtmlForGuestPreview(
+  fullHtml: string,
+  maxPreviewChars = 260
+): { previewHtml: string; remainderHtml: string; hasMore: boolean } {
+  const clean = String(fullHtml || '').trim();
+  if (!clean) return { previewHtml: '', remainderHtml: '', hasMore: false };
+
+  const blocks = clean.match(/<(?:p|h[1-6]|blockquote|ul|ol|div|figure)[^>]*>[\s\S]*?<\/(?:p|h[1-6]|blockquote|ul|ol|div|figure)>/gi);
+  if (blocks && blocks.length > 1) {
+    let charAcc = 0;
+    let splitIdx = 1;
+    for (let i = 0; i < blocks.length; i++) {
+      const textLen = blocks[i].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().length;
+      if (i > 0 && charAcc + textLen > maxPreviewChars) {
+        splitIdx = i;
+        break;
+      }
+      charAcc += textLen;
+      splitIdx = i + 1;
+    }
+    if (splitIdx < blocks.length) {
+      return {
+        previewHtml: blocks.slice(0, splitIdx).join(''),
+        remainderHtml: blocks.slice(splitIdx, splitIdx + 3).join(''),
+        hasMore: true,
+      };
+    }
+  }
+
+  // Fallback for single long paragraph or plain text
+  const plain = clean.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (plain.length <= 160) {
+    return { previewHtml: clean, remainderHtml: '', hasMore: false };
+  }
+  const cut = Math.min(plain.length - 40, maxPreviewChars);
+  const spaceIdx = plain.lastIndexOf(' ', cut);
+  const splitAt = spaceIdx > 80 ? spaceIdx : cut;
+  return {
+    previewHtml: `<p>${escapeHtml(plain.slice(0, splitAt))}...</p>`,
+    remainderHtml: `<p>${escapeHtml(plain.slice(splitAt, splitAt + 420))}</p>`,
+    hasMore: true,
+  };
+}

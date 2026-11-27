@@ -66,7 +66,7 @@ export default function HomeFeedScreen() {
   const [webFeedMode, setWebFeedMode] = useState<'latest' | 'trending' | 'popular' | 'articles' | 'videos'>('latest');
   const [categoryPoolItems, setCategoryPoolItems] = useState<FeedItem[]>([]);
   const [categorySyncTick, setCategorySyncTick] = useState(0);
-  const [homepageConfig, setHomepageConfig] = useState<any[]>([]);
+  const [homepageConfig, setHomepageConfig] = useState<any | null>(null);
   const webScrollRef = useRef<ScrollView>(null);
   const loggedLeaderboardAdId = useRef<string | null>(null);
   const tabs = ['For you', 'Trending', 'Headlines', 'Articles', 'Videos'];
@@ -373,10 +373,10 @@ export default function HomeFeedScreen() {
 
   const isSectionVisible = React.useCallback(
     (sectionKey: string) => {
-      if (!homepageConfig || homepageConfig.length === 0) return true;
-      const hasAnySection = homepageConfig.some((c) => c.section_key);
-      if (!hasAnySection) return true;
-      return homepageConfig.some((c) => c.section_key === sectionKey);
+      const sections = Array.isArray(homepageConfig?.sections) ? homepageConfig.sections : [];
+      if (sections.length === 0) return true;
+      const found = sections.find((s: any) => s.key === sectionKey);
+      return found ? found.visible !== false : true;
     },
     [homepageConfig]
   );
@@ -522,21 +522,23 @@ export default function HomeFeedScreen() {
             </View>
           ) : (
             <>
-              {isSectionVisible('breaking_ticker') && (
+              {isSectionVisible('breaking') && (
                 <WebBreakingTicker
                   items={webSections.breakingItems}
                   onPressItem={handleWebPressItem}
                 />
               )}
 
-              <WebHeroSection
-                editorsPicks={webSections.editorsPicks}
-                mainNews={webSections.mainNews}
-                trendingNow={webSections.trendingNow}
-                onPressItem={handleWebPressItem}
-              />
+              {isSectionVisible('hero') && (
+                <WebHeroSection
+                  editorsPicks={webSections.editorsPicks}
+                  mainNews={webSections.mainNews}
+                  trendingNow={webSections.trendingNow}
+                  onPressItem={handleWebPressItem}
+                />
+              )}
 
-              {isSectionVisible('featured_stories') && (
+              {isSectionVisible('featured') && (
                 <WebFeaturedPosts
                   items={webSections.featuredItems}
                   onPressItem={handleWebPressItem}
@@ -544,7 +546,7 @@ export default function HomeFeedScreen() {
                 />
               )}
 
-              {isSectionVisible('latest_dispatches') && (
+              {isSectionVisible('latest') && (
                 <WebExpressPosts
                   expressOneItems={webSections.expressOneItems}
                   expressTwoItems={webSections.expressTwoItems}

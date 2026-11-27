@@ -30,6 +30,19 @@ function detectInitialLang(): SiteLang {
   return i18n.language === 'ta' ? 'ta' : 'en';
 }
 
+export function normalizeUtcTimestamp(iso?: string | null): Date | null {
+  if (!iso) return null;
+  let normalized = String(iso).trim();
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(normalized)) {
+    normalized = normalized.replace(' ', 'T');
+  }
+  if (normalized && !normalized.endsWith('Z') && !/[+-]\d{2}(:?\d{2})?$/.test(normalized)) {
+    normalized += 'Z';
+  }
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export function SiteLanguageProvider({ children }: { children: ReactNode }) {
   const { userProfile } = useAuth();
   const [lang, setLang] = useState<SiteLang>(detectInitialLang);
@@ -103,7 +116,8 @@ export function SiteLanguageProvider({ children }: { children: ReactNode }) {
 
   const formatDate = useCallback(
     (iso?: string | null) => {
-      if (!iso) return '';
+      const date = normalizeUtcTimestamp(iso);
+      if (!date) return iso || '';
       try {
         return new Intl.DateTimeFormat(lang === 'ta' ? 'ta-IN' : 'en-IN', {
           year: 'numeric',
@@ -111,10 +125,11 @@ export function SiteLanguageProvider({ children }: { children: ReactNode }) {
           day: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
+          hour12: true,
           timeZone: 'Asia/Kolkata',
-        }).format(new Date(iso));
+        }).format(date);
       } catch {
-        return iso;
+        return iso || '';
       }
     },
     [lang]
@@ -122,14 +137,15 @@ export function SiteLanguageProvider({ children }: { children: ReactNode }) {
 
   const formatShortDate = useCallback(
     (iso?: string | null) => {
-      if (!iso) return '';
+      const date = normalizeUtcTimestamp(iso);
+      if (!date) return '';
       try {
         return new Intl.DateTimeFormat(lang === 'ta' ? 'ta-IN' : 'en-IN', {
           year: 'numeric',
           month: 'short',
           day: 'numeric',
           timeZone: 'Asia/Kolkata',
-        }).format(new Date(iso));
+        }).format(date);
       } catch {
         return '';
       }

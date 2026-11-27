@@ -16,6 +16,8 @@ import AdBanner from '../../components/AdBanner';
 import AdEnabledVideoPlayer from '../../components/AdEnabledVideoPlayer';
 import WebPageShell from '../../components/web/WebPageShell';
 import ArticleBodyRenderer from '../../components/ArticleBodyRenderer';
+import { LinearGradient } from 'expo-linear-gradient';
+import { resolveArticleHtml, splitHtmlForGuestPreview } from '../../utils/tiptapSerializer';
 import WebHeadSeo from '../../seo/WebHeadSeo';
 import { buildArticleSeoConfig, SITE_URL } from '../../seo/seoUtils';
 import { useSiteLanguage } from '../../context/SiteLanguageContext';
@@ -47,7 +49,8 @@ export default function ArticleDetailScreen() {
   const routeId = route.params?.id;
   const routeSlug = route.params?.slug;
   const articleLookupKey = routeId || routeSlug || '';
-  const { userProfile } = useAuth();
+  const { userProfile, isAuthenticated } = useAuth();
+  const isGuestUser = !isAuthenticated && !userProfile?.id;
   const { lang: siteLang, setSiteLang, formatDate } = useSiteLanguage();
   const { t } = useTranslation();
   const preferredRouteLang = route.params?.lang === 'ta' || route.params?.lang === 'en' ? route.params.lang : siteLang;
@@ -214,20 +217,11 @@ export default function ArticleDetailScreen() {
 
   useEffect(() => {
     const logView = async () => {
-      if (!id) return;
+      if (!id || !userProfile?.id) return;
       try {
-        let visitorKey = userProfile?.id || '';
-        if (!visitorKey && typeof window !== 'undefined' && window.localStorage) {
-          visitorKey = window.localStorage.getItem('postsapp_visitor_id') || '';
-          if (!visitorKey) {
-            visitorKey = `anon_${generateUUID()}`;
-            window.localStorage.setItem('postsapp_visitor_id', visitorKey);
-          }
-        }
-        if (!visitorKey) visitorKey = `session_${generateUUID()}`;
         await supabase.rpc('record_post_view', {
           p_post_id: id,
-          p_visitor_key: visitorKey,
+          p_visitor_key: userProfile.id,
         });
       } catch (e) {
         console.warn('PostView log error');
@@ -630,8 +624,15 @@ export default function ArticleDetailScreen() {
   const publishedDateStr = formatDate(selectedArticle.published_at || selectedArticle.createdAt);
   const updatedDateStr =
     selectedArticle.updatedAt && selectedArticle.updatedAt !== (selectedArticle.published_at || selectedArticle.createdAt)
-      ? formatDate(selectedArticle.updatedAt)
+      ? `${formatDate(selectedArticle.updatedAt)} IST`
       : null;
+
+  const fullArticleHtml = resolveArticleHtml(
+    selectedArticle.content_json,
+    selectedArticle.content || selectedArticle.excerpt || ''
+  );
+  const guestSplit = splitHtmlForGuestPreview(fullArticleHtml, 260);
+  const showGuestPaywall = isGuestUser && guestSplit.hasMore;
 
   const articleBodyContent = (
     <>
@@ -784,11 +785,147 @@ export default function ArticleDetailScreen() {
         {/* Mid-Roll Ad Overlay is handled by AdEnabledVideoPlayer */}
 
         <View style={{ padding: isWebDesktop ? 32 : 24, minHeight: 100 }}>
-          <ArticleBodyRenderer
-            contentJson={selectedArticle.content_json}
-            contentHtml={selectedArticle.content || selectedArticle.excerpt || ''}
-            language={selectedArticle.language || 'en'}
-          />
+          {showGuestPaywall ? (
+            <View>
+              <ArticleBodyRenderer
+                contentHtml={guestSplit.previewHtml}
+                language={selectedArticle.language || 'en'}
+              />
+
+              <View
+                style={{
+                  position: 'relative',
+                  marginTop: 8,
+                  minHeight: 240,
+                  maxHeight: 280,
+                  overflow: 'hidden',
+                  borderRadius: 12,
+                }}
+              >
+                <View
+                  pointerEvents="none"
+                  style={[
+                    { opacity: Platform.OS === 'web' ? 0.42 : 0.2 },
+                    Platform.OS === 'web'
+                      ? ({ filter: 'blur(6px)', userSelect: 'none' } as any)
+                      : null,
+                  ]}
+                >
+                  <ArticleBodyRenderer
+                    contentHtml={guestSplit.remainderHtml}
+                    language={selectedArticle.language || 'en'}
+                  />
+                </View>
+
+                <LinearGradient
+                  colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.88)', '#FFFFFF']}
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    paddingHorizontal: 20,
+                    paddingVertical: 24,
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB',
+                      borderRadius: 14,
+                      paddingVertical: 22,
+                      paddingHorizontal: 24,
+                      maxWidth: 420,
+                      width: '100%',
+                      alignItems: 'center',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 8 },
+                      shadowOpacity: 0.08,
+                      shadowRadius: 20,
+                      elevation: 5,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 21,
+                        backgroundColor: '#FEF2F2',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginBottom: 10,
+                      }}
+                    >
+                      <Ionicons name="lock-closed" size={20} color="#D4191F" />
+                    </View>
+                    <Text
+                      style={{
+                        fontSize: 17,
+                        fontWeight: '800',
+                        color: '#111827',
+                        textAlign: 'center',
+                      }}
+                    >
+                      {selectedArticle.language === 'ta' || siteLang === 'ta'
+                        ? 'முழு கட்டுரையைப் படிக்க உள்நுழையவும்'
+                        : 'Sign in to read the full story'}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        color: '#6B7280',
+                        textAlign: 'center',
+                        marginTop: 6,
+                        lineHeight: 19,
+                      }}
+                    >
+                      {selectedArticle.language === 'ta' || siteLang === 'ta'
+                        ? 'இலவச கணக்கில் உள்நுழைந்து முழு கட்டுரையைப் படித்து கருத்துத் தெரிவிக்கவும்.'
+                        : 'Continue reading this dispatch, save stories to your library, and join the conversation.'}
+                    </Text>
+                    <TouchableOpacity
+                      style={{
+                        marginTop: 16,
+                        backgroundColor: '#D4191F',
+                        paddingHorizontal: 24,
+                        paddingVertical: 11,
+                        borderRadius: 8,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                        width: '100%',
+                        justifyContent: 'center',
+                      }}
+                      onPress={() => navigation.navigate('Login')}
+                    >
+                      <Ionicons name="log-in-outline" size={18} color="#FFFFFF" />
+                      <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>
+                        {t('auth.sign_in', 'Sign In')}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{ marginTop: 10, paddingVertical: 4 }}
+                      onPress={() => navigation.navigate('SignUp')}
+                    >
+                      <Text style={{ color: '#D4191F', fontWeight: '700', fontSize: 12 }}>
+                        {t('auth.sign_up', 'Create Free Account')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </LinearGradient>
+              </View>
+            </View>
+          ) : (
+            <ArticleBodyRenderer
+              contentJson={selectedArticle.content_json}
+              contentHtml={selectedArticle.content || selectedArticle.excerpt || ''}
+              language={selectedArticle.language || 'en'}
+            />
+          )}
         </View>
         
         {((hashtags && hashtags.length > 0) || (selectedArticle.hashtags && selectedArticle.hashtags.length > 0)) && (
