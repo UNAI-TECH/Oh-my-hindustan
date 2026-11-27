@@ -232,9 +232,9 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, 'text/html; charset=utf-8', fs.readFileSync(prerenderIndex, 'utf8'));
     }
 
-    // 8. Known interactive SPA routes (/login, /signup, /profile, /library, /settings, /notifications, /en/search, /ta/search, etc.)
+    // 8. Known interactive SPA routes (/login, /signup, /auth/callback, /profile, /library, /settings, /notifications, /en/search, /ta/search, etc.)
     const knownSpaPattern =
-      /^\/(?:(?:en|ta)\/)?(?:latest|trending|most-read|search|explore|stories|creators|login|signup|profile|library|settings|notifications|privacy|category\/[^/]+|tag\/[^/]+|creator\/[^/]+)$/;
+      /^\/(?:(?:en|ta)\/)?(?:latest|trending|most-read|search|explore|stories|creators|login|signup|otp|auth\/callback|onboarding\/[^/]+|profile|library|settings|notifications|privacy|category\/[^/]+|tag\/[^/]+|creator\/[^/]+)$/;
     if (knownSpaPattern.test(pathname)) {
       const lang = pathname.startsWith('/ta/') ? 'ta' : 'en';
       const title = `PostsApp`;
@@ -245,7 +245,7 @@ const server = http.createServer(async (req, res) => {
           description: 'PostsApp bilingual digital news and community platform.',
           canonicalUrl: `${config.siteUrl}${pathname}`,
           lang,
-          robots: /\/(login|signup|profile|library|settings|notifications|search)/.test(pathname)
+          robots: /\/(login|signup|otp|auth\/callback|onboarding|profile|library|settings|notifications|search)/.test(pathname)
             ? 'noindex, follow'
             : 'index, follow',
         },

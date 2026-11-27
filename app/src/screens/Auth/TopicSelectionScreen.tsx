@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { navigateAfterAuth } from '../../utils/authReturn';
 
 const TOPICS = [
   { name: 'National Security', icon: 'shield-checkmark' },
@@ -64,7 +65,7 @@ export default function TopicSelectionScreen() {
     setErrorMsg(null);
     try {
       await updateOnboardingProfile({ topics: selectedTopics });
-      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+      navigateAfterAuth(navigation);
     } catch (e: any) {
       setErrorMsg(e.message || 'Failed to finish setup. Please try again.');
     }

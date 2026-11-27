@@ -18,6 +18,8 @@ import WebPageShell from '../../components/web/WebPageShell';
 import ArticleBodyRenderer from '../../components/ArticleBodyRenderer';
 import { LinearGradient } from 'expo-linear-gradient';
 import { resolveArticleHtml, splitHtmlForGuestPreview } from '../../utils/tiptapSerializer';
+import { translateArticleContent, TranslatedArticlePayload } from '../../utils/articleTranslator';
+import { savePendingAuthReturn } from '../../utils/authReturn';
 import WebHeadSeo from '../../seo/WebHeadSeo';
 import { buildArticleSeoConfig, SITE_URL } from '../../seo/seoUtils';
 import { useSiteLanguage } from '../../context/SiteLanguageContext';
@@ -98,6 +100,8 @@ export default function ArticleDetailScreen() {
   const [postAuthorId, setPostAuthorId] = useState<string | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<any[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
+  const [translatedPayload, setTranslatedPayload] = useState<TranslatedArticlePayload | null>(null);
+  const [isTranslatingArticle, setIsTranslatingArticle] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const [modalConfig, setModalConfig] = useState<{
     visible: boolean;
@@ -143,10 +147,67 @@ export default function ArticleDetailScreen() {
     setRelatedPosts([]);
     setIsReady(false);
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+    setTranslatedPayload(null);
+    setIsTranslatingArticle(false);
     if (articleLookupKey) fetchArticle(articleLookupKey, preferredRouteLang);
     const timer = setTimeout(() => setIsReady(true), 150);
     return () => clearTimeout(timer);
   }, [articleLookupKey, preferredRouteLang]);
+
+  // Bilingual switching: when user switches site language while viewing an article,
+  // switch to the linked translation sibling if present, otherwise auto-translate the article view.
+  useEffect(() => {
+    if (!selectedArticle?.id) return;
+    const articleLang: 'en' | 'ta' = selectedArticle.language === 'ta' ? 'ta' : 'en';
+    if (siteLang === articleLang) {
+      setTranslatedPayload(null);
+      setIsTranslatingArticle(false);
+      return;
+    }
+
+    const linkedSibling = (selectedArticle.translations || []).find((tr) => tr.language === siteLang);
+    if (linkedSibling) {
+      setTranslatedPayload(null);
+      setIsTranslatingArticle(false);
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const nextUrl = `/${linkedSibling.language}/article/${encodeURIComponent(linkedSibling.slug || linkedSibling.id)}`;
+        window.history.replaceState(null, '', nextUrl);
+      }
+      navigation.navigate('ArticleDetail', {
+        id: linkedSibling.id,
+        slug: linkedSibling.slug,
+        title: linkedSibling.title,
+        lang: linkedSibling.language,
+      });
+      return;
+    }
+
+    let cancelled = false;
+    setIsTranslatingArticle(true);
+    const sourceHtml = resolveArticleHtml(
+      selectedArticle.content_json,
+      selectedArticle.content || selectedArticle.excerpt || ''
+    );
+    translateArticleContent({
+      articleId: selectedArticle.id,
+      title: selectedArticle.title,
+      shortDescription: selectedArticle.short_description,
+      bodyHtml: sourceHtml,
+      sourceLang: articleLang,
+      targetLang: siteLang,
+    })
+      .then((res) => {
+        if (!cancelled) setTranslatedPayload(res);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setIsTranslatingArticle(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [siteLang, selectedArticle?.id, selectedArticle?.language, selectedArticle?.translations]);
 
   useEffect(() => {
     if (!selectedArticle?.title) return;
@@ -631,8 +692,31 @@ export default function ArticleDetailScreen() {
     selectedArticle.content_json,
     selectedArticle.content || selectedArticle.excerpt || ''
   );
-  const guestSplit = splitHtmlForGuestPreview(fullArticleHtml, 260);
+  const activeTranslated =
+    translatedPayload && translatedPayload.targetLang === siteLang ? translatedPayload : null;
+  const displayTitle = activeTranslated?.title || title;
+  const displayShortDesc =
+    activeTranslated?.shortDescription !== undefined
+      ? activeTranslated.shortDescription
+      : selectedArticle.short_description;
+  const displayArticleHtml = activeTranslated?.bodyHtml || fullArticleHtml;
+  const displayArticleLang: 'en' | 'ta' = activeTranslated ? siteLang : (selectedArticle.language || 'en');
+
+  const guestSplit = splitHtmlForGuestPreview(displayArticleHtml, 260);
   const showGuestPaywall = isGuestUser && guestSplit.hasMore;
+
+  const rememberArticleAndGo = (authRoute: 'Login' | 'SignUp') => {
+    savePendingAuthReturn({
+      screen: 'ArticleDetail',
+      params: {
+        id: selectedArticle.id,
+        slug: selectedArticle.slug || routeSlug,
+        title: selectedArticle.title,
+        lang: siteLang,
+      },
+    });
+    navigation.navigate(authRoute);
+  };
 
   const articleBodyContent = (
     <>
@@ -659,13 +743,36 @@ export default function ArticleDetailScreen() {
             </View>
           </View>
 
-          <Text style={[styles.title, isWebDesktop && { fontSize: 34, lineHeight: 42 }, { marginBottom: 14 }]}>{title}</Text>
+          <Text style={[styles.title, isWebDesktop && { fontSize: 34, lineHeight: 42 }, { marginBottom: 14 }]}>{displayTitle}</Text>
 
-          {selectedArticle.short_description ? (
+          {displayShortDesc ? (
             <Text style={{ fontSize: 16, lineHeight: 24, color: colors.Slate500, marginBottom: 18 }}>
-              {selectedArticle.short_description}
+              {displayShortDesc}
             </Text>
           ) : null}
+
+          {isTranslatingArticle && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#F8FAFC', borderRadius: 6, alignSelf: 'flex-start' }}>
+              <ActivityIndicator size="small" color={colors.PrimaryRed} />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.Slate500 }}>
+                {siteLang === 'ta' ? 'தமிழில் மொழிபெயர்க்கப்படுகிறது...' : 'Translating to English...'}
+              </Text>
+            </View>
+          )}
+
+          {activeTranslated && !isTranslatingArticle && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16, paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#EFF6FF', borderRadius: 6, borderWidth: 1, borderColor: '#BFDBFE' }}>
+              <Ionicons name="language-outline" size={15} color="#1D4ED8" />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: '#1E40AF' }}>
+                {siteLang === 'ta' ? 'தமிழில் மொழிபெயர்க்கப்பட்ட பதிப்பு' : 'Auto-translated English view'}
+              </Text>
+              <TouchableOpacity onPress={() => setSiteLang(selectedArticle.language === 'ta' ? 'ta' : 'en')}>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#D4191F', textDecorationLine: 'underline' }}>
+                  {selectedArticle.language === 'ta' ? 'தமிழ் மூலத்தைப் பார்க்க' : 'View original English'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {updatedDateStr ? (
             <Text style={{ fontSize: 11, color: colors.Slate400, marginBottom: 16 }}>
@@ -900,7 +1007,7 @@ export default function ArticleDetailScreen() {
                         width: '100%',
                         justifyContent: 'center',
                       }}
-                      onPress={() => navigation.navigate('Login')}
+                      onPress={() => rememberArticleAndGo('Login')}
                     >
                       <Ionicons name="log-in-outline" size={18} color="#FFFFFF" />
                       <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>
@@ -909,7 +1016,7 @@ export default function ArticleDetailScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={{ marginTop: 10, paddingVertical: 4 }}
-                      onPress={() => navigation.navigate('SignUp')}
+                      onPress={() => rememberArticleAndGo('SignUp')}
                     >
                       <Text style={{ color: '#D4191F', fontWeight: '700', fontSize: 12 }}>
                         {t('auth.sign_up', 'Create Free Account')}
@@ -921,9 +1028,8 @@ export default function ArticleDetailScreen() {
             </View>
           ) : (
             <ArticleBodyRenderer
-              contentJson={selectedArticle.content_json}
-              contentHtml={selectedArticle.content || selectedArticle.excerpt || ''}
-              language={selectedArticle.language || 'en'}
+              contentHtml={displayArticleHtml}
+              language={displayArticleLang}
             />
           )}
         </View>
@@ -1186,7 +1292,7 @@ export default function ArticleDetailScreen() {
           setModalConfig(prev => ({ ...prev, visible: false, isLoginPrompt: false }));
           if (goToLogin) {
             setShowComments(false);
-            navigation.navigate('Login');
+            rememberArticleAndGo('Login');
           }
         }}
         onSecondaryPress={() => setModalConfig(prev => ({ ...prev, visible: false, isLoginPrompt: false }))}
@@ -1234,7 +1340,21 @@ export default function ArticleDetailScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
           <Ionicons name="arrow-back" size={24} color={colors.DarkText} />
         </TouchableOpacity>
-        <View style={{ flexDirection: 'row' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', borderRadius: 6, padding: 2, marginRight: 4 }}>
+            <TouchableOpacity
+              onPress={() => setSiteLang('en')}
+              style={{ paddingHorizontal: 7, paddingVertical: 3, borderRadius: 4, backgroundColor: siteLang === 'en' ? colors.PrimaryRed : 'transparent' }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '700', color: siteLang === 'en' ? '#FFFFFF' : '#475569' }}>EN</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setSiteLang('ta')}
+              style={{ paddingHorizontal: 7, paddingVertical: 3, borderRadius: 4, backgroundColor: siteLang === 'ta' ? colors.PrimaryRed : 'transparent' }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '700', color: siteLang === 'ta' ? '#FFFFFF' : '#475569' }}>தமிழ்</Text>
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity onPress={onShare} style={{ padding: 8 }}>
              <Ionicons name="share-social-outline" size={24} color={colors.DarkText} />
           </TouchableOpacity>

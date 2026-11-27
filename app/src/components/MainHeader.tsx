@@ -5,12 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabaseClient';
 import { useTranslation } from 'react-i18next';
+import { useSiteLanguage } from '../context/SiteLanguageContext';
 import PostsAppLogo from './PostsAppLogo';
 
 export default function MainHeader() {
   const { colors, isDark } = useAppTheme();
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
+  const { lang, setSiteLang } = useSiteLanguage();
   const [profilePic, setProfilePic] = useState<string | null>(null);
 
   useEffect(() => {
@@ -31,6 +33,21 @@ export default function MainHeader() {
       </TouchableOpacity>
       
       <View style={styles.headerRight}>
+        <View style={styles.langPill}>
+          <TouchableOpacity
+            onPress={() => setSiteLang('en')}
+            style={[styles.langBtn, lang === 'en' && { backgroundColor: colors.PrimaryRed }]}
+          >
+            <Text style={[styles.langText, lang === 'en' && styles.langTextActive]}>EN</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setSiteLang('ta')}
+            style={[styles.langBtn, lang === 'ta' && { backgroundColor: colors.PrimaryRed }]}
+          >
+            <Text style={[styles.langText, lang === 'ta' && styles.langTextActive]}>தமிழ்</Text>
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity onPress={() => navigation.navigate('Search')} style={styles.iconBtn}>
           <Ionicons name="search-outline" size={24} color={colors.DarkText} />
         </TouchableOpacity>
@@ -102,5 +119,26 @@ const styles = StyleSheet.create({
   profileAvatar: {
     width: '100%',
     height: '100%',
-  }
+  },
+  langPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 6,
+    padding: 2,
+    gap: 2,
+  },
+  langBtn: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  langText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  langTextActive: {
+    color: '#FFFFFF',
+  },
 });

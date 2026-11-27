@@ -75,6 +75,7 @@ const linking: any = {
       Login: 'login',
       SignUp: 'signup',
       OTP: 'otp',
+      AuthCallback: 'auth/callback',
       ProfileSetup: 'onboarding/profile',
       UsernameSetup: 'onboarding/username',
       LanguageSelection: 'onboarding/language',
@@ -125,6 +126,10 @@ const linking: any = {
     }
 
     const lower = rawPath.toLowerCase();
+
+    if (lower === 'auth/callback') {
+      return { routes: [{ name: 'AuthCallback' }] };
+    }
 
     if (lower === 'latest' || lower === 'trending' || lower === 'most-read') {
       const mode = lower === 'most-read' ? 'popular' : lower;
@@ -202,7 +207,13 @@ const linking: any = {
       const clean = resolved.split('?')[0];
       return `/${lang}${clean}`;
     }
-    if (resolved.startsWith('/en/') || resolved.startsWith('/ta/') || resolved === '/en' || resolved === '/ta') {
+    if (
+      resolved.startsWith('/en/') ||
+      resolved.startsWith('/ta/') ||
+      resolved === '/en' ||
+      resolved === '/ta' ||
+      resolved.startsWith('/auth/callback')
+    ) {
       return resolved;
     }
     return `/${lang}${resolved.startsWith('/') ? resolved : `/${resolved}`}`;

@@ -621,9 +621,19 @@ export default function HomeFeedScreen() {
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewabilityConfig}
           ListFooterComponent={() => (
-            isLoading && hasMore ? (
-              <ActivityIndicator size="small" color={colors.PrimaryRed} style={{ marginVertical: 20 }} />
-            ) : null
+            <>
+              {isLoading && hasMore ? (
+                <ActivityIndicator size="small" color={colors.PrimaryRed} style={{ marginVertical: 20 }} />
+              ) : null}
+              {Platform.OS === 'web' && !hasMore ? (
+                <View style={{ marginHorizontal: -16, marginTop: 24 }}>
+                  <WebPortalFooter
+                    onSelectCategory={handleWebSelectCategory}
+                    onNavigate={(route, params) => navigation.navigate(route, params)}
+                  />
+                </View>
+              ) : null}
+            </>
           )}
           refreshControl={
             <RefreshControl 

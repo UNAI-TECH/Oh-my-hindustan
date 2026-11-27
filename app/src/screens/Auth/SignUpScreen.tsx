@@ -20,6 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import CustomModal from '../../components/CustomModal';
 import PostsAppLogo from '../../components/PostsAppLogo';
 import WebAuthShell, { webAuthCardStyles } from '../../components/web/WebAuthShell';
+import { navigateAfterAuth } from '../../utils/authReturn';
 
 export default function SignUpScreen() {
   const { colors } = useAppTheme();
@@ -47,33 +48,48 @@ export default function SignUpScreen() {
       if (needsOnboarding) {
         navigation.reset({ index: 0, routes: [{ name: 'UsernameSetup' }] });
       } else {
-        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+        navigateAfterAuth(navigation);
       }
     }
   }, [isAuthenticated, needsOnboarding]);
 
   useEffect(() => {
-    if (error) {
+    if (error && Platform.OS !== 'web') {
       setModalConfig({ visible: true, title: 'Authentication Failed', message: error, isError: true });
     }
   }, [error]);
 
   const handleSignUp = async () => {
-    if (!name || !email || !mobile || !password || !confirmPassword) {
-      setLocalError('Please fill in all fields');
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanMobile = mobile.trim();
+
+    if (cleanName.length < 2) {
+      setLocalError('Please enter your full name (at least 2 characters).');
       return;
     }
-    if (password !== confirmPassword) {
-      setLocalError('Passwords do not match');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setLocalError('Please enter a valid email address.');
+      return;
+    }
+    if (cleanMobile.replace(/\D/g, '').length < 7) {
+      setLocalError('Please enter a valid mobile number (at least 7 digits).');
       return;
     }
     if (password.length < 6) {
-      setLocalError('Password must be at least 6 characters');
+      setLocalError('Password must be at least 6 characters.');
       return;
     }
+    if (password !== confirmPassword) {
+      setLocalError('Passwords do not match.');
+      return;
+    }
+
     setLocalError(null);
-    
-    await register(email.trim(), name.trim(), password, mobile.trim());
+    const outcome = await register(cleanEmail, cleanName, password, cleanMobile);
+    if (outcome === 'confirmation_required') {
+      navigation.navigate('OTP', { email: cleanEmail });
+    }
   };
 
   const handleGoogleSignIn = async () => {

@@ -64,7 +64,7 @@ export default function ProfileImageUploadScreen() {
         const publicUrl = await uploadProfileImage(imageUri);
         await updateOnboardingProfile({ avatarUrl: publicUrl });
       }
-      navigation.navigate('TopicSelection');
+      navigation.navigate('LanguageSelection');
     } catch (e: any) {
       setErrorMsg(e.message || 'Failed to upload image. Please try again.');
     } finally {
@@ -73,7 +73,7 @@ export default function ProfileImageUploadScreen() {
   };
 
   const handleSkip = () => {
-    navigation.navigate('TopicSelection');
+    navigation.navigate('LanguageSelection');
   };
 
   const avatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D4191F&color=fff&size=200`;

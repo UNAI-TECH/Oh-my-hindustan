@@ -18,6 +18,7 @@ import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import PostsAppLogo from '../../components/PostsAppLogo';
 import WebAuthShell, { webAuthCardStyles } from '../../components/web/WebAuthShell';
+import { navigateAfterAuth } from '../../utils/authReturn';
 
 export default function LoginScreen() {
   const { colors } = useAppTheme();
@@ -25,11 +26,14 @@ export default function LoginScreen() {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const isWebDesktop = Platform.OS === 'web' && width >= 768;
-  const { login, signInWithGoogle, signInWithGoogleNative, isLoading, error, loginSuccess, isAuthenticated, needsOnboarding, clearState } = useAuth();
+  const { login, signInWithGoogle, sendPasswordReset, isLoading, error, isAuthenticated, needsOnboarding, clearState } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSuccessMsg, setResetSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     clearState();
@@ -40,18 +44,27 @@ export default function LoginScreen() {
       if (needsOnboarding) {
         navigation.reset({ index: 0, routes: [{ name: 'UsernameSetup' }] });
       } else {
-        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+        navigateAfterAuth(navigation);
       }
     }
   }, [isAuthenticated, needsOnboarding]);
 
   const handleLogin = async () => {
-    if (!identifier || !password) {
-      setLocalError('Please enter valid credentials');
+    if (!identifier.trim() || !password) {
+      setLocalError('Please enter your email/username and password.');
       return;
     }
     setLocalError(null);
     await login(identifier.trim(), password);
+  };
+
+  const handleSendReset = async () => {
+    setLocalError(null);
+    setResetSuccessMsg(null);
+    const ok = await sendPasswordReset(resetEmail || identifier);
+    if (ok) {
+      setResetSuccessMsg('Password reset link sent! Check your email inbox.');
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -108,18 +121,65 @@ export default function LoginScreen() {
             <Text style={webAuthCardStyles.errorText}>{displayError}</Text>
           )}
 
+          {resetSuccessMsg && (
+            <Text style={{ color: '#059669', fontSize: 12, fontWeight: '600' }}>{resetSuccessMsg}</Text>
+          )}
+
           <TouchableOpacity
-            style={webAuthCardStyles.primaryBtn}
-            onPress={handleLogin}
-            disabled={isLoading}
-            activeOpacity={0.88}
+            style={{ alignSelf: 'flex-end' }}
+            onPress={() => {
+              setResetMode((v) => !v);
+              setResetEmail(identifier.includes('@') ? identifier : '');
+              setResetSuccessMsg(null);
+              setLocalError(null);
+            }}
           >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={webAuthCardStyles.primaryBtnText}>Sign In</Text>
-            )}
+            <Text style={{ fontSize: 12, fontWeight: '600', color: '#D4191F' }}>
+              {resetMode ? 'Back to password sign-in' : 'Forgot Password?'}
+            </Text>
           </TouchableOpacity>
+
+          {resetMode ? (
+            <View style={{ gap: 10 }}>
+              <View style={webAuthCardStyles.inputWrap}>
+                <Ionicons name="mail-outline" size={18} color="#18181B" style={webAuthCardStyles.inputIcon} />
+                <TextInput
+                  style={webAuthCardStyles.input}
+                  placeholder="Enter your account email"
+                  placeholderTextColor="#6B7280"
+                  value={resetEmail}
+                  onChangeText={setResetEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
+              </View>
+              <TouchableOpacity
+                style={webAuthCardStyles.primaryBtn}
+                onPress={handleSendReset}
+                disabled={isLoading}
+                activeOpacity={0.88}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={webAuthCardStyles.primaryBtnText}>Send Reset Link</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={webAuthCardStyles.primaryBtn}
+              onPress={handleLogin}
+              disabled={isLoading}
+              activeOpacity={0.88}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={webAuthCardStyles.primaryBtnText}>Sign In</Text>
+              )}
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={webAuthCardStyles.googleBtn}
@@ -128,7 +188,7 @@ export default function LoginScreen() {
             activeOpacity={0.85}
           >
             <Ionicons name="logo-google" size={18} color="#DB4437" />
-            <Text style={webAuthCardStyles.googleBtnText}>Google</Text>
+            <Text style={webAuthCardStyles.googleBtnText}>Continue with Google</Text>
           </TouchableOpacity>
         </View>
 

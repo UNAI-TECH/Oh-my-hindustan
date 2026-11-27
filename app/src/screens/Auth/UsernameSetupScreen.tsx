@@ -98,10 +98,16 @@ export default function UsernameSetupScreen() {
   };
 
   useEffect(() => {
+    const rawSeed = userProfile?.channel_name || userProfile?.email?.split('@')[0] || '';
+    const cleaned = cleanUsername(rawSeed).slice(0, 20);
+    if (!username && cleaned.length >= 3) {
+      setUsername(cleaned);
+      checkUsername(cleaned);
+    }
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, []);
+  }, [userProfile?.channel_name, userProfile?.email]);
 
   return (
     <KeyboardAvoidingView
