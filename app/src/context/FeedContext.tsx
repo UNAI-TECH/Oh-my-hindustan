@@ -134,7 +134,7 @@ const FeedContext = createContext<FeedContextProps | undefined>(undefined);
 export const FeedProvider = ({ children }: { children: ReactNode }) => {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<FeedItem | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
@@ -143,10 +143,13 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   const { userProfile } = useAuth();
   const { lang } = useSiteLanguage();
   const isFetchingRef = useRef(false);
+  const fetchRequestIdRef = useRef(0);
 
   const saveToCache = async (data: FeedItem[]) => {
     try {
-      await AsyncStorage.setItem(`${FEED_CACHE_KEY}_${lang}`, JSON.stringify(data));
+      if (data.length > 0) {
+        await AsyncStorage.setItem(`${FEED_CACHE_KEY}_${lang}`, JSON.stringify(data));
+      }
     } catch (e) {
       console.error('Failed to save feed cache', e);
     }
@@ -156,7 +159,10 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
     try {
       const cached = await AsyncStorage.getItem(`${FEED_CACHE_KEY}_${lang}`);
       if (cached) {
-        setFeedItems(JSON.parse(cached));
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setFeedItems(parsed);
+        }
       }
     } catch (e) {
       console.error('Failed to load feed cache', e);
@@ -164,28 +170,32 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const setSortBy = (sort: 'latest' | 'trending' | 'popular') => {
+    if (sort === sortBy) return;
     setSortByState(sort);
     setPage(1);
     setFeedItems([]);
   };
 
   const fetchHomeFeed = async (showLoading = true, reset = false) => {
-    if (isFetchingRef.current) return;
+    if (!reset && isFetchingRef.current) return;
+    const reqId = reset ? ++fetchRequestIdRef.current : fetchRequestIdRef.current;
     isFetchingRef.current = true;
     if (showLoading) setIsLoading(true);
     const targetPage = reset ? 1 : page;
-    
+
     try {
       if (reset && showLoading && feedItems.length === 0) await loadFromCache();
-      
+
       const response = await withRetry(
         () => AppApi.getHomeFeed(targetPage, 25, sortBy, lang),
         3,
         1000,
       );
+      if (reqId !== fetchRequestIdRef.current) return;
+
       const posts = response.data || [];
       const mapped = posts.map(toFeedItem);
-      
+
       setFeedItems(prev => {
         const combined = reset ? mapped : [...prev, ...mapped];
         const seen = new Set();
@@ -195,35 +205,33 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
           return true;
         });
       });
-      
-      // FIX: use posts.length < limit to determine if there are more pages
-      // This avoids the stale closure on feedItems.length
+
       const noMore = posts.length < 15;
       setHasMore(!noMore);
       setError(null);
       if (reset) {
-        if (reset) setPage(1);
+        setPage(1);
         await saveToCache(mapped.slice(0, 50));
       }
     } catch (e: any) {
-      // FIX: Handle PGRST103 (offset beyond available rows) gracefully
+      if (reqId !== fetchRequestIdRef.current) return;
       if (e?.code === 'PGRST103') {
-        setHasMore(false); // No more data — stop pagination
-        // Don't set error — this isn't a real error, just end of data
+        setHasMore(false);
       } else {
         console.error('Feed fetch error:', e);
         setError(e.message || 'Failed to load feed. Please check your connection.');
       }
     } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-      isFetchingRef.current = false;
+      if (reqId === fetchRequestIdRef.current) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+        isFetchingRef.current = false;
+      }
     }
   };
 
   const loadMoreFeed = async () => {
     if (isLoading || !hasMore || isFetchingRef.current) return;
-    // Only increment page when we actually have more data
     setPage(prev => prev + 1);
   };
 
@@ -231,18 +239,21 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
     setFeedItems([]);
     setPage(1);
     fetchHomeFeed(true, true);
-  }, [lang]);
+  }, [lang, sortBy]);
 
   useEffect(() => {
-    fetchHomeFeed(page === 1, page === 1);
-  }, [page, sortBy]);
+    if (page > 1) {
+      fetchHomeFeed(false, false);
+    }
+  }, [page]);
 
   const refreshFeed = () => {
     if (page === 1) {
-      setIsRefreshing(true);
-      fetchHomeFeed(false, true);
+      if (feedItems.length > 0) setIsRefreshing(true);
+      fetchHomeFeed(feedItems.length === 0, true);
     } else {
       setPage(1);
+      fetchHomeFeed(true, true);
     }
   };
 

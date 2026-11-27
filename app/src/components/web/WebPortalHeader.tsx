@@ -59,9 +59,13 @@ export function WebTopMasthead({
     setSiteLang(target);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const p = window.location.pathname || '/';
+      const params = new URLSearchParams(window.location.search || '');
+      params.delete('lang');
+      const cleanSearch = params.toString();
+      const searchSuffix = cleanSearch ? `?${cleanSearch}` : '';
       if (!p.includes('/article/') && (p === '/' || p === '/en' || p === '/ta' || p.startsWith('/en/') || p.startsWith('/ta/'))) {
         const nextPath = p === '/' ? `/${target}` : p.replace(/^\/(en|ta)(\/|$)/, `/${target}$2`);
-        window.history.replaceState(null, '', nextPath + window.location.search);
+        window.history.replaceState(null, '', nextPath + searchSuffix);
       }
     }
   };

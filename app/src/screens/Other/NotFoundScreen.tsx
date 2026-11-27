@@ -10,7 +10,7 @@ import { useSiteLanguage } from '../../context/SiteLanguageContext';
 export default function NotFoundScreen() {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
-  const isWebDesktop = Platform.OS === 'web' && width >= 768;
+  const isWebDesktop = Platform.OS === 'web';
   const { lang } = useSiteLanguage();
 
   const body = (
@@ -38,7 +38,7 @@ export default function NotFoundScreen() {
       <View style={styles.actions}>
         <TouchableOpacity
           style={styles.primaryBtn}
-          onPress={() => navigation.navigate('Home', { initialCategory: 'home', lang })}
+          onPress={() => navigation.navigate('Home', { initialCategory: 'home' })}
         >
           <Text style={styles.primaryText}>{lang === 'ta' ? 'முகப்புக்குச் செல்' : 'Go to Home'}</Text>
         </TouchableOpacity>

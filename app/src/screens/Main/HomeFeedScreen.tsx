@@ -144,7 +144,7 @@ export default function HomeFeedScreen() {
       return;
     }
     let cancelled = false;
-    AppApi.getHomeFeed(1, 60, sortBy)
+    AppApi.getHomeFeed(1, 60, sortBy, lang)
       .then((res) => {
         if (!cancelled && res?.data) {
           setCategoryPoolItems(res.data.map(mapPostToFeedItem));
@@ -491,6 +491,8 @@ export default function HomeFeedScreen() {
                   setActiveTag(null);
                   setWebSearchQuery('');
                   handleWebFeedMode('latest');
+                  navigation.setParams({ initialCategory: 'home' });
+                  if (feedItems.length === 0) refreshFeed();
                 }}
               >
                 <Text style={styles.webFilterReset}>Reset Filters</Text>
@@ -515,6 +517,8 @@ export default function HomeFeedScreen() {
                   setActiveTag(null);
                   setWebSearchQuery('');
                   handleWebFeedMode('latest');
+                  navigation.setParams({ initialCategory: 'home' });
+                  if (feedItems.length === 0) refreshFeed();
                 }}
               >
                 <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>View All Stories</Text>

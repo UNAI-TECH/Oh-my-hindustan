@@ -23,6 +23,10 @@ function detectInitialLang(): SiteLang {
     if (path === '/ta' || path.startsWith('/ta/')) return 'ta';
     if (path === '/en' || path.startsWith('/en/')) return 'en';
 
+    const queryLang = new URLSearchParams(window.location.search || '').get('lang');
+    if (queryLang === 'ta') return 'ta';
+    if (queryLang === 'en') return 'en';
+
     const match = document.cookie.match(/(?:^|;\s*)postsapp_lang=(en|ta)/);
     if (match?.[1] === 'ta') return 'ta';
     if (match?.[1] === 'en') return 'en';

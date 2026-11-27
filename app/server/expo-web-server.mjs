@@ -232,9 +232,20 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, 'text/html; charset=utf-8', fs.readFileSync(prerenderIndex, 'utf8'));
     }
 
+    // 7.5 Normalize duplicate /category/category/... paths cleanly
+    const dupCatMatch = pathname.match(/^\/(?:(en|ta)\/)?(?:category\/){2,}(.+)$/);
+    if (dupCatMatch) {
+      const targetLang = dupCatMatch[1] || 'en';
+      const tailSlug = dupCatMatch[2].replace(/^\/+|\/+$/g, '').toLowerCase();
+      const targetUrl = !tailSlug || tailSlug === 'home' ? `/${targetLang}` : `/${targetLang}/category/${tailSlug}`;
+      res.writeHead(301, { Location: targetUrl });
+      res.end();
+      return;
+    }
+
     // 8. Known interactive SPA routes (/login, /signup, /auth/callback, /profile, /library, /settings, /notifications, /en/search, /ta/search, etc.)
     const knownSpaPattern =
-      /^\/(?:(?:en|ta)\/)?(?:latest|trending|most-read|search|explore|stories|creators|login|signup|otp|auth\/callback|onboarding\/[^/]+|profile|library|settings|notifications|privacy|category\/[^/]+|tag\/[^/]+|creator\/[^/]+)$/;
+      /^\/(?:(?:en|ta)\/)?(?:home|latest|trending|most-read|search|explore|stories|creators|login|signup|otp|auth\/callback|onboarding\/[^/]+|profile|library|settings|notifications|privacy|about|contact|editorial-policy|corrections-policy|privacy-policy|terms|advertise|info\/[^/]+|category\/[^/]+|tag\/[^/]+|creator\/[^/]+)$/;
     if (knownSpaPattern.test(pathname)) {
       const lang = pathname.startsWith('/ta/') ? 'ta' : 'en';
       const title = `PostsApp`;

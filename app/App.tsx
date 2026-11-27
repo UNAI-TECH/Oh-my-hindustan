@@ -17,8 +17,27 @@ import './src/lib/i18n';
 
 const CATEGORY_SLUGS = new Set([
   ...WEB_NAV_CATEGORIES.map((c) => categoryToSlug(c)),
+  'home',
+  'general',
+  'national',
+  'international',
+  'politics',
+  'technology',
+  'business',
+  'economy',
+  'policy',
+  'education',
+  'sports',
+  'culture',
+  'world',
   'watch-online',
   'science-and-tech',
+  'science-tech',
+  'entertainment',
+  'lifestyle',
+  'health',
+  'opinion',
+  'environment',
 ]);
 
 const STATIC_PAGE_KEYS = new Set([
@@ -119,9 +138,17 @@ const linking: any = {
     } else if (rawPath === 'ta' || rawPath.startsWith('ta/')) {
       routeLang = 'ta';
       rawPath = rawPath === 'ta' ? '' : rawPath.slice(3);
+    } else {
+      const qLang = queryParams.get('lang');
+      if (qLang === 'en' || qLang === 'ta') {
+        routeLang = qLang;
+      }
     }
 
-    if (!rawPath) {
+    // Collapse duplicate category prefixes (e.g. category/category/home -> category/home)
+    rawPath = rawPath.replace(/^(?:category\/)+/i, 'category/').replace(/^\/+|\/+$/g, '');
+
+    if (!rawPath || rawPath.toLowerCase() === 'home' || rawPath.toLowerCase() === 'category' || rawPath.toLowerCase() === 'category/home') {
       return { routes: [{ name: 'Home', params: { initialCategory: 'HOME', ...(routeLang ? { lang: routeLang } : {}) } }] };
     }
 
@@ -129,6 +156,14 @@ const linking: any = {
 
     if (lower === 'auth/callback') {
       return { routes: [{ name: 'AuthCallback' }] };
+    }
+
+    if (lower.startsWith('category/')) {
+      const segments = rawPath.split('/').filter(Boolean);
+      const catSlug = segments[segments.length - 1] || 'home';
+      return {
+        routes: [{ name: 'Home', params: { initialCategory: slugToCategory(catSlug), ...(routeLang ? { lang: routeLang } : {}) } }],
+      };
     }
 
     if (lower === 'latest' || lower === 'trending' || lower === 'most-read') {
@@ -199,8 +234,18 @@ const linking: any = {
       return `/${lang}/search`;
     }
 
+    if (activeRoute?.name === 'Home') {
+      const rawCat = String((activeRoute.params as any)?.initialCategory || 'HOME');
+      const slug = categoryToSlug(slugToCategory(rawCat));
+      if (!slug || slug === 'home') {
+        return `/${lang}`;
+      }
+      return `/${lang}/category/${slug}`;
+    }
+
     const resolved = getPathFromState(state, options);
-    if (resolved === '/category/home' || resolved === '/category' || resolved === '/') {
+    const resolvedPathname = resolved.split('?')[0];
+    if (resolvedPathname === '/category/home' || resolvedPathname === '/category' || resolvedPathname === '/') {
       return `/${lang}`;
     }
     if (resolved.startsWith('/article/')) {
