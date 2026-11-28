@@ -99,6 +99,9 @@ export default function ArticleDetailScreen() {
   const [loadingComments, setLoadingComments] = useState(false);
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyingToUsername, setReplyingToUsername] = useState<string | null>(null);
+  const [confirmDeleteCommentId, setConfirmDeleteCommentId] = useState<string | null>(null);
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+  const [commentActionError, setCommentActionError] = useState<string | null>(null);
   const [postAuthorId, setPostAuthorId] = useState<string | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<any[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
@@ -159,6 +162,9 @@ export default function ArticleDetailScreen() {
     setViewCount(0);
     setCommentsCount(0);
     setComments([]);
+    setConfirmDeleteCommentId(null);
+    setDeletingCommentId(null);
+    setCommentActionError(null);
     setPostAuthorId(null);
     setRelatedPosts([]);
     setIsReady(false);
@@ -488,7 +494,83 @@ export default function ArticleDetailScreen() {
     setShowComments(true);
     setReplyingToId(null);
     setReplyingToUsername(null);
+    setConfirmDeleteCommentId(null);
+    setCommentActionError(null);
     fetchComments();
+  };
+
+  const effectivePostAuthorId = postAuthorId || selectedArticle?.authorId;
+  const currentUserRole = String(userProfile?.role || '').toUpperCase();
+
+  /**
+   * Only the comment owner, an Admin, or that article's verified creator can delete a comment.
+   */
+  const canDeleteComment = (comment: any): boolean => {
+    if (!userProfile?.id || !comment?.id || String(comment.id).startsWith('temp-')) return false;
+    const isCommentOwner = comment.userId === userProfile.id || comment.User?.id === userProfile.id;
+    const isAdmin = currentUserRole === 'ADMIN';
+    const isVerifiedPostCreator =
+      Boolean(effectivePostAuthorId && effectivePostAuthorId === userProfile.id) &&
+      ['CREATOR', 'ANALYST', 'ADMIN'].includes(currentUserRole);
+    return isCommentOwner || isAdmin || isVerifiedPostCreator;
+  };
+
+  const handleDeleteComment = async (comment: any) => {
+    const activeUser = userProfile?.id ? userProfile : await ensureAuthenticatedUser();
+    if (!activeUser?.id) {
+      promptLogin('Please login to delete comments');
+      return;
+    }
+    if (!canDeleteComment(comment)) return;
+
+    const prevComments = [...comments];
+    const prevCount = commentsCount;
+    const roleUpper = String(activeUser?.role || userProfile?.role || '').toUpperCase();
+    const isModerator =
+      roleUpper === 'ADMIN' ||
+      (Boolean(effectivePostAuthorId && effectivePostAuthorId === activeUser.id) &&
+        ['CREATOR', 'ANALYST', 'ADMIN'].includes(roleUpper));
+    const replyIds = isModerator
+      ? comments.filter(r => r.parentId === comment.id).map(r => r.id)
+      : [];
+    const removedCount = 1 + replyIds.length;
+
+    setConfirmDeleteCommentId(null);
+    setDeletingCommentId(comment.id);
+    setCommentActionError(null);
+    setComments(prev =>
+      prev.filter(c => c.id !== comment.id && !(isModerator && c.parentId === comment.id))
+    );
+    setCommentsCount(c => Math.max(0, c - removedCount));
+
+    try {
+      if (replyIds.length > 0) {
+        const { error: childErr } = await supabase
+          .from('Comment')
+          .delete()
+          .eq('parentId', comment.id);
+        if (childErr) throw childErr;
+      }
+
+      const { data: deletedRows, error } = await supabase
+        .from('Comment')
+        .delete()
+        .eq('id', comment.id)
+        .select('id');
+
+      if (error) throw error;
+      if (!deletedRows || deletedRows.length === 0) {
+        throw new Error('You do not have permission to delete this comment.');
+      }
+
+      await Promise.all([fetchComments(), fetchInteractions()]);
+    } catch (e: any) {
+      setComments(prevComments);
+      setCommentsCount(prevCount);
+      setCommentActionError(e?.message || 'Could not delete comment');
+    } finally {
+      setDeletingCommentId(null);
+    }
   };
 
   const handleCommentVote = async (commentId: string, type: 1 | -1) => {
@@ -1311,6 +1393,13 @@ export default function ArticleDetailScreen() {
               <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 16 }}>
                 {t('common.comments', 'Comments')} ({commentsCount})
               </Text>
+
+              {commentActionError ? (
+                <View style={styles.commentErrorBanner}>
+                  <Ionicons name="alert-circle-outline" size={16} color="#B91C1C" />
+                  <Text style={styles.commentErrorText}>{commentActionError}</Text>
+                </View>
+              ) : null}
               
               {loadingComments ? (
                 <ActivityIndicator size="small" color={colors.PrimaryRed} style={{ marginVertical: 32 }} />
@@ -1324,34 +1413,84 @@ export default function ArticleDetailScreen() {
                   renderItem={({ item }) => {
                     const itemReplies = comments.filter(r => r.parentId === item.id);
                     
-                    const renderComment = (c: any, isReply = false) => (
-                      <View key={c.id} style={[styles.commentItem, isReply && { marginLeft: 32, borderBottomWidth: 0, paddingVertical: 8 }]}>
-                        <Image
-                          source={{ uri: c.User?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.User?.username || 'U')}&background=D4191F&color=fff` }}
-                          style={styles.commentAvatar}
-                        />
-                        <View style={{ flex: 1, marginLeft: 10 }}>
-                          <Text style={{ fontWeight: 'bold', fontSize: 13 }}>@{c.User?.username || 'User'}</Text>
-                          <Text style={{ fontSize: 14, color: colors.DarkText, marginTop: 2 }}>{c.content}</Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 16 }}>
-                            <Text style={{ fontSize: 11, color: colors.Slate400 }}>{new Date(c.createdAt).toLocaleDateString()}</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                              {!isReply && (
-                                <TouchableOpacity onPress={() => { setReplyingToId(c.id); setReplyingToUsername(c.User?.username); }}>
-                                  <Text style={{ fontSize: 11, fontWeight: 'bold', color: 'gray' }}>Reply</Text>
-                                </TouchableOpacity>
+                    const renderComment = (c: any, isReply = false) => {
+                      const showDelete = canDeleteComment(c);
+                      const isConfirmingDelete = confirmDeleteCommentId === c.id;
+                      const isDeleting = deletingCommentId === c.id;
+                      return (
+                        <View key={c.id} style={[styles.commentItem, isReply && { marginLeft: 32, borderBottomWidth: 0, paddingVertical: 8 }]}>
+                          <Image
+                            source={{ uri: c.User?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.User?.username || 'U')}&background=D4191F&color=fff` }}
+                            style={styles.commentAvatar}
+                          />
+                          <View style={{ flex: 1, marginLeft: 10 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                              <Text style={{ fontWeight: 'bold', fontSize: 13, flex: 1 }} numberOfLines={1}>
+                                @{c.User?.username || 'User'}
+                              </Text>
+                              {showDelete && (
+                                isConfirmingDelete ? (
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <TouchableOpacity
+                                      onPress={() => setConfirmDeleteCommentId(null)}
+                                      disabled={isDeleting}
+                                      style={styles.commentDeleteCancelBtn}
+                                    >
+                                      <Text style={styles.commentDeleteCancelText}>Cancel</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                      onPress={() => handleDeleteComment(c)}
+                                      disabled={isDeleting}
+                                      style={styles.commentDeleteConfirmBtn}
+                                    >
+                                      {isDeleting ? (
+                                        <ActivityIndicator size="small" color="#FFFFFF" />
+                                      ) : (
+                                        <Text style={styles.commentDeleteConfirmText}>Delete</Text>
+                                      )}
+                                    </TouchableOpacity>
+                                  </View>
+                                ) : (
+                                  <TouchableOpacity
+                                    onPress={() => {
+                                      setCommentActionError(null);
+                                      setConfirmDeleteCommentId(c.id);
+                                    }}
+                                    disabled={isDeleting}
+                                    style={styles.commentDeleteIconBtn}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    accessibilityLabel="Delete comment"
+                                  >
+                                    {isDeleting ? (
+                                      <ActivityIndicator size="small" color={colors.PrimaryRed} />
+                                    ) : (
+                                      <Ionicons name="trash-outline" size={16} color="#94A3B8" />
+                                    )}
+                                  </TouchableOpacity>
+                                )
                               )}
                             </View>
+                            <Text style={{ fontSize: 14, color: colors.DarkText, marginTop: 2 }}>{c.content}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 16 }}>
+                              <Text style={{ fontSize: 11, color: colors.Slate400 }}>{new Date(c.createdAt).toLocaleDateString()}</Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                {!isReply && (
+                                  <TouchableOpacity onPress={() => { setReplyingToId(c.id); setReplyingToUsername(c.User?.username); }}>
+                                    <Text style={{ fontSize: 11, fontWeight: 'bold', color: 'gray' }}>Reply</Text>
+                                  </TouchableOpacity>
+                                )}
+                              </View>
+                            </View>
                           </View>
+                          {c.creatorLiked && (
+                            <View style={{ position: 'absolute', right: 0, bottom: 4 }}>
+                              <Ionicons name="heart" size={16} color="red" />
+                              <Image source={{ uri: selectedArticle?.authorImage || `https://ui-avatars.com/api/?name=C&background=D4191F&color=fff` }} style={{ width: 12, height: 12, borderRadius: 6, position: 'absolute', bottom: -2, right: -4, borderWidth: 1, borderColor: 'white' }} />
+                            </View>
+                          )}
                         </View>
-                        {c.creatorLiked && (
-                          <View style={{ position: 'absolute', right: 0, bottom: 4 }}>
-                            <Ionicons name="heart" size={16} color="red" />
-                            <Image source={{ uri: selectedArticle?.authorImage || `https://ui-avatars.com/api/?name=C&background=D4191F&color=fff` }} style={{ width: 12, height: 12, borderRadius: 6, position: 'absolute', bottom: -2, right: -4, borderWidth: 1, borderColor: 'white' }} />
-                          </View>
-                        )}
-                      </View>
-                    );
+                      );
+                    };
 
                     return (
                       <View>
@@ -1539,6 +1678,50 @@ const getStyles = (colors: any) => StyleSheet.create({
   sheetHandle: { width: 40, height: 4, backgroundColor: '#D1D5DB', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
   commentItem: { flexDirection: 'row', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   commentAvatar: { width: 32, height: 32, borderRadius: 16 },
+  commentDeleteIconBtn: {
+    padding: 4,
+    borderRadius: 6,
+  },
+  commentDeleteCancelBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#F1F5F9',
+  },
+  commentDeleteCancelText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  commentDeleteConfirmBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#D4191F',
+  },
+  commentDeleteConfirmText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  commentErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  commentErrorText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#B91C1C',
+  },
   commentInputRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16, gap: 10 },
   commentInput: { flex: 1, backgroundColor: '#F1F5F9', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, maxHeight: 80 },
   sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.PrimaryRed, justifyContent: 'center', alignItems: 'center' },
