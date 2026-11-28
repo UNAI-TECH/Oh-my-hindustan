@@ -850,6 +850,20 @@ export default function ArticleDetailScreen() {
               ))}
             </View>
           )}
+          {(authorNameCustom || authorPosition || selectedArticle.author_name || selectedArticle.author_position) && (
+            <View style={{ marginBottom: 4, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+              {(authorNameCustom || selectedArticle.author_name) && (
+                <Text style={{ fontSize: 18, fontWeight: '900', color: colors.DarkText, marginBottom: 4 }}>
+                  {authorNameCustom || selectedArticle.author_name}
+                </Text>
+              )}
+              {(authorPosition || selectedArticle.author_position) && (
+                <Text style={{ fontSize: 13, color: colors.Slate500, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  {authorPosition || selectedArticle.author_position}
+                </Text>
+              )}
+            </View>
+          )}
         </View>
 
         {thumbnail && (
@@ -895,20 +909,6 @@ export default function ArticleDetailScreen() {
 
         {/* Creator Profile & Follow Below Cover Image */}
         <View style={{ paddingHorizontal: isWebDesktop ? 32 : 24, paddingTop: 18, paddingBottom: 6 }}>
-          {(authorNameCustom || authorPosition || selectedArticle.author_name || selectedArticle.author_position) && (
-            <View style={{ marginBottom: 14, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
-              {(authorNameCustom || selectedArticle.author_name) && (
-                <Text style={{ fontSize: 17, fontWeight: '900', color: colors.DarkText, marginBottom: 4 }}>
-                  {authorNameCustom || selectedArticle.author_name}
-                </Text>
-              )}
-              {(authorPosition || selectedArticle.author_position) && (
-                <Text style={{ fontSize: 12, color: colors.Slate500, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  {authorPosition || selectedArticle.author_position}
-                </Text>
-              )}
-            </View>
-          )}
           <View style={styles.authorRow}>
             <Image source={{ uri: authorImage || `https://ui-avatars.com/api/?name=C&background=D4191F&color=fff` }} style={styles.authorImage} />
             <TouchableOpacity style={{ flex: 1, marginLeft: 12 }} onPress={() => navigation.navigate('CreatorProfile', { authorId: postAuthorId, authorName })}>
