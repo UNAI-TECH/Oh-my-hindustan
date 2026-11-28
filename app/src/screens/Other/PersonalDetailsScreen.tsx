@@ -74,7 +74,8 @@ export default function PersonalDetailsScreen() {
         setModalConfig({ visible: true, title: 'Success', message: 'Profile picture updated successfully!', isError: false });
       }
     } catch (e: any) {
-      setModalConfig({ visible: true, title: 'Error', message: e.message || 'Failed to update profile picture. Please try again.', isError: true });
+      console.error('Profile picture update failed:', e);
+      setModalConfig({ visible: true, title: 'Error', message: 'Something went wrong while updating your profile picture. Please try again.', isError: true });
     } finally {
       setUploadingImage(false);
     }

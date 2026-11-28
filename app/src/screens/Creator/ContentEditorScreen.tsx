@@ -78,7 +78,7 @@ export default function ContentEditorScreen() {
       });
     } catch (error: any) {
       console.error('Publish error:', error);
-      setModalConfig({ visible: true, title: 'Publish Failed', message: error.message || 'Something went wrong. Please try again.', isError: true });
+      setModalConfig({ visible: true, title: 'Publish Failed', message: 'Something went wrong while publishing. Please try again.', isError: true });
     } finally {
       setIsPublishing(false);
     }

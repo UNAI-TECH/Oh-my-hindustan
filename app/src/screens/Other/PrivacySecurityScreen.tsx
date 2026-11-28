@@ -122,10 +122,11 @@ export default function PrivacySecurityScreen() {
                     await supabase.auth.signOut();
                     setModalConfig({ visible: false, title: '', message: '', isError: false });
                   } catch (e: any) {
+                    console.error('Account deletion failed:', e);
                     setModalConfig({
                       visible: true,
                       title: 'Deletion Failed',
-                      message: e?.message || 'Unable to delete account right now.',
+                      message: 'Unable to delete account right now. Please try again later.',
                       isError: true,
                       primaryButtonText: 'OK',
                       secondaryButtonText: undefined,

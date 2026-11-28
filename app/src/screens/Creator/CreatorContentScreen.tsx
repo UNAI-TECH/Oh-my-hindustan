@@ -68,7 +68,8 @@ export default function CreatorContentScreen() {
           setPosts(prev => prev.filter(p => p.id !== postId));
           setModalConfig(prev => ({ ...prev, visible: false }));
         } catch (e: any) {
-          setModalConfig({ visible: true, title: 'Error', message: e.message || 'Failed to delete', isError: true, primaryButtonText: 'OK', secondaryButtonText: undefined, onPrimaryPress: undefined, onSecondaryPress: undefined });
+          console.error('Delete post failed:', e);
+          setModalConfig({ visible: true, title: 'Error', message: 'Something went wrong while deleting the article. Please try again.', isError: true, primaryButtonText: 'OK', secondaryButtonText: undefined, onPrimaryPress: undefined, onSecondaryPress: undefined });
         }
       }
     });

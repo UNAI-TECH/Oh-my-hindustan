@@ -602,7 +602,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     } catch (e: any) {
       console.error('[AUTH] Registration error:', e);
-      setError(e?.message || 'Registration failed. Please try again.');
+      const raw = String(e?.message || '').toLowerCase();
+      if (raw.includes('already registered') || raw.includes('already exists')) {
+        setError('An account with this email already exists. Please sign in instead.');
+      } else {
+        setError('Registration could not be completed. Please check your details and try again.');
+      }
       return false;
     } finally {
       setIsLoading(false);
@@ -630,7 +635,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (resetErr) throw resetErr;
       return true;
     } catch (e: any) {
-      setError(e?.message || 'Could not send reset email.');
+      console.error('[AUTH] Password reset error:', e);
+      setError('Could not send password reset email right now. Please try again later.');
       return false;
     } finally {
       setIsLoading(false);
@@ -707,7 +713,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.warn('[GOOGLE AUTH] Sign-in already in progress');
       } else {
         console.error('[GOOGLE AUTH] Native Error:', error);
-        setError(error.message || 'Google Sign-In failed. Please try again.');
+        setError('Google Sign-In could not be completed. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -743,7 +749,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
         if (authError) throw authError;
       } catch (e: any) {
-        setError(e?.message || 'Google Sign-In failed. Please try again.');
+        console.error('[GOOGLE AUTH] Web Error:', e);
+        setError('Google Sign-In could not be completed. Please try again.');
         setIsLoading(false);
         isHandlingOAuthRef.current = false;
       }
@@ -1214,8 +1221,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       setUpdateProfileSuccess(true);
     } catch (e: any) {
-      console.error('[ONBOARDING] Error:', e.message);
-      setError(e.message || 'Update failed');
+      console.error('[ONBOARDING] Error:', e);
+      setError('Something went wrong while updating your profile. Please try again.');
       throw e;
     } finally {
       setIsLoading(false);

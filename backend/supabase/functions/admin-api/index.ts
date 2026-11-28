@@ -14,6 +14,21 @@ function jsonRes(body: unknown, status = 200) {
   });
 }
 
+function generateOneTimePassword(length = 8): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -142,8 +157,10 @@ serve(async (req: Request) => {
         const email = String(payload.email || "").trim().toLowerCase();
         const fullName = String(payload.fullName || "").trim();
         const bio = String(payload.bio || "").trim();
-        const password = payload.password ? String(payload.password) : undefined;
-        const creatorPortalUrl = payload.redirectTo || Deno.env.get("CREATOR_PORTAL_URL") || undefined;
+        const providedOtp = payload.oneTimePassword || payload.password;
+        const oneTimePassword = providedOtp && String(providedOtp).trim().length >= 6
+          ? String(providedOtp).trim()
+          : generateOneTimePassword(8);
 
         if (!email) return jsonRes({ error: "Email is required" }, 400);
 
@@ -155,53 +172,51 @@ serve(async (req: Request) => {
           .maybeSingle();
 
         let authUserId = existingRow?.id;
-        let actionLink: string | null = null;
+        let existingAuthUser: any = null;
 
         if (!authUserId) {
           const { data: listRes } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
           const matched = (listRes?.users || []).find((u) => (u.email || "").toLowerCase() === email);
           authUserId = matched?.id;
+          existingAuthUser = matched || null;
+        } else {
+          const { data: fetchedUser } = await adminClient.auth.admin.getUserById(authUserId);
+          existingAuthUser = fetchedUser?.user || null;
         }
 
+        const otpHash = await sha256Hex(oneTimePassword);
+        const nowIso = new Date().toISOString();
+        const expiresIso = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+        const nextAppMeta = {
+          ...(existingAuthUser?.app_metadata || {}),
+          must_change_password: true,
+          otp_hash: otpHash,
+          otp_issued_at: nowIso,
+          otp_expires_at: expiresIso,
+          otp_issued_by: callerId,
+        };
+
         if (authUserId) {
-          if (password && password.length >= 8) {
-            const { error: updErr } = await adminClient.auth.admin.updateUserById(authUserId, {
-              password,
-              email_confirm: true,
-              user_metadata: { full_name: fullName || existingRow?.channel_name },
-            });
-            if (updErr) throw updErr;
-          } else {
-            const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
-              type: "recovery",
-              email,
-              options: creatorPortalUrl ? { redirectTo: creatorPortalUrl } : undefined,
-            });
-            if (!linkErr) actionLink = linkData?.properties?.action_link || null;
-          }
+          const { error: updErr } = await adminClient.auth.admin.updateUserById(authUserId, {
+            password: oneTimePassword,
+            email_confirm: true,
+            app_metadata: nextAppMeta,
+            user_metadata: {
+              ...(existingAuthUser?.user_metadata || {}),
+              full_name: fullName || existingRow?.channel_name,
+            },
+          });
+          if (updErr) throw updErr;
         } else {
-          if (password && password.length >= 8) {
-            const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
-              email,
-              password,
-              email_confirm: true,
-              user_metadata: { full_name: fullName, username: `${rawBase}_${Date.now()}` },
-            });
-            if (createErr || !created.user) throw createErr || new Error("Failed to create auth user");
-            authUserId = created.user.id;
-          } else {
-            const { data: inviteData, error: inviteErr } = await adminClient.auth.admin.generateLink({
-              type: "invite",
-              email,
-              options: {
-                data: { full_name: fullName, username: `${rawBase}_${Date.now()}` },
-                ...(creatorPortalUrl ? { redirectTo: creatorPortalUrl } : {}),
-              },
-            });
-            if (inviteErr || !inviteData?.user) throw inviteErr || new Error("Failed to generate invite");
-            authUserId = inviteData.user.id;
-            actionLink = inviteData.properties?.action_link || null;
-          }
+          const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
+            email,
+            password: oneTimePassword,
+            email_confirm: true,
+            app_metadata: nextAppMeta,
+            user_metadata: { full_name: fullName, username: `${rawBase}_${Date.now()}` },
+          });
+          if (createErr || !created.user) throw createErr || new Error("Failed to create auth user");
+          authUserId = created.user.id;
         }
 
         let uniqueUsername = existingRow?.username;
@@ -215,7 +230,6 @@ serve(async (req: Request) => {
           uniqueUsername = conflict ? `${rawBase}_${Date.now().toString().slice(-5)}` : rawBase;
         }
 
-        const now = new Date().toISOString();
         const targetRole = existingRow?.role === "ADMIN" ? "ADMIN" : "CREATOR";
 
         const { error: upsertErr } = await adminClient.from("User").upsert({
@@ -227,12 +241,144 @@ serve(async (req: Request) => {
           bio: bio || existingRow?.bio || "",
           role: targetRole,
           account_status: "active",
-          updatedAt: now,
+          updatedAt: nowIso,
         });
         if (upsertErr) throw upsertErr;
 
-        await audit("creator.provision", "User", authUserId, null, { email, role: targetRole, invited: !password });
-        return jsonRes({ userId: authUserId, email, username: uniqueUsername, actionLink });
+        // Best-effort sync to creator_otp_credentials table if migration 010 is applied
+        try {
+          await adminClient
+            .from("creator_otp_credentials")
+            .upsert({
+              user_id: authUserId,
+              otp_hash: otpHash,
+              issued_by: callerId,
+              issued_at: nowIso,
+              expires_at: expiresIso,
+              consumed_at: null,
+              must_change_password: true,
+              updated_at: nowIso,
+            });
+        } catch (_) {}
+
+        await audit("creator.provision_otp", "User", authUserId, null, { email, role: targetRole });
+        return jsonRes({ userId: authUserId, email, username: uniqueUsername, oneTimePassword, actionLink: null });
+      }
+
+      case "issueCreatorOtp": {
+        const email = String(payload.email || "").trim().toLowerCase();
+        if (!email) return jsonRes({ error: "Email required" }, 400);
+
+        const providedOtp = payload.oneTimePassword;
+        const oneTimePassword = providedOtp && String(providedOtp).trim().length >= 6
+          ? String(providedOtp).trim()
+          : generateOneTimePassword(8);
+
+        const { data: userRow } = await adminClient
+          .from("User")
+          .select("id, email, username, channel_name")
+          .ilike("email", email)
+          .maybeSingle();
+
+        let authUserId = userRow?.id;
+        let existingAuthUser: any = null;
+        if (authUserId) {
+          const { data: uRes } = await adminClient.auth.admin.getUserById(authUserId);
+          existingAuthUser = uRes?.user || null;
+        } else {
+          const { data: listRes } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
+          const matched = (listRes?.users || []).find((u) => (u.email || "").toLowerCase() === email);
+          authUserId = matched?.id;
+          existingAuthUser = matched || null;
+        }
+        if (!authUserId) return jsonRes({ error: "Creator auth account not found" }, 404);
+
+        const otpHash = await sha256Hex(oneTimePassword);
+        const nowIso = new Date().toISOString();
+        const expiresIso = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+
+        const { error: updErr } = await adminClient.auth.admin.updateUserById(authUserId, {
+          password: oneTimePassword,
+          email_confirm: true,
+          app_metadata: {
+            ...(existingAuthUser?.app_metadata || {}),
+            must_change_password: true,
+            otp_hash: otpHash,
+            otp_issued_at: nowIso,
+            otp_expires_at: expiresIso,
+            otp_issued_by: callerId,
+          },
+        });
+        if (updErr) throw updErr;
+
+        try {
+          await adminClient
+            .from("creator_otp_credentials")
+            .upsert({
+              user_id: authUserId,
+              otp_hash: otpHash,
+              issued_by: callerId,
+              issued_at: nowIso,
+              expires_at: expiresIso,
+              consumed_at: null,
+              must_change_password: true,
+              updated_at: nowIso,
+            });
+        } catch (_) {}
+
+        await audit("user.otp_reset", "User", authUserId, null, { email });
+        return jsonRes({ email, oneTimePassword, actionLink: null });
+      }
+
+      case "deleteCategory": {
+        const categoryId = String(payload.categoryId || "").trim();
+        if (!categoryId) return jsonRes({ error: "categoryId is required" }, 400);
+
+        const { data: prevCat, error: catErr } = await adminClient
+          .from("categories")
+          .select("*")
+          .eq("id", categoryId)
+          .maybeSingle();
+        if (catErr) throw catErr;
+        if (!prevCat) return jsonRes({ error: "Category not found" }, 404);
+
+        const { data: linkedRows } = await adminClient
+          .from("post_categories")
+          .select("post_id")
+          .eq("category_id", categoryId);
+        const affectedPostIds = Array.from(new Set((linkedRows || []).map((r: any) => r.post_id).filter(Boolean)));
+
+        if (affectedPostIds.length > 0) {
+          await adminClient
+            .from("post_categories")
+            .delete()
+            .eq("category_id", categoryId);
+        }
+
+        // Reassign legacy string Post.category references to General
+        if (prevCat.name_en) {
+          await adminClient
+            .from("Post")
+            .update({ category: "General", updatedAt: new Date().toISOString() })
+            .eq("category", prevCat.name_en);
+        }
+        if (prevCat.name_ta) {
+          await adminClient
+            .from("Post")
+            .update({ category: "General", updatedAt: new Date().toISOString() })
+            .eq("category", prevCat.name_ta);
+        }
+
+        const { error: delErr } = await adminClient
+          .from("categories")
+          .delete()
+          .eq("id", categoryId);
+        if (delErr) throw delErr;
+
+        await audit("category.delete", "categories", categoryId, prevCat, {
+          reassignedPostCount: affectedPostIds.length,
+        });
+        return jsonRes({ success: true, reassignedPostCount: affectedPostIds.length });
       }
 
       case "approveCreatorRequest": {
@@ -242,7 +388,7 @@ serve(async (req: Request) => {
           .from("creator_requests")
           .update({
             status: "approved",
-            admin_message: adminMessage || "Your application has been approved! Use your invitation/setup link to access Creator Studio.",
+            admin_message: adminMessage || "Your application has been approved! Use your One-Time Password to sign in to Creator Studio and create your personal password.",
             updated_at: new Date().toISOString(),
           })
           .eq("id", requestId);

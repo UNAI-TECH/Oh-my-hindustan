@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import { Platform } from 'react-native';
 import { AppApi } from '../api/services';
 import { FeedItem, FeedItemType } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -130,27 +131,49 @@ export const mapPostToFeedItem = (post: any): FeedItem => {
 
 const toFeedItem = mapPostToFeedItem;
 
+const readWebFeedCacheSync = (targetLang: string): FeedItem[] => {
+  if (Platform.OS !== 'web' || typeof window === 'undefined' || !window.localStorage) return [];
+  try {
+    const raw = window.localStorage.getItem(`${FEED_CACHE_KEY}_${targetLang}`);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
 const FeedContext = createContext<FeedContextProps | undefined>(undefined);
 
 export const FeedProvider = ({ children }: { children: ReactNode }) => {
-  const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+  const { userProfile } = useAuth();
+  const { lang } = useSiteLanguage();
+  const initialWebCacheRef = useRef<FeedItem[] | null>(null);
+  if (initialWebCacheRef.current === null) {
+    initialWebCacheRef.current = readWebFeedCacheSync(lang);
+  }
+  const [feedItems, setFeedItems] = useState<FeedItem[]>(initialWebCacheRef.current);
   const [selectedArticle, setSelectedArticle] = useState<FeedItem | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(initialWebCacheRef.current.length === 0);
   const [isArticleLoading, setIsArticleLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const [sortBy, setSortByState] = useState<'latest' | 'trending' | 'popular'>('latest');
   const [error, setError] = useState<string | null>(null);
-  const { userProfile } = useAuth();
-  const { lang } = useSiteLanguage();
   const isFetchingRef = useRef(false);
   const fetchRequestIdRef = useRef(0);
 
   const saveToCache = async (data: FeedItem[]) => {
     try {
       if (data.length > 0) {
-        await AsyncStorage.setItem(`${FEED_CACHE_KEY}_${lang}`, JSON.stringify(data));
+        const serialized = JSON.stringify(data);
+        if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+          try {
+            window.localStorage.setItem(`${FEED_CACHE_KEY}_${lang}`, serialized);
+          } catch {}
+        }
+        await AsyncStorage.setItem(`${FEED_CACHE_KEY}_${lang}`, serialized);
       }
     } catch (e) {
       console.error('Failed to save feed cache', e);
@@ -225,7 +248,7 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
         setHasMore(false);
       } else {
         console.error('Feed fetch error:', e);
-        setError(e.message || 'Failed to load feed. Please check your connection.');
+        setError('Something went wrong while loading the feed. Please check your connection and try again.');
       }
     } finally {
       if (reqId === fetchRequestIdRef.current) {

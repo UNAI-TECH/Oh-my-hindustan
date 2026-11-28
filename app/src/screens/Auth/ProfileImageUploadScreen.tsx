@@ -75,7 +75,8 @@ export default function ProfileImageUploadScreen() {
       });
       navigateAfterAuth(navigation);
     } catch (e: any) {
-      setErrorMsg(e?.message || 'Could not finish profile setup. Please try again.');
+      console.error('Profile image setup failed:', e);
+      setErrorMsg('Could not finish profile setup. Please try again.');
     } finally {
       setUploading(false);
     }

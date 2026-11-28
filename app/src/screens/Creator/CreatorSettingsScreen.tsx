@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, Switch, ActivityIndicator, Alert, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, Switch, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +15,7 @@ export default function CreatorSettingsScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
-  const { userProfile, updateProfile } = useAuth();
+  const { userProfile, updateProfile, logout } = useAuth();
   const { t, i18n } = useTranslation();
 
   const [displayName, setDisplayName] = useState(userProfile?.username || '');
@@ -23,7 +23,16 @@ export default function CreatorSettingsScreen() {
   const [notifComments, setNotifComments] = useState(true);
   const [notifFollowers, setNotifFollowers] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [modalConfig, setModalConfig] = useState({ visible: false, title: '', message: '', isError: false });
+  const [modalConfig, setModalConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    isError: boolean;
+    primaryButtonText?: string;
+    secondaryButtonText?: string;
+    onPrimaryPress?: () => void;
+    onSecondaryPress?: () => void;
+  }>({ visible: false, title: '', message: '', isError: false });
 
   const currentLanguage = i18n.language;
 
@@ -38,10 +47,11 @@ export default function CreatorSettingsScreen() {
         isError: false 
       });
     } catch (e: any) {
+      console.error('Creator settings save failed:', e);
       setModalConfig({ 
         visible: true, 
         title: t('common.error'), 
-        message: e.message || 'Failed to save.', 
+        message: 'Something went wrong while saving your settings. Please try again.', 
         isError: true 
       });
     } finally {
@@ -129,7 +139,25 @@ export default function CreatorSettingsScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.logoutBtn} onPress={() => Alert.alert('Logout', 'Are you sure?', [{ text: 'Cancel' }, { text: 'Logout', onPress: () => navigation.navigate('Splash') }])}>
+        <TouchableOpacity
+          style={styles.logoutBtn}
+          onPress={() =>
+            setModalConfig({
+              visible: true,
+              title: 'Log Out',
+              message: 'Are you sure you want to log out of Creator Studio?',
+              isError: true,
+              primaryButtonText: 'Log Out',
+              secondaryButtonText: 'Cancel',
+              onSecondaryPress: () => setModalConfig((prev) => ({ ...prev, visible: false })),
+              onPrimaryPress: async () => {
+                setModalConfig((prev) => ({ ...prev, visible: false }));
+                await logout();
+                navigation.navigate('Splash');
+              },
+            })
+          }
+        >
           <Ionicons name="log-out-outline" size={20} color="#D4191F" />
           <Text style={styles.logoutText}>{t('creator_studio.logout')}</Text>
         </TouchableOpacity>
@@ -157,8 +185,11 @@ export default function CreatorSettingsScreen() {
           visible={modalConfig.visible} 
           title={modalConfig.title} 
           message={modalConfig.message} 
-          isError={modalConfig.isError} 
-          onPrimaryPress={() => setModalConfig(prev => ({ ...prev, visible: false }))} 
+          isError={modalConfig.isError}
+          primaryButtonText={modalConfig.primaryButtonText}
+          secondaryButtonText={modalConfig.secondaryButtonText}
+          onPrimaryPress={modalConfig.onPrimaryPress || (() => setModalConfig(prev => ({ ...prev, visible: false })))}
+          onSecondaryPress={modalConfig.onSecondaryPress}
         />
       </WebStudioShell>
     );
@@ -188,8 +219,11 @@ export default function CreatorSettingsScreen() {
         visible={modalConfig.visible} 
         title={modalConfig.title} 
         message={modalConfig.message} 
-        isError={modalConfig.isError} 
-        onPrimaryPress={() => setModalConfig(prev => ({ ...prev, visible: false }))} 
+        isError={modalConfig.isError}
+        primaryButtonText={modalConfig.primaryButtonText}
+        secondaryButtonText={modalConfig.secondaryButtonText}
+        onPrimaryPress={modalConfig.onPrimaryPress || (() => setModalConfig(prev => ({ ...prev, visible: false })))}
+        onSecondaryPress={modalConfig.onSecondaryPress}
       />
     </SafeAreaView>
   );

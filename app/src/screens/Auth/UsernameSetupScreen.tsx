@@ -91,7 +91,8 @@ export default function UsernameSetupScreen() {
       await updateOnboardingProfile({ username });
       navigation.navigate('ProfileImageUpload');
     } catch (e: any) {
-      setErrorMsg(e?.message || 'Failed to save username. Please try again.');
+      console.error('Username save failed:', e);
+      setErrorMsg('Something went wrong while saving your username. Please try again.');
     }
   };
 

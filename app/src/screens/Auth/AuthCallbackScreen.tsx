@@ -38,7 +38,8 @@ export default function AuthCallbackScreen() {
         }
       } catch (err: any) {
         if (active) {
-          setErrorMsg(err?.message || 'Google sign-in could not be completed. Please try again.');
+          console.error('[AUTH CALLBACK] Error:', err);
+          setErrorMsg('Google sign-in could not be completed. Please try again.');
           setProcessing(false);
         }
       }

@@ -14,6 +14,14 @@ function jsonRes(body: unknown, status = 200) {
   });
 }
 
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -40,14 +48,85 @@ serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    if (body.confirmText !== "DELETE") {
-      return jsonRes({ error: 'Confirmation text "DELETE" is required' }, 400);
-    }
-
     const uid = userData.user.id;
     const adminClient = createClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+
+    if (body.action === "completeCreatorOtpSetup") {
+      const otp = String(body.otp || "").trim();
+      const newPassword = String(body.newPassword || "");
+
+      if (!otp) {
+        return jsonRes({ error: "One-time password is required" }, 400);
+      }
+      if (newPassword.length < 8) {
+        return jsonRes({ error: "New password must be at least 8 characters" }, 400);
+      }
+
+      const { data: authRecord, error: authFetchErr } = await adminClient.auth.admin.getUserById(uid);
+      if (authFetchErr || !authRecord?.user) {
+        return jsonRes({ error: "Account not found" }, 404);
+      }
+
+      const appMeta = authRecord.user.app_metadata || {};
+      if (!appMeta.must_change_password || !appMeta.otp_hash) {
+        return jsonRes({ error: "No pending one-time password verification found for this account" }, 400);
+      }
+
+      if (appMeta.otp_expires_at && new Date(appMeta.otp_expires_at).getTime() < Date.now()) {
+        return jsonRes({ error: "One-time password has expired. Ask an administrator to issue a new one." }, 400);
+      }
+
+      const providedHash = await sha256Hex(otp);
+      if (providedHash !== appMeta.otp_hash) {
+        return jsonRes({ error: "The one-time password does not match our records." }, 403);
+      }
+
+      const nowIso = new Date().toISOString();
+      const { error: updateAuthErr } = await adminClient.auth.admin.updateUserById(uid, {
+        password: newPassword,
+        app_metadata: {
+          ...appMeta,
+          must_change_password: false,
+          otp_hash: null,
+          otp_used_at: nowIso,
+        },
+      });
+      if (updateAuthErr) throw updateAuthErr;
+
+      try {
+        await adminClient
+          .from("creator_otp_credentials")
+          .update({
+            consumed_at: nowIso,
+            must_change_password: false,
+            updated_at: nowIso,
+          })
+          .eq("user_id", uid);
+      } catch (_) {}
+
+      const { data: profile } = await adminClient
+        .from("User")
+        .select("role")
+        .eq("id", uid)
+        .maybeSingle();
+
+      await adminClient.from("audit_logs").insert({
+        actor_id: uid,
+        actor_role: profile?.role || "CREATOR",
+        action: "creator.otp_password_set",
+        resource_type: "User",
+        resource_id: uid,
+        outcome: "success",
+      });
+
+      return jsonRes({ success: true });
+    }
+
+    if (body.confirmText !== "DELETE") {
+      return jsonRes({ error: 'Confirmation text "DELETE" is required' }, 400);
+    }
 
     const { data: profile } = await adminClient
       .from("User")

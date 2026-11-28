@@ -420,7 +420,8 @@ export default function ArticleDetailScreen() {
       setUpvotes(prevUpvotes);
       setDownvotes(prevDownvotes);
       setMyVote(prevMyVote);
-      setModalConfig({ visible: true, title: 'Vote Failed', message: e?.message || 'Could not register vote', isError: true });
+      console.error('Vote failed:', e);
+      setModalConfig({ visible: true, title: 'Vote Failed', message: 'Something went wrong while registering your vote. Please try again.', isError: true });
     }
   };
 
@@ -445,7 +446,8 @@ export default function ArticleDetailScreen() {
       }
     } catch (e: any) {
       setIsSaved(prevSaved);
-      setModalConfig({ visible: true, title: 'Save Failed', message: e?.message || 'Could not save post', isError: true });
+      console.error('Save post failed:', e);
+      setModalConfig({ visible: true, title: 'Save Failed', message: 'Something went wrong while saving this post. Please try again.', isError: true });
     }
   };
 
@@ -567,7 +569,9 @@ export default function ArticleDetailScreen() {
     } catch (e: any) {
       setComments(prevComments);
       setCommentsCount(prevCount);
-      setCommentActionError(e?.message || 'Could not delete comment');
+      console.error('Delete comment failed:', e);
+      const isPermErr = String(e?.message || '').toLowerCase().includes('permission');
+      setCommentActionError(isPermErr ? 'You do not have permission to delete this comment.' : 'Something went wrong. Could not delete comment.');
     } finally {
       setDeletingCommentId(null);
     }
@@ -641,7 +645,8 @@ export default function ArticleDetailScreen() {
       setComments(prevComments);
       setCommentsCount(prevCount);
       setNewComment(commentContent);
-      setModalConfig({ visible: true, title: 'Comment Failed', message: e?.message || 'Could not post comment', isError: true });
+      console.error('Submit comment failed:', e);
+      setModalConfig({ visible: true, title: 'Comment Failed', message: 'Something went wrong while posting your comment. Please try again.', isError: true });
     }
   };
   // Fetch related posts (same category or same author, excluding current)

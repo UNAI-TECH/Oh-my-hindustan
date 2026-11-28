@@ -265,6 +265,32 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, 'text/html; charset=utf-8', html);
     }
 
+    // 8.5 Bare published-post slug redirect (/<slug> or /(en|ta)/<slug> -> /{lang}/article/{slug})
+    const bareSlugMatch = pathname.match(/^\/(?:(en|ta)\/)?([^/]+)$/);
+    if (bareSlugMatch) {
+      const candidateSlug = decodeURIComponent(bareSlugMatch[2] || '').trim();
+      const lowerSlug = candidateSlug.toLowerCase();
+      const reservedSlugs = new Set([
+        'home', 'latest', 'trending', 'most-read', 'search', 'explore', 'stories', 'creators',
+        'login', 'signup', 'otp', 'profile', 'library', 'settings', 'notifications',
+        'privacy', 'about', 'contact', 'editorial-policy', 'corrections-policy',
+        'privacy-policy', 'terms', 'advertise', 'robots.txt', 'favicon.ico', 'sitemap.xml',
+      ]);
+      if (candidateSlug && !reservedSlugs.has(lowerSlug) && !lowerSlug.includes('.')) {
+        const posts = await sbSelect(
+          config,
+          'Post',
+          `select=slug,language&slug=eq.${encodeURIComponent(candidateSlug)}&status=eq.PUBLISHED&or=(is_active.eq.true,is_active.is.null)&limit=1`
+        ).catch(() => []);
+        if (posts && posts[0]?.slug) {
+          const targetLang = bareSlugMatch[1] || (posts[0].language === 'ta' ? 'ta' : 'en');
+          res.writeHead(301, { Location: `/${targetLang}/article/${encodeURIComponent(posts[0].slug)}` });
+          res.end();
+          return;
+        }
+      }
+    }
+
     // 9. Unknown routes return HTTP 404 with Expo SPA fallback UI
     const notFoundHtml = injectSeoIntoTemplate(
       getBaseTemplate(),

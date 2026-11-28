@@ -49,11 +49,11 @@ serve(async (req: Request) => {
       }
     }
 
-    const { email, actionLink, type = "invite" } = await req.json();
+    const { email, actionLink, oneTimePassword, loginUrl = "https://creator.postsapp.in/login", type = "otp" } = await req.json();
 
-    if (!email || !actionLink) {
+    if (!email || (!oneTimePassword && !actionLink)) {
       return new Response(
-        JSON.stringify({ error: "Missing email or secure actionLink" }),
+        JSON.stringify({ error: "Missing email or credentials" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -65,7 +65,7 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           sent: false,
-          message: "SMTP credentials not configured; share the secure setup link directly.",
+          message: "SMTP credentials not configured; copy and share the one-time password directly.",
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -76,16 +76,36 @@ serve(async (req: Request) => {
       auth: { user, pass },
     });
 
-    const isReset = type === "recovery";
-    const subject = isReset
-      ? "PostsApp Creator Studio — Password Setup / Reset Link"
-      : "Welcome to PostsApp Creator Studio — Complete Your Account Setup";
+    const isReset = type === "recovery" || type === "otp_reset";
+    const subject = oneTimePassword
+      ? (isReset
+        ? "PostsApp Creator Studio — Your New One-Time Password"
+        : "Welcome to PostsApp Creator Studio — Your One-Time Login Credentials")
+      : (isReset
+        ? "PostsApp Creator Studio — Password Setup / Reset Link"
+        : "Welcome to PostsApp Creator Studio — Complete Your Account Setup");
 
-    const mailOptions = {
-      from: `"PostsApp Editorial Admin" <${user}>`,
-      to: email,
-      subject,
-      html: `
+    const htmlBody = oneTimePassword
+      ? `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #111827;">
+          <h2 style="color: #D4191F;">${isReset ? "Creator Studio One-Time Password Reset" : "Welcome to PostsApp Creator Studio"}</h2>
+          <p>${isReset
+            ? "An administrator has issued a new one-time password for your Creator Studio account."
+            : "Your creator application has been approved! Sign in using your email and the one-time password below. You will be asked to create your own permanent password upon login."
+          }</p>
+          <div style="background: #F3F4F6; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px; margin: 20px 0;">
+            <p style="margin: 0 0 8px 0; font-size: 13px; color: #6B7280;"><strong>Email:</strong> ${email}</p>
+            <p style="margin: 0; font-size: 16px; color: #111827;"><strong>One-Time Password:</strong> <code style="background: #FFFFFF; padding: 4px 10px; border-radius: 6px; border: 1px solid #D1D5DB; font-weight: bold; letter-spacing: 1px;">${oneTimePassword}</code></p>
+          </div>
+          <div style="margin: 24px 0;">
+            <a href="${loginUrl}" style="background-color: #D4191F; color: #FFFFFF; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">
+              Sign In to Creator Studio
+            </a>
+          </div>
+          <p style="font-size: 12px; color: #6B7280;">This one-time password expires automatically after first use or in 48 hours.</p>
+        </div>
+      `
+      : `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #111827;">
           <h2 style="color: #D4191F;">${isReset ? "Reset Your Creator Studio Password" : "Welcome to PostsApp Creator Studio"}</h2>
           <p>${isReset
@@ -97,9 +117,15 @@ serve(async (req: Request) => {
               ${isReset ? "Set New Password" : "Activate Creator Account"}
             </a>
           </div>
-          <p style="font-size: 12px; color: #6B7280;">For security, this link expires automatically and never exposes a plaintext password.</p>
+          <p style="font-size: 12px; color: #6B7280;">For security, this link expires automatically.</p>
         </div>
-      `,
+      `;
+
+    const mailOptions = {
+      from: `"PostsApp Editorial Admin" <${user}>`,
+      to: email,
+      subject,
+      html: htmlBody,
     };
 
     await transporter.sendMail(mailOptions);
