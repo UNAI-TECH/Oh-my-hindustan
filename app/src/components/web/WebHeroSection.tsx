@@ -10,7 +10,9 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { FeedItem } from '../../types';
-import { estimateReadTime, stripHtml } from './webPortalHelpers';
+import { estimateReadTime, stripHtml, localizeCategoryName } from './webPortalHelpers';
+import { useTranslation } from 'react-i18next';
+import { useSiteLanguage } from '../../context/SiteLanguageContext';
 
 interface WebHeroSectionProps {
   editorsPicks: FeedItem[];
@@ -33,6 +35,8 @@ export default function WebHeroSection({
   onPressItem,
 }: WebHeroSectionProps) {
   const { width } = useWindowDimensions();
+  const { t } = useTranslation();
+  const { lang } = useSiteLanguage();
   const isDesktop = width >= 1024;
   const isMobile = width < 768;
 
@@ -44,7 +48,7 @@ export default function WebHeroSection({
       <View style={[styles.grid, !isDesktop && styles.gridTablet, isMobile && { flexDirection: 'column', gap: 18 }]}>
         {/* Left Column: Editor's Picks */}
         <View style={[styles.sideColumn, !isDesktop && styles.columnTabletHalf, isMobile && styles.columnMobileFull]}>
-          <SectionHeading title="Editor's Picks" />
+          <SectionHeading title={t('editorial.editors_picks', "Editor's Picks")} />
 
           {leadPick ? (
             <TouchableOpacity
@@ -69,7 +73,7 @@ export default function WebHeroSection({
                   </View>
                   <View style={styles.redCategoryPill}>
                     <Text style={styles.pillText}>
-                      {(leadPick.category || 'NEWS').toUpperCase()}
+                      {localizeCategoryName(leadPick.category || 'NEWS', lang).toUpperCase()}
                     </Text>
                   </View>
                 </View>
@@ -89,7 +93,7 @@ export default function WebHeroSection({
             >
               <Text style={styles.pickCompactMeta}>
                 <Text style={styles.pickCompactTime}>{estimateReadTime(item).toUpperCase()}  </Text>
-                <Text style={styles.pickCompactCat}>{(item.category || 'NEWS').toUpperCase()}</Text>
+                <Text style={styles.pickCompactCat}>{localizeCategoryName(item.category || 'NEWS', lang).toUpperCase()}</Text>
               </Text>
               <Text style={styles.pickCompactTitle} numberOfLines={3}>
                 {item.title}
@@ -107,7 +111,7 @@ export default function WebHeroSection({
             !isDesktop && ({ order: -1 } as any),
           ]}
         >
-          <SectionHeading title="Main News" />
+          <SectionHeading title={t('editorial.main_news', 'Main News')} />
           {mainNews ? (
             <TouchableOpacity
               style={[styles.mainNewsCard, isMobile && styles.mainNewsCardMobile]}
@@ -153,7 +157,7 @@ export default function WebHeroSection({
 
         {/* Right Column: Trending Now */}
         <View style={[styles.sideColumn, !isDesktop && styles.columnTabletHalf, isMobile && styles.columnMobileFull]}>
-          <SectionHeading title="Trending Now" />
+          <SectionHeading title={t('editorial.trending_now', 'Trending Now')} />
           <View style={styles.trendingList}>
             {trendingNow.slice(0, 4).map((item, idx) => (
               <TouchableOpacity
@@ -177,7 +181,7 @@ export default function WebHeroSection({
 
                 <View style={styles.trendingBody}>
                   <Text style={styles.trendingCategory} numberOfLines={1}>
-                    {(item.category || 'NEWS').toUpperCase()}
+                    {localizeCategoryName(item.category || 'NEWS', lang).toUpperCase()}
                   </Text>
                   <Text style={styles.trendingTitle} numberOfLines={2}>
                     {item.title}

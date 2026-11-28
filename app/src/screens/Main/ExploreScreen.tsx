@@ -7,10 +7,12 @@ import { Ionicons } from '@expo/vector-icons';
 import AppBottomNavBar from '../../components/BottomNavBar';
 import MainHeader from '../../components/MainHeader';
 import WebPageShell from '../../components/web/WebPageShell';
-import { buildArticleParams } from '../../components/web/webPortalHelpers';
+import { buildArticleParams, localizeCategoryName } from '../../components/web/webPortalHelpers';
 import { useFeed } from '../../context/FeedContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
+import { useSiteLanguage } from '../../context/SiteLanguageContext';
+import { useTranslation } from 'react-i18next';
 import { FeedItemType, FeedItem } from '../../types';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -22,18 +24,20 @@ interface FollowedCreator {
 
 export default function ExploreScreen() {
   const { colors } = useAppTheme();
+  const { t } = useTranslation();
+  const { lang } = useSiteLanguage();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const isWebDesktop = Platform.OS === 'web';
   const isMobileWeb = Platform.OS === 'web' && width < 640;
-  const { feedItems, isLoading: feedLoading } = useFeed();
+  const { feedItems, isLoading: feedLoading, refreshFeed } = useFeed();
   const { isAuthenticated, userProfile } = useAuth();
   const { unreadCount } = useNotifications();
   const [followedCreators, setFollowedCreators] = useState<FollowedCreator[]>([]);
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [refreshing, setRefreshing] = useState(false);
-  const filters = ['All', 'News', 'Blogs', 'Videos', 'Trending'];
+  const filters = ['All', 'News', 'Blogs', 'Trending'];
 
   // Fetch followed creators
   const fetchFollowedCreators = useCallback(async () => {
@@ -59,23 +63,36 @@ export default function ExploreScreen() {
 
   useEffect(() => {
     fetchFollowedCreators();
-    if (!userProfile?.id) return;
     const channel = supabase
-      .channel(`explore-follows-${userProfile.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'Follow', filter: `followerId=eq.${userProfile.id}` }, () => {
-        fetchFollowedCreators();
+      .channel(`explore-realtime-${userProfile?.id || 'guest'}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Post' }, () => {
+        refreshFeed();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'Vote' }, () => {
+        refreshFeed();
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'User' }, () => {
         fetchFollowedCreators();
-      })
-      .subscribe();
+      });
+
+    if (userProfile?.id) {
+      channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'Follow', filter: `followerId=eq.${userProfile.id}` },
+        () => {
+          fetchFollowedCreators();
+        }
+      );
+    }
+
+    channel.subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [fetchFollowedCreators, userProfile?.id]);
 
-  // Get content from followed creators, shuffled
+  // Get content from followed creators
   const followedCreatorIds = useMemo(() => followedCreators.map(c => c.id), [followedCreators]);
 
   const contentFeed = useMemo(() => {
@@ -84,11 +101,13 @@ export default function ExploreScreen() {
     // Filter by type
     if (selectedFilter === 'News') items = items.filter(it => [FeedItemType.NEWS, FeedItemType.UPDATE, FeedItemType.POLICY_TYPE].includes(it.type));
     if (selectedFilter === 'Blogs') items = items.filter(it => [FeedItemType.BLOG, FeedItemType.FORUM].includes(it.type));
-    if (selectedFilter === 'Videos') items = items.filter(it => it.type === FeedItemType.VIDEO || it.type === FeedItemType.DEBATE);
-    if (selectedFilter === 'Trending') items = items.filter(it => it.isTrending);
+    if (selectedFilter === 'Trending') {
+      items = [...items]
+        .filter(it => it.isTrending || (it.viewCount || 0) > 0 || (it.upvoteCount || 0) > 0)
+        .sort((a, b) => (b.isTrending ? 10000 : 0) + (b.viewCount || 0) + (b.upvoteCount || 0) - ((a.isTrending ? 10000 : 0) + (a.viewCount || 0) + (a.upvoteCount || 0)));
+    }
 
-    // Shuffle for random order
-    return [...items].sort(() => Math.random() - 0.5);
+    return items;
   }, [feedItems, selectedFilter]);
 
   const onRefresh = useCallback(async () => {
@@ -118,7 +137,7 @@ export default function ExploreScreen() {
 
     return (
       <TouchableOpacity
-        style={styles.contentCard}
+        style={[styles.contentCard, isWebDesktop && styles.webContentCard]}
         onPress={() => navigation.navigate('ArticleDetail', buildArticleParams(item))}
       >
         {/* Thumbnail */}
@@ -164,7 +183,7 @@ export default function ExploreScreen() {
               {item.category && (
                 <>
                   <Text style={styles.metaDot}>•</Text>
-                  <Text style={styles.metaText}>{item.category}</Text>
+                  <Text style={styles.metaText}>{localizeCategoryName(item.category, lang)}</Text>
                 </>
               )}
             </View>
@@ -183,21 +202,35 @@ export default function ExploreScreen() {
         <View style={styles.webHeaderRow}>
           <View style={styles.webTitleRow}>
             <View style={styles.webDash} />
-            <Text style={styles.webPageTitle}>Explore Stories & Creators</Text>
+            <Text style={styles.webPageTitle}>{t('editorial.explore_title', 'Explore Stories & Creators')}</Text>
           </View>
-          <View style={styles.webFilterPills}>
-            {filters.map((filter) => (
-              <TouchableOpacity
-                key={filter}
-                style={[styles.webFilterChip, selectedFilter === filter && styles.webFilterChipActive]}
-                onPress={() => setSelectedFilter(filter)}
-              >
-                <Text style={[styles.webFilterText, selectedFilter === filter && styles.webFilterTextActive]}>
-                  {filter}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.webFilterPills}
+          >
+            {filters.map((filter) => {
+              const filterLabel =
+                filter === 'All'
+                  ? t('common.all', 'All')
+                  : filter === 'News'
+                    ? t('editorial.news_filter', 'News')
+                    : filter === 'Blogs'
+                      ? t('editorial.blogs_filter', 'Blogs')
+                      : t('common.trending', 'Trending');
+              return (
+                <TouchableOpacity
+                  key={filter}
+                  style={[styles.webFilterChip, selectedFilter === filter && styles.webFilterChipActive]}
+                  onPress={() => setSelectedFilter(filter)}
+                >
+                  <Text style={[styles.webFilterText, selectedFilter === filter && styles.webFilterTextActive]}>
+                    {filterLabel}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
 
         {followedCreators.length > 0 && (
@@ -461,6 +494,14 @@ const getStyles = (colors: any) => StyleSheet.create({
     elevation: 3,
     overflow: 'hidden',
   },
+  webContentCard: {
+    marginHorizontal: 0,
+    marginBottom: 0,
+    width: '100%',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
   thumbnailContainer: {
     position: 'relative',
     width: '100%',
@@ -627,24 +668,26 @@ const getStyles = (colors: any) => StyleSheet.create({
   webGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'flex-start',
     gap: 18,
+    width: '100%',
   },
   webCardWrapDesktop: {
     flexBasis: '31%',
     flexGrow: 1,
     minWidth: 280,
-    marginHorizontal: -16,
   },
   webCardWrapTablet: {
     flexBasis: '47%',
     flexGrow: 1,
     minWidth: 260,
-    marginHorizontal: -16,
   },
   webCardWrapMobile: {
     width: '100%',
+    flexBasis: '100%',
+    flexGrow: 0,
+    flexShrink: 0,
     minWidth: 0,
-    marginHorizontal: -12,
   },
   webEmptyBox: {
     backgroundColor: '#FFFFFF',

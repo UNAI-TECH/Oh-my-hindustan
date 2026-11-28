@@ -10,7 +10,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FeedItem } from '../../types';
-import { estimateReadTime } from './webPortalHelpers';
+import { estimateReadTime, localizeCategoryName } from './webPortalHelpers';
+import { useTranslation } from 'react-i18next';
+import { useSiteLanguage } from '../../context/SiteLanguageContext';
 
 interface WebFeaturedPostsProps {
   items: FeedItem[];
@@ -30,6 +32,8 @@ export default function WebFeaturedPosts({
   carousel = false,
 }: WebFeaturedPostsProps) {
   const { width } = useWindowDimensions();
+  const { t } = useTranslation();
+  const { lang } = useSiteLanguage();
   const isDesktop = width >= 1024;
   const isMobile = width < 640;
   const scrollRef = useRef<ScrollView>(null);
@@ -81,7 +85,7 @@ export default function WebFeaturedPosts({
 
       <View style={styles.cardBody}>
         <Text style={styles.categoryText} numberOfLines={1}>
-          {(item.category || 'NEWS').toUpperCase()}
+          {localizeCategoryName(item.category || 'NEWS', lang).toUpperCase()}
         </Text>
         <Text style={styles.titleText} numberOfLines={2}>
           {item.title}
@@ -125,7 +129,7 @@ export default function WebFeaturedPosts({
             </View>
           )}
           <TouchableOpacity onPress={onPressViewAll}>
-            <Text style={styles.viewAllText}>View All Stories →</Text>
+            <Text style={styles.viewAllText}>{t('editorial.view_all_stories', 'View All Stories')} →</Text>
           </TouchableOpacity>
         </View>
       </View>

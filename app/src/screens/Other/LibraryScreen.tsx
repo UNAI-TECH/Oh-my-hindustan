@@ -12,18 +12,20 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { supabase } from '../../lib/supabaseClient';
 import { savePendingAuthReturn } from '../../utils/authReturn';
+import { useTranslation } from 'react-i18next';
 
 type LibraryTab = 'saved' | 'liked' | 'commented';
-type FilterType = 'All' | 'Blogs' | 'Posts' | 'Videos' | 'News';
+type FilterType = 'All' | 'Blogs' | 'Posts' | 'News';
 
-const TAB_CONFIG: { key: LibraryTab; icon: string; label: string; color: string; bg: string }[] = [
-  { key: 'saved', icon: 'bookmark', label: 'Saved', color: '#D4191F', bg: '#FEF2F2' },
-  { key: 'liked', icon: 'heart', label: 'Liked', color: '#EC4899', bg: '#FDF2F8' },
-  { key: 'commented', icon: 'chatbubble-ellipses', label: 'Comments', color: '#8B5CF6', bg: '#F5F3FF' },
+const TAB_CONFIG: { key: LibraryTab; icon: string; label: string; tKey: string; color: string; bg: string }[] = [
+  { key: 'saved', icon: 'bookmark', label: 'Saved', tKey: 'editorial.saved_tab', color: '#D4191F', bg: '#FEF2F2' },
+  { key: 'liked', icon: 'heart', label: 'Liked', tKey: 'editorial.liked_tab', color: '#EC4899', bg: '#FDF2F8' },
+  { key: 'commented', icon: 'chatbubble-ellipses', label: 'Comments', tKey: 'editorial.comments_tab', color: '#8B5CF6', bg: '#F5F3FF' },
 ];
 
 export default function LibraryScreen() {
   const { colors } = useAppTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const { userProfile, isAuthenticated } = useAuth();
   const { unreadCount } = useNotifications();
@@ -110,7 +112,6 @@ export default function LibraryScreen() {
     if (activeFilter === 'All') return true;
     if (activeFilter === 'Blogs' && item.category?.toLowerCase().includes('blog')) return true;
     if (activeFilter === 'Posts' && (!item.category || item.category?.toLowerCase() === 'general' || item.category?.toLowerCase() === 'politics' || item.category?.toLowerCase() === 'economy')) return true;
-    if (activeFilter === 'Videos' && item.category?.toLowerCase().includes('video')) return true;
     if (activeFilter === 'News' && item.category?.toLowerCase().includes('news')) return true;
     return item.category?.toLowerCase() === activeFilter.toLowerCase();
   });
@@ -121,7 +122,9 @@ export default function LibraryScreen() {
     <View style={{ paddingBottom: 4 }}>
       {/* Page Title */}
       <View style={{ paddingHorizontal: 20, marginTop: 8, marginBottom: 16 }}>
-        <Text style={{ fontSize: 28, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 }}>Your Library</Text>
+        <Text style={{ fontSize: 28, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 }}>
+          {t('editorial.library_title', 'Your Library')}
+        </Text>
       </View>
 
       {/* Tab Selector — Compact inline row */}
@@ -171,7 +174,7 @@ export default function LibraryScreen() {
                 fontSize: 14,
                 fontWeight: isActive ? '700' : '600',
                 color: isActive ? tab.color : '#64748B',
-              }}>{tab.label}</Text>
+              }}>{t(tab.tKey, tab.label)}</Text>
             </TouchableOpacity>
           );
         })}
@@ -182,7 +185,7 @@ export default function LibraryScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <View style={{ width: 4, height: 20, backgroundColor: activeTabConfig.color, borderRadius: 2 }} />
           <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A' }}>
-            {activeTabConfig.label}
+            {t(activeTabConfig.tKey, activeTabConfig.label)}
           </Text>
           <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
             <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>{filteredItems.length}</Text>
@@ -192,7 +195,7 @@ export default function LibraryScreen() {
 
       {/* Filters */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 12 }}>
-        {(['All', 'Blogs', 'Posts', 'Videos', 'News'] as FilterType[]).map(f => (
+        {(['All', 'Blogs', 'Posts', 'News'] as FilterType[]).map(f => (
           <TouchableOpacity
             key={f}
             style={{
@@ -241,7 +244,7 @@ export default function LibraryScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <View style={{ width: 14, height: 3, backgroundColor: '#D4191F' }} />
-            <Text style={{ fontSize: 22, fontWeight: '800', color: '#111827' }}>Your Library</Text>
+            <Text style={{ fontSize: 22, fontWeight: '800', color: '#111827' }}>{t('editorial.library_title', 'Your Library')}</Text>
           </View>
 
           <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -265,7 +268,7 @@ export default function LibraryScreen() {
                 >
                   <Ionicons name={tab.icon as any} size={16} color={isActive ? tab.color : '#6B7280'} />
                   <Text style={{ fontSize: 13, fontWeight: isActive ? '700' : '600', color: isActive ? tab.color : '#374151' }}>
-                    {tab.label}
+                    {t(tab.tKey, tab.label)}
                   </Text>
                 </TouchableOpacity>
               );
@@ -275,14 +278,14 @@ export default function LibraryScreen() {
 
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={{ fontSize: 16, fontWeight: '800', color: '#111827' }}>{activeTabConfig.label}</Text>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: '#111827' }}>{t(activeTabConfig.tKey, activeTabConfig.label)}</Text>
             <View style={{ backgroundColor: '#E5E7EB', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#374151' }}>{filteredItems.length}</Text>
             </View>
           </View>
 
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            {(['All', 'Blogs', 'Posts', 'Videos', 'News'] as FilterType[]).map(f => (
+            {(['All', 'Blogs', 'Posts', 'News'] as FilterType[]).map(f => (
               <TouchableOpacity
                 key={f}
                 style={{

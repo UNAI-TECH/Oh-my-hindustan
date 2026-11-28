@@ -275,6 +275,51 @@ Sitemap: ${siteUrl}/sitemap-articles-ta.xml
         )
       );
     }
+
+    // SPA shell routes so direct navigation / page refresh on static hosts returns HTTP 200
+    const spaRoutes = [
+      { key: 'explore', titleEn: 'Explore Stories | PostsApp', titleTa: 'செய்திகளை ஆராய்க | PostsApp', robots: 'index, follow' },
+      { key: 'search', titleEn: 'Search | PostsApp', titleTa: 'தேடல் | PostsApp', robots: 'noindex, follow' },
+      { key: 'library', titleEn: 'Saved Library | PostsApp', titleTa: 'சேமித்தவை | PostsApp', robots: 'noindex, follow' },
+      { key: 'profile', titleEn: 'Profile | PostsApp', titleTa: 'சுயவிவரம் | PostsApp', robots: 'noindex, follow' },
+      { key: 'stories', titleEn: 'Stories | PostsApp', titleTa: 'கதைகள் | PostsApp', robots: 'index, follow' },
+      { key: 'login', titleEn: 'Sign In | PostsApp', titleTa: 'உள்நுழைக | PostsApp', robots: 'noindex, follow' },
+      { key: 'signup', titleEn: 'Sign Up | PostsApp', titleTa: 'பதிவு செய்க | PostsApp', robots: 'noindex, follow' },
+    ];
+    for (const sr of spaRoutes) {
+      const seo = {
+        title: lang === 'ta' ? sr.titleTa : sr.titleEn,
+        description: 'PostsApp bilingual digital news and community platform.',
+        canonicalUrl: `${siteUrl}/${lang}/${sr.key}`,
+        lang,
+        robots: sr.robots,
+      };
+      writeDistFile(
+        path.join(lang, sr.key, 'index.html'),
+        injectSeoIntoTemplate(
+          templateHtml,
+          seo,
+          `<main id="seo-prerender" lang="${lang}" style="max-width:860px;margin:0 auto;padding:24px;font-family:system-ui,sans-serif"><h1>${escapeHtml(seo.title)}</h1></main>`
+        )
+      );
+    }
+  }
+
+  for (const rootSpa of ['explore', 'library', 'profile', 'search', 'login', 'signup', 'auth/callback']) {
+    writeDistFile(
+      path.join(rootSpa, 'index.html'),
+      injectSeoIntoTemplate(
+        templateHtml,
+        {
+          title: 'PostsApp',
+          description: 'PostsApp bilingual digital news and community platform.',
+          canonicalUrl: `${siteUrl}/${rootSpa}`,
+          lang: 'en',
+          robots: 'noindex, follow',
+        },
+        `<main id="seo-prerender" lang="en" style="max-width:860px;margin:0 auto;padding:24px;font-family:system-ui,sans-serif"><h1>PostsApp</h1></main>`
+      )
+    );
   }
 
   writeDistFile(

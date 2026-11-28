@@ -27,6 +27,7 @@ import {
   WEB_NAV_CATEGORIES,
   getFormattedHeaderDate,
   buildArticleParams,
+  localizeCategoryName,
 } from './webPortalHelpers';
 
 interface WebTopMastheadProps {
@@ -351,13 +352,16 @@ export function WebStickyNavBar({
         homeItem,
         ...visible.map((c) => ({
           key: String(c.name_en).toUpperCase(),
-          label: lang === 'ta' ? (c.name_ta || c.name_en) : String(c.name_en).toUpperCase(),
+          label:
+            lang === 'ta'
+              ? localizeCategoryName(c.name_en, 'ta', c.name_ta)
+              : String(c.name_en).toUpperCase(),
         })),
       ];
     }
     return WEB_NAV_CATEGORIES.map((c) => ({
       key: c,
-      label: c === 'HOME' ? t('nav.home', 'HOME') : c,
+      label: c === 'HOME' ? t('nav.home', 'HOME') : localizeCategoryName(c, lang),
     }));
   }, [dbCategories, lang, t]);
 
@@ -525,7 +529,7 @@ export function WebStickyNavBar({
               <View style={[styles.searchBox, showLiveDropdown && styles.searchBoxFocused]}>
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="Search news..."
+                  placeholder={t('search.placeholder_short', 'Search news...')}
                   placeholderTextColor="#9CA3AF"
                   value={searchQuery}
                   autoFocus
@@ -581,13 +585,13 @@ export function WebStickyNavBar({
                   <View style={styles.liveSearchHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <View style={styles.livePulseDot} />
-                      <Text style={styles.liveSearchTitle}>LIVE RESULTS</Text>
+                      <Text style={styles.liveSearchTitle}>{t('search.live_results', 'LIVE RESULTS')}</Text>
                     </View>
                     {liveSearching ? (
                       <ActivityIndicator size="small" color="#D4191F" />
                     ) : (
                       <Text style={styles.liveSearchCount}>
-                        {livePosts.length + liveCreators.length} found
+                        {t('search.found_count', { count: livePosts.length + liveCreators.length, defaultValue: `${livePosts.length + liveCreators.length} found` })}
                       </Text>
                     )}
                   </View>
@@ -759,13 +763,13 @@ export function WebStickyNavBar({
             </View>
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 12 }}>
-              <Text style={styles.drawerSectionTitle}>NAVIGATION</Text>
+              <Text style={styles.drawerSectionTitle}>{t('nav.navigation', 'NAVIGATION')}</Text>
               {[
-                { label: 'Home Portal', icon: 'home-outline', route: 'Home' },
-                { label: 'Saved Library', icon: 'bookmark-outline', route: 'Library' },
-                { label: 'Search All', icon: 'search-outline', route: 'Search' },
-                { label: 'My Profile', icon: 'person-outline', route: 'Profile' },
-                { label: 'About PostsApp', icon: 'information-circle-outline', route: 'StaticInfo', params: { pageKey: 'about' } },
+                { label: t('nav.home_portal', 'Home Portal'), icon: 'home-outline', route: 'Home' },
+                { label: t('nav.saved_library', 'Saved Library'), icon: 'bookmark-outline', route: 'Library' },
+                { label: t('nav.search_all', 'Search All'), icon: 'search-outline', route: 'Search' },
+                { label: t('nav.my_profile', 'My Profile'), icon: 'person-outline', route: 'Profile' },
+                { label: t('nav.about_postsapp', 'About PostsApp'), icon: 'information-circle-outline', route: 'StaticInfo', params: { pageKey: 'about' } },
               ].map((item: any) => (
                 <TouchableOpacity
                   key={`${item.route}-${item.label}`}
@@ -795,7 +799,7 @@ export function WebStickyNavBar({
                 <Text style={styles.drawerItemText}>{t('nav.watch_online', 'Watch Online')}</Text>
               </TouchableOpacity>
 
-              <Text style={[styles.drawerSectionTitle, { marginTop: 20 }]}>FEED FILTERS</Text>
+              <Text style={[styles.drawerSectionTitle, { marginTop: 20 }]}>{t('nav.feed_filters', 'FEED FILTERS')}</Text>
               {(
                 [
                   { key: 'latest', label: t('common.latest', 'Latest') },

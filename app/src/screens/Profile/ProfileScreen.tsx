@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Linking, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import AppBottomNavBar from '../../components/BottomNavBar';
@@ -10,9 +9,11 @@ import WebPageShell from '../../components/web/WebPageShell';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { savePendingAuthReturn } from '../../utils/authReturn';
+import { useTranslation } from 'react-i18next';
 
 export default function ProfileScreen() {
   const { colors } = useAppTheme();
+  const { t } = useTranslation();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
@@ -21,12 +22,16 @@ export default function ProfileScreen() {
   const [selectedTab, setSelectedTab] = useState('Posts');
   const [stats, setStats] = useState({ posts: 0, saved: 0, following: 0, followers: 0 });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
   const tabs = ['Posts', 'Saved', 'Following'];
 
   // Fetch real stats from the database
   useEffect(() => {
     const fetchStats = async () => {
-      if (!userProfile?.id) return;
+      if (!userProfile?.id) {
+        setIsLoadingStats(false);
+        return;
+      }
       try {
         const [postsRes, savedRes, followingRes, followersRes] = await Promise.all([
           supabase.from('Post').select('id', { count: 'exact', head: true }).eq('authorId', userProfile.id),
@@ -50,8 +55,14 @@ export default function ProfileScreen() {
   }, [userProfile?.id]);
 
   const handleLogout = async () => {
-    await logout();
-    navigation.reset({ index: 0, routes: [{ name: 'Splash' }] });
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   const displayName = userProfile?.username || userProfile?.email?.split('@')[0] || 'User';
@@ -70,13 +81,8 @@ export default function ProfileScreen() {
 
   const profileInnerContent = (
     <>
-        {/* Cover + Avatar */}
-        <View style={{ width: '100%', paddingBottom: 80 }}>
-          <LinearGradient
-            colors={[colors.DeepCrimson, colors.PrimaryRed]}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            style={{ width: '100%', height: 160 }}
-          />
+        {/* Profile Avatar (clean, no cover banner) */}
+        <View style={{ width: '100%', alignItems: 'center', paddingTop: 28, paddingBottom: 14 }}>
           <View style={styles.avatarContainer}>
             <Image source={{ uri: avatarUrl }} style={styles.avatar} />
           </View>
@@ -96,22 +102,24 @@ export default function ProfileScreen() {
 
         {/* Stats */}
         <View style={styles.statsRow}>
-          <ProfileStatCard value={isLoadingStats ? '...' : formatStat(stats.posts)} label="Posts" />
-          <ProfileStatCard value={isLoadingStats ? '...' : formatStat(stats.saved)} label="Saved" />
-          <ProfileStatCard value={isLoadingStats ? '...' : formatStat(stats.following)} label="Following" />
-          <ProfileStatCard value={isLoadingStats ? '...' : formatStat(stats.followers)} label="Followers" />
+          <ProfileStatCard value={isLoadingStats ? '...' : formatStat(stats.posts)} label={t('profile.posts', 'Posts')} />
+          <ProfileStatCard value={isLoadingStats ? '...' : formatStat(stats.saved)} label={t('profile.saved', 'Saved')} />
+          <ProfileStatCard value={isLoadingStats ? '...' : formatStat(stats.following)} label={t('profile.following', 'Following')} />
+          <ProfileStatCard value={isLoadingStats ? '...' : formatStat(stats.followers)} label={t('profile.followers', 'Followers')} />
         </View>
 
         {/* User Preferences */}
         <View style={styles.preferencesContainer}>
-          <Text style={styles.sectionTitle}>My Preferences</Text>
+          <Text style={styles.sectionTitle}>{t('profile.my_preferences', 'My Preferences')}</Text>
           <View style={styles.preferenceRow}>
             <Ionicons name="language" size={20} color={colors.Slate500} />
-            <Text style={styles.preferenceText}>Language: <Text style={{fontWeight: '600', color: colors.PrimaryRed}}>{language}</Text></Text>
+            <Text style={styles.preferenceText}>
+              {t('profile.language', 'Language')}: <Text style={{fontWeight: '600', color: colors.PrimaryRed}}>{language}</Text>
+            </Text>
           </View>
           {topics.length > 0 && (
             <View style={{marginTop: 12}}>
-              <Text style={styles.preferenceText}>Interested Topics:</Text>
+              <Text style={styles.preferenceText}>{t('profile.interested_topics', 'Interested Topics')}:</Text>
               <View style={styles.topicsWrapper}>
                 {topics.map((topic: string) => (
                   <View key={topic} style={styles.topicBadge}>
@@ -132,16 +140,20 @@ export default function ProfileScreen() {
             <Ionicons name="rocket" size={20} color="white" />
           </View>
           <View style={{ flex: 1, marginLeft: 16 }}>
-            <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#991111' }}>Join as Creator</Text>
-            <Text style={{ color: '#B81414', fontSize: 12, marginTop: 2 }}>Become a voice on PostsApp!</Text>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#991111' }}>{t('profile.join_creator', 'Join as Creator')}</Text>
+            <Text style={{ color: '#B81414', fontSize: 12, marginTop: 2 }}>{t('profile.join_creator_sub', 'Become a voice on PostsApp!')}</Text>
           </View>
           <Ionicons name="open-outline" size={20} color={colors.PrimaryRed} />
         </TouchableOpacity>
 
         {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color={colors.PrimaryRed} />
-          <Text style={styles.logoutText}>Log Out</Text>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} disabled={loggingOut}>
+          {loggingOut ? (
+            <ActivityIndicator size="small" color={colors.PrimaryRed} />
+          ) : (
+            <Ionicons name="log-out-outline" size={20} color={colors.PrimaryRed} />
+          )}
+          <Text style={styles.logoutText}>{t('auth.sign_out', 'Log Out')}</Text>
         </TouchableOpacity>
     </>
   );
@@ -184,12 +196,8 @@ export default function ProfileScreen() {
           <View style={styles.webProfileTopBar}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={{ width: 14, height: 3, backgroundColor: '#D4191F' }} />
-              <Text style={{ fontSize: 18, fontWeight: '800', color: '#111827' }}>My Profile</Text>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#111827' }}>{t('profile.title', 'My Profile')}</Text>
             </View>
-            <TouchableOpacity style={styles.webSettingsBtn} onPress={() => navigation.navigate('Settings')}>
-              <Ionicons name="settings-outline" size={16} color="#374151" />
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#374151' }}>Settings</Text>
-            </TouchableOpacity>
           </View>
           <View style={{ paddingBottom: 24 }}>{profileInnerContent}</View>
         </View>
@@ -204,10 +212,8 @@ export default function ProfileScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={{ padding: 8 }}>
-          <Ionicons name="settings-outline" size={24} color="black" />
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t('nav.profile', 'Profile')}</Text>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }} bounces={false}>
@@ -235,8 +241,8 @@ const getStyles = (colors: any) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: 'white', paddingTop: Platform.OS === 'android' ? 24 : 0 },
   header: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', zIndex: 10 },
   headerTitle: { fontSize: 20, fontWeight: 'bold' },
-  avatarContainer: { position: 'absolute', bottom: 16, width: '100%', alignItems: 'center' },
-  avatar: { width: 128, height: 128, borderRadius: 64, borderWidth: 4, borderColor: 'white' },
+  avatarContainer: { alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 112, height: 112, borderRadius: 56, borderWidth: 3, borderColor: '#E5E7EB' },
   roleBadge: { 
     flexDirection: 'row', alignItems: 'center', marginTop: 10, 
     backgroundColor: colors.PrimaryRedAlpha10, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,

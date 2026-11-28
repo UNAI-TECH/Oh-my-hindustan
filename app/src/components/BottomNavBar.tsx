@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { useAppTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   currentRoute: string;
@@ -11,13 +12,14 @@ interface Props {
 
 export default function AppBottomNavBar({ currentRoute, onNavigate, onDoubleTapHome }: Props) {
   const { colors } = useAppTheme();
+  const { t } = useTranslation();
   const styles = getStyles(colors);
   const lastTap = useRef<number>(0);
   const items = [
-    { label: 'Home', route: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
-    { label: 'Explore', route: 'Explore', activeIcon: 'compass', inactiveIcon: 'compass-outline' },
-    { label: 'Library', route: 'Library', activeIcon: 'bookmark', inactiveIcon: 'bookmark-outline' },
-    { label: 'Profile', route: 'Profile', activeIcon: 'person', inactiveIcon: 'person-outline' },
+    { label: t('nav.home', 'Home'), route: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
+    { label: t('nav.explore', 'Explore'), route: 'Explore', activeIcon: 'compass', inactiveIcon: 'compass-outline' },
+    { label: t('nav.library', 'Library'), route: 'Library', activeIcon: 'bookmark', inactiveIcon: 'bookmark-outline' },
+    { label: t('nav.profile', 'Profile'), route: 'Profile', activeIcon: 'person', inactiveIcon: 'person-outline' },
   ];
 
   return (

@@ -50,6 +50,7 @@ export function normalizeUtcTimestamp(iso?: string | null): Date | null {
 export function SiteLanguageProvider({ children }: { children: ReactNode }) {
   const { userProfile } = useAuth();
   const [lang, setLang] = useState<SiteLang>(detectInitialLang);
+  const manualSwitchRef = React.useRef(false);
 
   const applyBrowserLangMeta = useCallback((target: SiteLang) => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -59,8 +60,10 @@ export function SiteLanguageProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Respect explicit URL locale on initial web mount; otherwise hydrate from AsyncStorage / user profile
+    // Respect explicit URL locale or manual switch; otherwise hydrate from AsyncStorage / user profile
     const init = async () => {
+      if (manualSwitchRef.current) return;
+
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         const path = window.location.pathname || '';
         if (path === '/ta' || path.startsWith('/ta/')) {
@@ -91,7 +94,6 @@ export function SiteLanguageProvider({ children }: { children: ReactNode }) {
         setLang(pref);
         applyBrowserLangMeta(pref);
       } else if (pref === 'hi') {
-        // Preserve legacy Hindi UI strings if set, while defaulting news feed language cleanly
         await setAppLanguage('hi');
       }
     };
@@ -100,6 +102,7 @@ export function SiteLanguageProvider({ children }: { children: ReactNode }) {
 
   const setSiteLang = useCallback(
     async (nextLang: SiteLang, options: { persistDb?: boolean } = { persistDb: true }) => {
+      manualSwitchRef.current = true;
       setLang(nextLang);
       applyBrowserLangMeta(nextLang);
       await setAppLanguage(nextLang);

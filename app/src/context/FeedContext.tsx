@@ -155,41 +155,45 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const loadFromCache = async () => {
+  const loadFromCache = async (targetLang = lang): Promise<boolean> => {
     try {
-      const cached = await AsyncStorage.getItem(`${FEED_CACHE_KEY}_${lang}`);
+      const cached = await AsyncStorage.getItem(`${FEED_CACHE_KEY}_${targetLang}`);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setFeedItems(parsed);
+          setIsLoading(false);
+          return true;
         }
       }
     } catch (e) {
       console.error('Failed to load feed cache', e);
     }
+    return false;
   };
 
   const setSortBy = (sort: 'latest' | 'trending' | 'popular') => {
     if (sort === sortBy) return;
     setSortByState(sort);
     setPage(1);
-    setFeedItems([]);
   };
 
   const fetchHomeFeed = async (showLoading = true, reset = false) => {
     if (!reset && isFetchingRef.current) return;
     const reqId = reset ? ++fetchRequestIdRef.current : fetchRequestIdRef.current;
     isFetchingRef.current = true;
-    if (showLoading) setIsLoading(true);
     const targetPage = reset ? 1 : page;
+    let hasCached = false;
+    if (reset && showLoading) {
+      hasCached = await loadFromCache(lang);
+    }
+    if (showLoading && !hasCached) setIsLoading(true);
 
     try {
-      if (reset && showLoading && feedItems.length === 0) await loadFromCache();
-
       const response = await withRetry(
         () => AppApi.getHomeFeed(targetPage, 25, sortBy, lang),
-        3,
-        1000,
+        2,
+        400,
       );
       if (reqId !== fetchRequestIdRef.current) return;
 
@@ -236,7 +240,6 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    setFeedItems([]);
     setPage(1);
     fetchHomeFeed(true, true);
   }, [lang, sortBy]);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Share, ActivityIndicator, Platform, Modal, TextInput, FlatList, KeyboardAvoidingView, Alert, Keyboard, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Image, Share, ActivityIndicator, Platform, Modal, TextInput, FlatList, KeyboardAvoidingView, Alert, Keyboard, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../context/ThemeContext';
@@ -105,6 +105,7 @@ export default function ArticleDetailScreen() {
   const [translatedPayload, setTranslatedPayload] = useState<TranslatedArticlePayload | null>(null);
   const [isTranslatingArticle, setIsTranslatingArticle] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const commentInputRef = useRef<TextInput>(null);
   const [modalConfig, setModalConfig] = useState<{
     visible: boolean;
     title: string;
@@ -810,13 +811,13 @@ export default function ArticleDetailScreen() {
           )}
 
           {updatedDateStr ? (
-            <Text style={{ fontSize: 11, color: colors.Slate400, marginBottom: 16 }}>
+            <Text style={{ fontSize: 11, color: colors.Slate400, marginBottom: 12 }}>
               Updated: {updatedDateStr}
             </Text>
           ) : null}
 
           {selectedArticle.translations && selectedArticle.translations.length > 0 && (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 }}>
               {selectedArticle.translations.map((tr) => (
                 <TouchableOpacity
                   key={tr.id}
@@ -849,39 +850,7 @@ export default function ArticleDetailScreen() {
               ))}
             </View>
           )}
-          {(authorNameCustom || authorPosition || selectedArticle.author_name || selectedArticle.author_position) && (
-            <View style={{ marginBottom: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
-              {(authorNameCustom || selectedArticle.author_name) && (
-                <Text style={{ fontSize: 18, fontWeight: '900', color: colors.DarkText, marginBottom: 4 }}>
-                  {authorNameCustom || selectedArticle.author_name}
-                </Text>
-              )}
-              {(authorPosition || selectedArticle.author_position) && (
-                <Text style={{ fontSize: 13, color: colors.Slate500, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  {authorPosition || selectedArticle.author_position}
-                </Text>
-              )}
-            </View>
-          )}
-          <View style={styles.authorRow}>
-            <Image source={{ uri: authorImage || `https://ui-avatars.com/api/?name=C&background=D4191F&color=fff` }} style={styles.authorImage} />
-            <TouchableOpacity style={{ flex: 1, marginLeft: 12 }} onPress={() => navigation.navigate('CreatorProfile', { authorId: postAuthorId, authorName })}>
-              <Text style={styles.authorName}>{authorName || 'Anonymous'}</Text>
-              <Text style={styles.authorSubtitle}>{subtitle || 'PostsApp'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.followBtn, isFollowing && { backgroundColor: '#F1F5F9' }]}
-              onPress={handleFollow}
-            >
-              <Text style={[styles.followBtnText, isFollowing && { color: 'black' }]}>
-                {isFollowing ? 'Following' : 'Follow'}
-              </Text>
-            </TouchableOpacity>
-          </View>
         </View>
-
-        {/* Ad Placement 1: Between creator profile and image */}
-        <AdBanner />
 
         {thumbnail && (
           <View>
@@ -917,12 +886,48 @@ export default function ArticleDetailScreen() {
                   <Text style={{ fontSize: 12, color: colors.Slate500 }}>{selectedArticle.featured_image_caption}</Text>
                 ) : null}
                 {selectedArticle.featured_image_credit ? (
-                  <Text style={{ fontSize: 11, color: colors.Slate400, marginTop: 2 }}>Credit: {selectedArticle.featured_image_credit}</Text>
+                  <Text style={{ fontSize: 11, color: colors.Slate400, marginTop: 2 }}>Source: {selectedArticle.featured_image_credit}</Text>
                 ) : null}
               </View>
             )}
           </View>
         )}
+
+        {/* Creator Profile & Follow Below Cover Image */}
+        <View style={{ paddingHorizontal: isWebDesktop ? 32 : 24, paddingTop: 18, paddingBottom: 6 }}>
+          {(authorNameCustom || authorPosition || selectedArticle.author_name || selectedArticle.author_position) && (
+            <View style={{ marginBottom: 14, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+              {(authorNameCustom || selectedArticle.author_name) && (
+                <Text style={{ fontSize: 17, fontWeight: '900', color: colors.DarkText, marginBottom: 4 }}>
+                  {authorNameCustom || selectedArticle.author_name}
+                </Text>
+              )}
+              {(authorPosition || selectedArticle.author_position) && (
+                <Text style={{ fontSize: 12, color: colors.Slate500, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  {authorPosition || selectedArticle.author_position}
+                </Text>
+              )}
+            </View>
+          )}
+          <View style={styles.authorRow}>
+            <Image source={{ uri: authorImage || `https://ui-avatars.com/api/?name=C&background=D4191F&color=fff` }} style={styles.authorImage} />
+            <TouchableOpacity style={{ flex: 1, marginLeft: 12 }} onPress={() => navigation.navigate('CreatorProfile', { authorId: postAuthorId, authorName })}>
+              <Text style={styles.authorName}>{authorName || 'Anonymous'}</Text>
+              <Text style={styles.authorSubtitle}>{subtitle || 'PostsApp'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.followBtn, isFollowing && { backgroundColor: '#F1F5F9' }]}
+              onPress={handleFollow}
+            >
+              <Text style={[styles.followBtnText, isFollowing && { color: 'black' }]}>
+                {isFollowing ? t('common.following', 'Following') : t('common.follow', 'Follow')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Ad Placement 1: Below creator profile */}
+        <AdBanner />
 
         {/* Mid-Roll Ad Overlay is handled by AdEnabledVideoPlayer */}
 
@@ -1249,12 +1254,26 @@ export default function ArticleDetailScreen() {
   const modalsBlock = (
     <>
       {/* Comments Modal */}
-      <Modal visible={showComments} animationType="slide" transparent>
+      <Modal
+        visible={showComments}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowComments(false)}
+      >
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <TouchableOpacity style={[styles.modalOverlay, keyboardOffset > 0 && { paddingBottom: keyboardOffset }]} activeOpacity={1} onPress={() => setShowComments(false)}>
-            <View style={[styles.commentsSheet, isWebDesktop && styles.webCommentsSheet]} onStartShouldSetResponder={() => true}>
-              <View style={styles.sheetHandle} />
-              <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 16 }}>Comments ({commentsCount})</Text>
+          <View style={[styles.modalOverlay, keyboardOffset > 0 && { paddingBottom: keyboardOffset }]}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowComments(false)} />
+            <View style={[styles.commentsSheet, isWebDesktop && styles.webCommentsSheet]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <View style={{ width: 28 }} />
+                <View style={styles.sheetHandle} />
+                <TouchableOpacity onPress={() => setShowComments(false)} style={{ padding: 4 }} accessibilityLabel="Close comments">
+                  <Ionicons name="close" size={20} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+              <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 16 }}>
+                {t('common.comments', 'Comments')} ({commentsCount})
+              </Text>
               
               {loadingComments ? (
                 <ActivityIndicator size="small" color={colors.PrimaryRed} style={{ marginVertical: 32 }} />
@@ -1318,19 +1337,24 @@ export default function ArticleDetailScreen() {
 
 
               <View style={styles.commentInputRow}>
-                <TextInput
-                  style={styles.commentInput}
-                  placeholder="Write a comment..."
-                  value={newComment}
-                  onChangeText={setNewComment}
-                  multiline
-                />
+                <Pressable style={{ flex: 1 }} onPress={() => commentInputRef.current?.focus()}>
+                  <TextInput
+                    ref={commentInputRef}
+                    style={styles.commentInput}
+                    placeholder="Write a comment..."
+                    placeholderTextColor="#64748B"
+                    value={newComment}
+                    onChangeText={setNewComment}
+                    multiline
+                    editable
+                  />
+                </Pressable>
                 <TouchableOpacity onPress={submitComment} style={styles.sendBtn}>
                   <Ionicons name="send" size={20} color="white" />
                 </TouchableOpacity>
               </View>
             </View>
-          </TouchableOpacity>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
 

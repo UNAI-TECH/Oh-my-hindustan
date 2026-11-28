@@ -1222,8 +1222,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setAuthState(null, false);
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (e) {
+      console.warn('[AUTH] signOut warning:', e);
+    }
+    try {
+      await AsyncStorage.removeItem(PROFILE_CACHE_KEY);
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+        Object.keys(window.localStorage).forEach((k) => {
+          if (k.startsWith('sb-') || k.includes('supabase') || k === PROFILE_CACHE_KEY) {
+            window.localStorage.removeItem(k);
+          }
+        });
+      }
+    } catch (_) {}
+    setUserProfile(null);
+    setNeedsOnboarding(false);
+    setIsAuthenticated(false);
+    setError(null);
   };
 
   return (

@@ -11,7 +11,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { FeedItem } from '../../types';
 import AdCard, { AdData } from '../AdCard';
-import { estimateReadTime, stripHtml } from './webPortalHelpers';
+import { estimateReadTime, stripHtml, localizeCategoryName } from './webPortalHelpers';
+import { useTranslation } from 'react-i18next';
+import { useSiteLanguage } from '../../context/SiteLanguageContext';
 
 interface WebExpressPostsProps {
   expressOneItems: FeedItem[];
@@ -39,6 +41,7 @@ const CompactHorizontalCard = ({
   onPress: () => void;
 }) => {
   const [hovered, setHovered] = useState(false);
+  const { lang } = useSiteLanguage();
 
   return (
     <TouchableOpacity
@@ -62,7 +65,7 @@ const CompactHorizontalCard = ({
 
       <View style={styles.compactBody}>
         <Text style={styles.compactCategory} numberOfLines={1}>
-          {(item.category || 'NEWS').toUpperCase()}
+          {localizeCategoryName(item.category || 'NEWS', lang).toUpperCase()}
         </Text>
         <Text
           style={[styles.compactTitle, hovered && styles.compactTitleHovered]}
@@ -86,6 +89,8 @@ export default function WebExpressPosts({
   onLoadMore,
 }: WebExpressPostsProps) {
   const { width } = useWindowDimensions();
+  const { t } = useTranslation();
+  const { lang } = useSiteLanguage();
   const isDesktop = width >= 1024;
   const isMobile = width < 768;
 
@@ -94,16 +99,16 @@ export default function WebExpressPosts({
   const expressTwoList = expressTwoItems.slice(0, 4);
 
   return (
-    <View style={[styles.container, isMobile && { paddingHorizontal: 12, marginTop: 24 }]}>
+    <View style={[styles.container, isMobile && { paddingHorizontal: 12, marginTop: 24, marginBottom: 16 }]}>
       <View style={[styles.splitRow, !isDesktop && styles.splitRowTablet]}>
         {/* Express Posts 1 (~2/3 width) */}
-        <View style={styles.leftTwoThirds}>
-          <SectionHeading title="Express Posts 1" />
+        <View style={[styles.leftTwoThirds, !isDesktop && styles.columnFullMobile]}>
+          <SectionHeading title={t('editorial.express_posts_1', 'Express Posts 1')} />
 
           <View style={[styles.expressOneInner, !isDesktop && styles.expressOneInnerTablet]}>
             {leadItem ? (
               <TouchableOpacity
-                style={styles.leadCard}
+                style={[styles.leadCard, !isDesktop && styles.columnFullMobile]}
                 activeOpacity={0.9}
                 onPress={() => onPressItem(leadItem)}
               >
@@ -123,7 +128,7 @@ export default function WebExpressPosts({
 
                 <View style={styles.leadBody}>
                   <Text style={styles.leadCategory} numberOfLines={1}>
-                    {(leadItem.category || 'NEWS').toUpperCase()}
+                    {localizeCategoryName(leadItem.category || 'NEWS', lang).toUpperCase()}
                   </Text>
                   <Text style={styles.leadTitle} numberOfLines={3}>
                     {leadItem.title}
@@ -139,7 +144,7 @@ export default function WebExpressPosts({
               </TouchableOpacity>
             ) : null}
 
-            <View style={styles.compactStack}>
+            <View style={[styles.compactStack, !isDesktop && styles.columnFullMobile]}>
               {expressOneList.map((item) => (
                 <CompactHorizontalCard
                   key={item.id}
@@ -152,9 +157,9 @@ export default function WebExpressPosts({
         </View>
 
         {/* Express Posts 2 (~1/3 width) */}
-        <View style={styles.rightOneThird}>
-          <SectionHeading title="Express Posts 2" />
-          <View style={styles.compactStack}>
+        <View style={[styles.rightOneThird, !isDesktop && styles.columnFullMobile]}>
+          <SectionHeading title={t('editorial.express_posts_2', 'Express Posts 2')} />
+          <View style={[styles.compactStack, !isDesktop && styles.columnFullMobile]}>
             {expressTwoList.map((item) => (
               <CompactHorizontalCard
                 key={item.id}
@@ -169,7 +174,7 @@ export default function WebExpressPosts({
       {/* Remaining Paginated Stories + Ads */}
       {extraItems.length > 0 && (
         <View style={styles.moreSection}>
-          <SectionHeading title="More Stories" />
+          <SectionHeading title={t('editorial.more_stories', 'More Stories')} />
           <View style={styles.moreGrid}>
             {extraItems.map((item, idx) => (
               <React.Fragment key={`${item.id}-${idx}`}>
@@ -219,7 +224,7 @@ export default function WebExpressPosts({
             {isLoading ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.loadMoreText}>Load More Stories</Text>
+              <Text style={styles.loadMoreText}>{t('editorial.load_more', 'Load More Stories')}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -260,6 +265,16 @@ const styles = StyleSheet.create({
   },
   splitRowTablet: {
     flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 24,
+  },
+  columnFullMobile: {
+    flex: 0,
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    width: '100%',
+    minWidth: 0,
   },
   leftTwoThirds: {
     flex: 2,
@@ -277,6 +292,7 @@ const styles = StyleSheet.create({
   },
   expressOneInnerTablet: {
     flexDirection: 'column',
+    alignItems: 'stretch',
   },
   leadCard: {
     flex: 1.05,

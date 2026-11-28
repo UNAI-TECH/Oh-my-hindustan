@@ -32,6 +32,7 @@ import {
   slugToCategory,
   buildArticleParams,
   titleToSlug,
+  localizeCategoryName,
 } from '../../components/web/webPortalHelpers';
 import { openExternalUrl } from '../../utils/openExternalUrl';
 import { useSiteLanguage } from '../../context/SiteLanguageContext';
@@ -590,10 +591,10 @@ export default function HomeFeedScreen() {
           {hasActiveWebFilter && (
             <View style={styles.webFilterBanner}>
               <Text style={styles.webFilterText}>
-                Showing {filteredWebItems.length} stories
-                {webCategory !== 'HOME' ? ` in ${webCategory.replace('_', ' ')}` : ''}
+                {t('editorial.showing_stories', { count: filteredWebItems.length, defaultValue: `Showing ${filteredWebItems.length} stories` })}
+                {webCategory !== 'HOME' ? ` • ${localizeCategoryName(webCategory.replace('_', ' '), lang)}` : ''}
                 {webFeedMode !== 'latest'
-                  ? ` • ${webFeedMode === 'popular' ? 'Most Read' : webFeedMode.charAt(0).toUpperCase() + webFeedMode.slice(1)}`
+                  ? ` • ${webFeedMode === 'popular' ? t('common.most_read', 'Most Read') : webFeedMode === 'trending' ? t('common.trending', 'Trending') : t('common.articles', 'Articles')}`
                   : ''}
                 {activeTag ? ` • ${activeTag}` : ''}
                 {webSearchQuery.trim() ? ` • "${webSearchQuery.trim()}"` : ''}
@@ -608,7 +609,7 @@ export default function HomeFeedScreen() {
                   if (feedItems.length === 0) refreshFeed();
                 }}
               >
-                <Text style={styles.webFilterReset}>Reset Filters</Text>
+                <Text style={styles.webFilterReset}>{t('editorial.reset_filters', 'Reset Filters')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -621,7 +622,9 @@ export default function HomeFeedScreen() {
             <View style={{ maxWidth: 1280, width: '100%', alignSelf: 'center', padding: 48, alignItems: 'center' }}>
               <Ionicons name="newspaper-outline" size={48} color="#9CA3AF" />
               <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginTop: 12 }}>
-                No matching stories found
+                {lang === 'ta'
+                  ? t('editorial.no_articles_in_lang', 'இந்தப் பதிப்பில் இன்னும் செய்திகள் வெளியிடப்படவில்லை.')
+                  : t('common.no_results', 'No matching stories found')}
               </Text>
               <TouchableOpacity
                 style={{ marginTop: 14, backgroundColor: '#D4191F', paddingHorizontal: 18, paddingVertical: 10, borderRadius: 4 }}
@@ -634,7 +637,7 @@ export default function HomeFeedScreen() {
                   if (feedItems.length === 0) refreshFeed();
                 }}
               >
-                <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>View All Stories</Text>
+                <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>{t('editorial.view_all_btn', 'View All Stories')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -669,7 +672,7 @@ export default function HomeFeedScreen() {
                   return (
                     <WebFeaturedPosts
                       key={key}
-                      title={sec.title || 'Featured Posts'}
+                      title={lang === 'ta' ? t('editorial.featured_stories', 'சிறப்புச் செய்திகள்') : (sec.title || t('editorial.featured_stories', 'Featured Posts'))}
                       maxItems={limit}
                       items={webSections.featuredItems}
                       onPressItem={handleWebPressItem}
@@ -698,7 +701,7 @@ export default function HomeFeedScreen() {
                   return (
                     <WebFeaturedPosts
                       key={key}
-                      title={sec.title || 'Trending Now'}
+                      title={lang === 'ta' ? t('editorial.trending_now', 'டிரெண்டிங் செய்திகள்') : (sec.title || t('editorial.trending_now', 'Trending Now'))}
                       maxItems={Math.max(limit, 8)}
                       carousel
                       items={webSections.trendingNow}
@@ -712,7 +715,7 @@ export default function HomeFeedScreen() {
                   return (
                     <WebFeaturedPosts
                       key={key}
-                      title={sec.title || 'Most Read'}
+                      title={lang === 'ta' ? t('editorial.most_read', 'அதிகம் வாசிக்கப்பட்டவை') : (sec.title || t('editorial.most_read', 'Most Read'))}
                       maxItems={Math.max(limit, 8)}
                       carousel
                       items={webSections.mostReadItems}

@@ -8,7 +8,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import PostsAppLogo from '../PostsAppLogo';
-import { FOOTER_CATEGORIES } from './webPortalHelpers';
+import { FOOTER_CATEGORIES, localizeCategoryName } from './webPortalHelpers';
 import { supabase } from '../../lib/supabaseClient';
 import { AppApi } from '../../api/services';
 import { useSiteLanguage } from '../../context/SiteLanguageContext';
@@ -44,7 +44,7 @@ export default function WebPortalFooter({
             setDbCategories(
               visible.slice(0, 10).map((c: any) => ({
                 key: String(c.name_en).toUpperCase(),
-                label: lang === 'ta' ? (c.name_ta || c.name_en) : c.name_en,
+                label: localizeCategoryName(c.name_en, lang, c.name_ta),
               }))
             );
           }
@@ -70,7 +70,7 @@ export default function WebPortalFooter({
   const footerCatList =
     dbCategories.length > 0
       ? dbCategories
-      : FOOTER_CATEGORIES.map((c) => ({ key: c.toUpperCase(), label: c }));
+      : FOOTER_CATEGORIES.map((c) => ({ key: c.toUpperCase(), label: localizeCategoryName(c, lang) }));
   const mid = Math.ceil(footerCatList.length / 2);
   const leftCategories = footerCatList.slice(0, mid);
   const rightCategories = footerCatList.slice(mid);
@@ -104,21 +104,23 @@ export default function WebPortalFooter({
       <View style={styles.footerInner}>
         <View style={[styles.columnsRow, !isDesktop && styles.columnsRowTablet]}>
           {/* Column 1: Brand & Bureaus */}
-          <View style={styles.brandCol}>
+          <View style={[styles.brandCol, !isDesktop && styles.colFullMobile]}>
             <PostsAppLogo variant="dark" size="md" style={{ alignItems: 'flex-start' }} />
             <Text style={styles.brandDesc}>
-              PostsApp is a high-velocity news and commentary portal covering Indian economy,
-              public policy, technology, geopolitics, and cultural heritage.
+              {t(
+                'footer.brand_desc',
+                'PostsApp is a high-velocity news and commentary portal covering Indian economy, public policy, technology, geopolitics, and cultural heritage.'
+              )}
             </Text>
             <Text style={styles.bureausText}>
-              Bureaus: New Delhi • Bengaluru • Chennai • Mumbai
+              {t('footer.bureaus', 'Bureaus: New Delhi • Bengaluru • Chennai • Mumbai')}
             </Text>
           </View>
 
           {/* Column 2: Categories */}
-          <View style={styles.categoriesCol}>
-            <Text style={styles.colHeading}>CATEGORIES</Text>
-            <View style={styles.categoryColumns}>
+          <View style={[styles.categoriesCol, !isDesktop && styles.colFullMobile]}>
+            <Text style={styles.colHeading}>{t('footer.categories_heading', 'CATEGORIES')}</Text>
+            <View style={[styles.categoryColumns, !isDesktop && { gap: 28, flexWrap: 'wrap' }]}>
               <View style={styles.categoryList}>
                 {leftCategories.map((cat) => (
                   <TouchableOpacity
@@ -145,17 +147,19 @@ export default function WebPortalFooter({
           </View>
 
           {/* Column 3: Daily Briefing Newsletter */}
-          <View style={styles.newsletterCol}>
-            <Text style={styles.colHeading}>POSTSAPP DAILY BRIEFING</Text>
+          <View style={[styles.newsletterCol, !isDesktop && styles.colFullMobile]}>
+            <Text style={styles.colHeading}>{t('footer.daily_briefing', 'POSTSAPP DAILY BRIEFING')}</Text>
             <Text style={styles.newsletterDesc}>
-              Get our top 5 dispatches and breaking news alerts delivered to your inbox every
-              morning.
+              {t(
+                'footer.newsletter_desc',
+                'Get our top 5 dispatches and breaking news alerts delivered to your inbox every morning.'
+              )}
             </Text>
 
             <View style={styles.inputRow}>
               <TextInput
                 style={styles.emailInput}
-                placeholder="Enter your email..."
+                placeholder={t('footer.email_placeholder', 'Enter your email...')}
                 placeholderTextColor="#737373"
                 value={email}
                 onChangeText={setEmail}
@@ -168,7 +172,7 @@ export default function WebPortalFooter({
                 onPress={handleJoin}
                 disabled={submitting}
               >
-                <Text style={styles.joinBtnText}>{submitting ? '...' : 'JOIN'}</Text>
+                <Text style={styles.joinBtnText}>{submitting ? '...' : t('footer.join_btn', 'JOIN')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -236,7 +240,16 @@ const styles = StyleSheet.create({
   },
   columnsRowTablet: {
     flexDirection: 'column',
+    alignItems: 'stretch',
     gap: 28,
+  },
+  colFullMobile: {
+    flex: 0,
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    width: '100%',
+    maxWidth: '100%',
   },
   brandCol: {
     flex: 1.3,

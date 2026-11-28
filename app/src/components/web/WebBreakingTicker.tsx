@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FeedItem } from '../../types';
+import { useTranslation } from 'react-i18next';
 
 interface WebBreakingTickerProps {
   items: FeedItem[];
@@ -10,6 +11,7 @@ interface WebBreakingTickerProps {
 
 export default function WebBreakingTicker({ items, onPressItem }: WebBreakingTickerProps) {
   const { width } = useWindowDimensions();
+  const { t } = useTranslation();
   const isMobile = width < 640;
   const [index, setIndex] = useState(0);
 
@@ -37,7 +39,9 @@ export default function WebBreakingTicker({ items, onPressItem }: WebBreakingTic
       <View style={styles.bar}>
         <View style={[styles.badge, isMobile && { paddingHorizontal: 10, gap: 6 }]}>
           <View style={styles.badgeDot} />
-          <Text style={styles.badgeText}>{isMobile ? 'BREAKING' : 'BREAKING NEWS'}</Text>
+          <Text style={styles.badgeText}>
+            {isMobile ? t('editorial.breaking_short', 'BREAKING') : t('editorial.breaking_news', 'BREAKING NEWS')}
+          </Text>
         </View>
 
         <TouchableOpacity

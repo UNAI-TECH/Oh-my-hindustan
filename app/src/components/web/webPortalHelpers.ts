@@ -33,6 +33,40 @@ export const POPULAR_TAGS = [
   '#culture',
 ] as const;
 
+const TA_CATEGORY_MAP: Record<string, string> = {
+  HOME: 'முகப்பு',
+  GENERAL: 'பொது',
+  NATIONAL: 'தேசியம்',
+  INTERNATIONAL: 'சர்வதேசம்',
+  POLITICS: 'அரசியல்',
+  TECHNOLOGY: 'தொழில்நுட்பம்',
+  BUSINESS: 'வணிகம்',
+  ECONOMY: 'பொருளாதாரம்',
+  POLICY: 'கொள்கை',
+  EDUCATION: 'கல்வி',
+  SPORTS: 'விளையாட்டு',
+  CULTURE: 'கலாச்சாரம்',
+  'SCIENCE & TECH': 'அறிவியல் & தொழில்நுட்பம்',
+  'SCIENCE AND TECH': 'அறிவியல் & தொழில்நுட்பம்',
+  WORLD: 'உலகம்',
+  ENTERTAINMENT: 'பொழுதுபோக்கு',
+  HEALTH: 'நலவாழ்வு',
+  LIFESTYLE: 'வாழ்வியல்',
+  OPINION: 'கருத்து',
+  ENVIRONMENT: 'சுற்றுச்சூழல்',
+};
+
+export function localizeCategoryName(rawName: string | null | undefined, lang: 'en' | 'ta', dbTamil?: string | null): string {
+  const enVal = String(rawName || 'NEWS').trim();
+  if (lang !== 'ta') return enVal;
+  const trimmedTa = (dbTamil || '').trim();
+  if (trimmedTa && trimmedTa.toLowerCase() !== enVal.toLowerCase()) {
+    return trimmedTa;
+  }
+  const upper = enVal.toUpperCase();
+  return TA_CATEGORY_MAP[upper] || enVal;
+}
+
 const CATEGORY_ALIASES: Record<string, string[]> = {
   POLITICS: ['politics', 'political', 'election', 'parliament', 'government', 'minister', 'party', 'assembly', 'lok sabha', 'rajya sabha', 'governance', 'policy'],
   BUSINESS: ['business', 'economy', 'infrastructure', 'corporate', 'market', 'finance'],

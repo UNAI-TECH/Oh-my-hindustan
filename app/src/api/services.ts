@@ -97,7 +97,8 @@ export const AuthApi = {
 /**
  * Application API - Supabase direct queries with real-time support
  */
-const POST_SELECT_FIELDS = 'id, title, subtitle, short_description, content, content_json, type, language, slug, category, custom_category, thumbnail, featured_image_alt, featured_image_caption, featured_image_credit, authorId, createdAt, updatedAt, published_at, videoDuration, videoUrl, isTrending, trending_score, is_breaking, is_featured, is_editors_pick, views_count, likes_count, comments_count, reading_time_minutes, author_name, author_position, hashtags, translation_group_id, seo_title, seo_description, canonical_url, og_title, og_description, og_image, robots_index, ads_enabled, ad_breaks, author:User!authorId(id, username, avatarUrl, channel_name), Vote:Vote(type), Comment:Comment(id, content), PostView:PostView(id)';
+const POST_FEED_SELECT_FIELDS = 'id, title, subtitle, short_description, content, type, language, slug, category, custom_category, thumbnail, featured_image_alt, featured_image_caption, featured_image_credit, authorId, createdAt, updatedAt, published_at, videoDuration, videoUrl, isTrending, trending_score, is_breaking, is_featured, is_editors_pick, views_count, likes_count, comments_count, reading_time_minutes, author_name, author_position, hashtags, translation_group_id, seo_title, seo_description, canonical_url, og_title, og_description, og_image, robots_index, ads_enabled, ad_breaks, author:User!authorId(id, username, avatarUrl, channel_name)';
+const POST_SELECT_FIELDS = `${POST_FEED_SELECT_FIELDS}, content_json, Vote:Vote(type), Comment:Comment(id, content), PostView:PostView(id)`;
 
 export const AppApi = {
   getHomeFeed: async (
@@ -111,7 +112,7 @@ export const AppApi = {
 
     let query = supabase
       .from('Post')
-      .select(POST_SELECT_FIELDS, { count: 'exact' })
+      .select(POST_FEED_SELECT_FIELDS, { count: 'estimated' })
       .eq('status', 'PUBLISHED')
       .or('is_active.eq.true,is_active.is.null');
 
@@ -132,13 +133,9 @@ export const AppApi = {
     if (error) throw error;
 
     const posts = (data || []).map((post: any) => {
-      const votes = post.Vote || [];
-      const allComments = post.Comment || [];
-      const upvotes = votes.filter((v: any) => v.type === 1).length;
-      const downvotes = votes.filter((v: any) => v.type === -1).length;
-      const realComments = Math.max(post.comments_count || 0, allComments.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length);
-      const reposts = allComments.filter((c: any) => c.content === '[SYSTEM_REPOST]').length;
-      const viewCount = Math.max(post.views_count || 0, post.PostView ? post.PostView.length : 0);
+      const upvotes = Number(post.likes_count || 0);
+      const realComments = Number(post.comments_count || 0);
+      const viewCount = Number(post.views_count || 0);
 
       const displayCategory = post.category === 'custom' && post.custom_category
         ? post.custom_category
@@ -161,11 +158,11 @@ export const AppApi = {
         featured_image_caption: post.featured_image_caption || null,
         featured_image_credit: post.featured_image_credit || null,
         authorId: post.authorId,
-        voteCount: upvotes - downvotes,
+        voteCount: upvotes,
         upvoteCount: upvotes,
-        downvoteCount: downvotes,
+        downvoteCount: 0,
         commentCount: realComments,
-        repostCount: reposts,
+        repostCount: 0,
         viewCount,
         hotScore: 0,
         category: displayCategory,
