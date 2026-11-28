@@ -10,8 +10,6 @@ import OTPScreen from '../screens/Auth/OTPScreen';
 import AuthCallbackScreen from '../screens/Auth/AuthCallbackScreen';
 import ProfileSetupScreen from '../screens/Auth/ProfileSetupScreen';
 import UsernameSetupScreen from '../screens/Auth/UsernameSetupScreen';
-import LanguageSelectionScreen from '../screens/Auth/LanguageSelectionScreen';
-import TopicSelectionScreen from '../screens/Auth/TopicSelectionScreen';
 import ProfileImageUploadScreen from '../screens/Auth/ProfileImageUploadScreen';
 
 // Main / Detail Screens
@@ -75,8 +73,6 @@ export default function RootNavigator() {
       <Stack.Screen name="AuthCallback" component={AuthCallbackScreen} />
       <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="UsernameSetup" component={UsernameSetupScreen} options={{ animation: 'slide_from_right', gestureEnabled: false }} />
-      <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="TopicSelection" component={TopicSelectionScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="ProfileImageUpload" component={ProfileImageUploadScreen} options={{ animation: 'slide_from_right' }} />
 
       {/* Main Public & Reader Screens */}

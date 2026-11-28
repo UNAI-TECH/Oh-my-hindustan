@@ -7,8 +7,7 @@ import LoginScreen from '../screens/Auth/LoginScreen';
 import SignUpScreen from '../screens/Auth/SignUpScreen';
 import ProfileSetupScreen from '../screens/Auth/ProfileSetupScreen';
 import UsernameSetupScreen from '../screens/Auth/UsernameSetupScreen';
-import LanguageSelectionScreen from '../screens/Auth/LanguageSelectionScreen';
-import TopicSelectionScreen from '../screens/Auth/TopicSelectionScreen';
+import ProfileImageUploadScreen from '../screens/Auth/ProfileImageUploadScreen';
 import OTPScreen from '../screens/Auth/OTPScreen';
 import HomeScreen from '../screens/Home/HomeScreen';
 
@@ -19,8 +18,7 @@ export type AuthStackParamList = {
   OTP: { email: string };
   ProfileSetup: undefined;
   UsernameSetup: undefined;
-  LanguageSelection: undefined;
-  TopicSelection: undefined;
+  ProfileImageUpload: undefined;
   Home: undefined;
 };
 
@@ -63,13 +61,8 @@ export default function AuthNavigator() {
         options={{ animation: 'slide_from_right', gestureEnabled: false }}
       />
       <Stack.Screen 
-        name="LanguageSelection" 
-        component={LanguageSelectionScreen} 
-        options={{ animation: 'slide_from_right' }}
-      />
-      <Stack.Screen 
-        name="TopicSelection" 
-        component={TopicSelectionScreen} 
+        name="ProfileImageUpload" 
+        component={ProfileImageUploadScreen} 
         options={{ animation: 'slide_from_right' }}
       />
       <Stack.Screen 

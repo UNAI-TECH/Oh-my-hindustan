@@ -9,20 +9,18 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import PostsAppLogo from '../../components/PostsAppLogo';
+import WebAuthShell, { webAuthCardStyles } from '../../components/web/WebAuthShell';
 
 export default function UsernameSetupScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
-  const { width } = useWindowDimensions();
-  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { checkUsernameAvailability, updateOnboardingProfile, isLoading, userProfile } = useAuth();
   const [username, setUsername] = useState('');
   const [isChecking, setIsChecking] = useState(false);
@@ -52,7 +50,7 @@ export default function UsernameSetupScreen() {
       if (!result.available) {
         setErrorMsg('This username is already taken');
       }
-    } catch (e) {
+    } catch {
       setErrorMsg('Error checking username');
     } finally {
       setIsChecking(false);
@@ -73,7 +71,7 @@ export default function UsernameSetupScreen() {
     if (cleaned.length >= 3) {
       debounceTimer.current = setTimeout(() => {
         checkUsername(cleaned);
-      }, 500);
+      }, 450);
     } else if (cleaned.length > 0) {
       setErrorMsg('Username must be at least 3 characters');
     }
@@ -93,7 +91,7 @@ export default function UsernameSetupScreen() {
       await updateOnboardingProfile({ username });
       navigation.navigate('ProfileImageUpload');
     } catch (e: any) {
-      setErrorMsg(e.message || 'Failed to save username. Please try again.');
+      setErrorMsg(e?.message || 'Failed to save username. Please try again.');
     }
   };
 
@@ -109,273 +107,225 @@ export default function UsernameSetupScreen() {
     };
   }, [userProfile?.channel_name, userProfile?.email]);
 
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, isWebDesktop && { backgroundColor: '#F5F5F7' }]}
-    >
-      <ScrollView contentContainerStyle={[styles.scrollContainer, isWebDesktop && styles.webScrollContainer]}>
-        <View style={isWebDesktop ? styles.webCard : { flex: 1 }}>
-        <View style={styles.stepIndicator}>
-          <View style={[styles.stepDot, styles.stepDotActive]} />
-          <View style={styles.stepLine} />
-          <View style={styles.stepDot} />
-          <View style={styles.stepLine} />
-          <View style={styles.stepDot} />
+  const cardInner = (
+    <View style={styles.cardBody}>
+      {/* Step 1 of 2 Progress */}
+      <View style={styles.stepHeader}>
+        <Text style={styles.stepBadgeText}>STEP 1 OF 2</Text>
+        <View style={styles.stepBarsRow}>
+          <View style={[styles.stepBar, styles.stepBarActive]} />
+          <View style={styles.stepBar} />
         </View>
+      </View>
 
-        <View style={styles.iconContainer}>
-          <Ionicons name="person-add" size={36} color={colors.PrimaryRed} />
-        </View>
+      <Text style={webAuthCardStyles.title}>{'Choose your\nusername'}</Text>
+      <Text style={webAuthCardStyles.subtitle}>
+        Pick a unique @handle so readers and creators can recognize you.
+      </Text>
 
-        <Text style={styles.title}>Choose your username</Text>
-        <Text style={styles.subtitle}>
-          This is how other users will find you.{'\n'}
-          Pick something unique!
-        </Text>
-
-        <View style={styles.inputWrapper}>
+      <View style={webAuthCardStyles.form}>
+        <View
+          style={[
+            webAuthCardStyles.inputWrap,
+            isAvailable === true && styles.inputWrapValid,
+            isAvailable === false && styles.inputWrapInvalid,
+          ]}
+        >
           <Text style={styles.atSymbol}>@</Text>
           <TextInput
-            style={styles.input}
+            style={webAuthCardStyles.input}
             placeholder="username"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#9CA3AF"
             value={username}
             onChangeText={handleUsernameChange}
             autoCapitalize="none"
             autoCorrect={false}
             maxLength={24}
+            onSubmitEditing={handleContinue}
           />
-          {isChecking && (
-            <ActivityIndicator size="small" color={colors.PrimaryRed} style={styles.inputIcon} />
-          )}
+          {isChecking && <ActivityIndicator size="small" color="#D4191F" />}
           {!isChecking && isAvailable === true && (
-            <Ionicons name="checkmark-circle" size={22} color="#16A34A" style={styles.inputIcon} />
+            <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
           )}
           {!isChecking && isAvailable === false && (
-            <Ionicons name="close-circle" size={22} color="#DC2626" style={styles.inputIcon} />
+            <Ionicons name="close-circle" size={20} color="#DC2626" />
           )}
         </View>
 
-        {errorMsg && (
-          <Text style={styles.errorText}>{errorMsg}</Text>
-        )}
+        {errorMsg ? <Text style={webAuthCardStyles.errorText}>{errorMsg}</Text> : null}
 
-        {isAvailable === true && (
-          <Text style={styles.availableText}>✓ Username is available!</Text>
-        )}
+        {isAvailable === true ? (
+          <Text style={styles.availableText}>✓ @{username} is available!</Text>
+        ) : null}
 
         {suggestions.length > 0 && (
-          <View style={styles.suggestionsContainer}>
-            <Text style={styles.suggestionsTitle}>Try one of these:</Text>
-            {suggestions.map((suggestion) => (
-              <TouchableOpacity
-                key={suggestion}
-                style={styles.suggestionChip}
-                onPress={() => handleSuggestionTap(suggestion)}
-              >
-                <Text style={styles.suggestionText}>@{suggestion}</Text>
-                <Ionicons name="arrow-forward" size={14} color={colors.PrimaryRed} />
-              </TouchableOpacity>
-            ))}
+          <View style={styles.suggestionsBox}>
+            <Text style={styles.suggestionsTitle}>Available suggestions</Text>
+            <View style={styles.suggestionsWrap}>
+              {suggestions.map((suggestion) => (
+                <TouchableOpacity
+                  key={suggestion}
+                  style={styles.suggestionChip}
+                  onPress={() => handleSuggestionTap(suggestion)}
+                >
+                  <Text style={styles.suggestionText}>@{suggestion}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         )}
 
-        <View style={{ flex: 1 }} />
-
         <TouchableOpacity
-          style={[styles.buttonContainer, (!isAvailable || isLoading) && styles.buttonDisabled]}
+          style={[
+            webAuthCardStyles.primaryBtn,
+            (!isAvailable || isLoading) && styles.primaryBtnDisabled,
+          ]}
           onPress={handleContinue}
           disabled={!isAvailable || isLoading}
+          activeOpacity={0.88}
         >
-          <LinearGradient
-            colors={isAvailable ? [colors.PrimaryRed, colors.DeepCrimson] : ['#CBD5E1', '#CBD5E1']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.gradientButton}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <View style={styles.buttonContent}>
-                <Text style={styles.buttonText}>Continue</Text>
-                <Ionicons name="arrow-forward" size={20} color="white" />
-              </View>
-            )}
-          </LinearGradient>
+          {isLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <View style={styles.btnContent}>
+              <Text style={webAuthCardStyles.primaryBtnText}>Continue</Text>
+              <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+            </View>
+          )}
         </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  if (Platform.OS === 'web') {
+    return <WebAuthShell>{cardInner}</WebAuthShell>;
+  }
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.nativeContainer}
+    >
+      <ScrollView
+        contentContainerStyle={styles.nativeScroll}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={{ marginBottom: 20, alignItems: 'center' }}>
+          <PostsAppLogo variant="light" size="md" />
         </View>
+        <View style={styles.nativeCard}>{cardInner}</View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    padding: 24,
-    paddingTop: Platform.OS === 'android' ? 48 : 60,
-  },
-  stepIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32,
-  },
-  stepDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#E2E8F0',
-  },
-  stepDotActive: {
-    backgroundColor: colors.PrimaryRed,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-  },
-  stepLine: {
-    width: 40,
-    height: 2,
-    backgroundColor: '#E2E8F0',
-    marginHorizontal: 8,
-  },
-  iconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: colors.PrimaryRedAlpha10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'center',
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 20,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 56,
-    backgroundColor: '#F8FAFC',
-  },
-  atSymbol: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#94A3B8',
-    marginRight: 4,
-  },
-  input: {
-    flex: 1,
-    fontSize: 17,
-    color: '#000',
-    fontWeight: '500',
-  },
-  inputIcon: {
-    marginLeft: 8,
-  },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 13,
-    marginTop: 10,
-    fontWeight: '500',
-  },
-  availableText: {
-    color: '#16A34A',
-    fontSize: 13,
-    marginTop: 10,
-    fontWeight: '600',
-  },
-  suggestionsContainer: {
-    marginTop: 20,
-    padding: 16,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  suggestionsTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#64748B',
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  suggestionChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  suggestionText: {
-    fontSize: 15,
-    color: colors.PrimaryRed,
-    fontWeight: '600',
-  },
-  buttonContainer: {
-    width: '100%',
-    height: 56,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 24,
-    marginTop: 24,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  gradientButton: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  webScrollContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  webCard: {
-    width: '100%',
-    maxWidth: 520,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    padding: 36,
-  },
-});
+const getStyles = (_colors: any) =>
+  StyleSheet.create({
+    cardBody: {
+      width: '100%',
+    },
+    stepHeader: {
+      marginBottom: 18,
+      gap: 8,
+    },
+    stepBadgeText: {
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 1,
+      color: '#D4191F',
+    },
+    stepBarsRow: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    stepBar: {
+      flex: 1,
+      height: 4,
+      borderRadius: 999,
+      backgroundColor: '#E5E7EB',
+    },
+    stepBarActive: {
+      backgroundColor: '#D4191F',
+    },
+    atSymbol: {
+      fontSize: 17,
+      fontWeight: '800',
+      color: '#6B7280',
+      marginRight: 6,
+    },
+    inputWrapValid: {
+      borderColor: '#16A34A',
+      backgroundColor: '#F0FDF4',
+    },
+    inputWrapInvalid: {
+      borderColor: '#DC2626',
+      backgroundColor: '#FEF2F2',
+    },
+    availableText: {
+      color: '#16A34A',
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    suggestionsBox: {
+      padding: 12,
+      backgroundColor: '#F9FAFB',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+      gap: 8,
+    },
+    suggestionsTitle: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#6B7280',
+      textTransform: 'uppercase',
+      letterSpacing: 0.6,
+    },
+    suggestionsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    suggestionChip: {
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      backgroundColor: '#FFFFFF',
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: '#FCA5A5',
+    },
+    suggestionText: {
+      fontSize: 12,
+      color: '#D4191F',
+      fontWeight: '700',
+    },
+    primaryBtnDisabled: {
+      backgroundColor: '#D1D5DB',
+    },
+    btnContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    nativeContainer: {
+      flex: 1,
+      backgroundColor: '#F7F6F2',
+    },
+    nativeScroll: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      padding: 20,
+    },
+    nativeCard: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 20,
+      padding: 24,
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.06,
+      shadowRadius: 20,
+      elevation: 4,
+    },
+  });

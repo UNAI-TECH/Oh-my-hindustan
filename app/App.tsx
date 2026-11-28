@@ -97,8 +97,6 @@ const linking: any = {
       AuthCallback: 'auth/callback',
       ProfileSetup: 'onboarding/profile',
       UsernameSetup: 'onboarding/username',
-      LanguageSelection: 'onboarding/language',
-      TopicSelection: 'onboarding/topics',
       ProfileImageUpload: 'onboarding/avatar',
       Explore: 'explore',
       StoryFeed: 'stories',
@@ -156,6 +154,10 @@ const linking: any = {
 
     if (lower === 'auth/callback') {
       return { routes: [{ name: 'AuthCallback' }] };
+    }
+
+    if (lower === 'onboarding/language' || lower === 'onboarding/topics') {
+      return { routes: [{ name: 'UsernameSetup' }] };
     }
 
     if (lower.startsWith('category/')) {

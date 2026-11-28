@@ -6,24 +6,23 @@ import {
   StyleSheet,
   Image,
   Platform,
+  ScrollView,
   ActivityIndicator,
-  Alert,
-  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAppTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import CustomModal from '../../components/CustomModal';
+import PostsAppLogo from '../../components/PostsAppLogo';
+import WebAuthShell, { webAuthCardStyles } from '../../components/web/WebAuthShell';
+import { navigateAfterAuth } from '../../utils/authReturn';
 
 export default function ProfileImageUploadScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
-  const { width } = useWindowDimensions();
-  const isWebDesktop = Platform.OS === 'web' && width >= 768;
   const { uploadProfileImage, updateOnboardingProfile, isLoading, userProfile } = useAuth();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -31,13 +30,19 @@ export default function ProfileImageUploadScreen() {
   const [modalConfig, setModalConfig] = useState({ visible: false, title: '', message: '', isError: false });
 
   const displayName = userProfile?.username || userProfile?.email?.split('@')[0] || 'User';
+  const avatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D4191F&color=fff&size=200`;
 
   const pickImage = async () => {
     setErrorMsg(null);
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        setModalConfig({ visible: true, title: 'Permission Required', message: 'Please allow access to your photos to upload a profile picture.', isError: true });
+        setModalConfig({
+          visible: true,
+          title: 'Permission Required',
+          message: 'Please allow access to your photos to upload a profile picture.',
+          isError: true,
+        });
         return;
       }
 
@@ -45,320 +50,256 @@ export default function ProfileImageUploadScreen() {
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.85,
       });
 
       if (!result.canceled && result.assets[0]) {
         setImageUri(result.assets[0].uri);
       }
-    } catch (e: any) {
+    } catch {
       setErrorMsg('Failed to pick image. Please try again.');
     }
   };
 
-  const handleContinue = async () => {
+  const finishOnboarding = async (skipPhoto = false) => {
     setErrorMsg(null);
     setUploading(true);
     try {
-      if (imageUri) {
-        const publicUrl = await uploadProfileImage(imageUri);
-        await updateOnboardingProfile({ avatarUrl: publicUrl });
+      let publicUrl: string | undefined;
+      if (!skipPhoto && imageUri) {
+        publicUrl = await uploadProfileImage(imageUri);
       }
-      navigation.navigate('LanguageSelection');
+      await updateOnboardingProfile({
+        ...(publicUrl ? { avatarUrl: publicUrl } : {}),
+        onboarding_complete: true,
+      });
+      navigateAfterAuth(navigation);
     } catch (e: any) {
-      setErrorMsg(e.message || 'Failed to upload image. Please try again.');
+      setErrorMsg(e?.message || 'Could not finish profile setup. Please try again.');
     } finally {
       setUploading(false);
     }
   };
 
-  const handleSkip = () => {
-    navigation.navigate('LanguageSelection');
-  };
-
-  const avatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=D4191F&color=fff&size=200`;
-
-  return (
-    <View style={[styles.container, isWebDesktop && styles.webOuter]}>
-      <View style={isWebDesktop ? styles.webCard : { flex: 1 }}>
-      <View style={[styles.content, isWebDesktop && { flex: 0, paddingTop: 8 }]}>
-        {/* Step Indicator - Step 2 of 3 */}
-        <View style={styles.stepIndicator}>
-          <View style={[styles.stepDot, styles.stepDotCompleted]} />
-          <View style={[styles.stepLine, styles.stepLineCompleted]} />
-          <View style={[styles.stepDot, styles.stepDotActive]} />
-          <View style={styles.stepLine} />
-          <View style={styles.stepDot} />
+  const cardInner = (
+    <View style={styles.cardBody}>
+      {/* Step 2 of 2 Progress */}
+      <View style={styles.stepHeader}>
+        <Text style={styles.stepBadgeText}>STEP 2 OF 2</Text>
+        <View style={styles.stepBarsRow}>
+          <View style={[styles.stepBar, styles.stepBarDone]} />
+          <View style={[styles.stepBar, styles.stepBarActive]} />
         </View>
+      </View>
 
-        <View style={styles.iconContainer}>
-          <Ionicons name="camera" size={36} color={colors.PrimaryRed} />
-        </View>
+      <Text style={webAuthCardStyles.title}>{'Add your\nprofile photo'}</Text>
+      <Text style={webAuthCardStyles.subtitle}>
+        Upload a photo for <Text style={styles.handleHighlight}>@{displayName}</Text> or finish right away.
+      </Text>
 
-        <Text style={styles.title}>Add a profile photo</Text>
-        <Text style={styles.subtitle}>
-          Upload a profile picture so other users{'\n'}can recognize you
-        </Text>
-
-        {/* Avatar Preview */}
-        <TouchableOpacity style={styles.avatarContainer} onPress={pickImage} activeOpacity={0.8}>
+      <View style={styles.avatarStage}>
+        <TouchableOpacity style={styles.avatarWrap} onPress={pickImage} activeOpacity={0.85}>
           <Image
-            source={{ uri: imageUri || avatarFallback }}
+            source={{ uri: imageUri || userProfile?.avatarUrl || avatarFallback }}
             style={styles.avatarImage}
           />
-          <View style={styles.cameraOverlay}>
-            <Ionicons name="camera" size={24} color="white" />
-          </View>
           <View style={styles.editBadge}>
-            <Ionicons name="pencil" size={14} color="white" />
+            <Ionicons name="camera" size={16} color="#FFFFFF" />
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.changePhotoBtn} onPress={pickImage}>
-          <Ionicons name="images-outline" size={18} color={colors.PrimaryRed} />
-          <Text style={styles.changePhotoText}>
+        <TouchableOpacity style={styles.pickPhotoBtn} onPress={pickImage} activeOpacity={0.85}>
+          <Ionicons name="images-outline" size={16} color="#D4191F" />
+          <Text style={styles.pickPhotoBtnText}>
             {imageUri ? 'Change Photo' : 'Choose from Gallery'}
           </Text>
         </TouchableOpacity>
-
-        {errorMsg && (
-          <Text style={styles.errorText}>{errorMsg}</Text>
-        )}
-
-        {imageUri && (
-          <Text style={styles.successText}>✓ Photo selected! Tap continue to upload.</Text>
-        )}
       </View>
 
-      {/* Bottom Buttons */}
-      <View style={styles.bottomContainer}>
+      {errorMsg ? <Text style={[webAuthCardStyles.errorText, { textAlign: 'center', marginBottom: 8 }]}>{errorMsg}</Text> : null}
+
+      {imageUri ? (
+        <Text style={styles.selectedText}>✓ Photo ready to upload</Text>
+      ) : null}
+
+      <View style={webAuthCardStyles.form}>
         <TouchableOpacity
-          style={[styles.buttonContainer, (uploading || isLoading) && styles.buttonDisabled]}
-          onPress={handleContinue}
+          style={webAuthCardStyles.primaryBtn}
+          onPress={() => finishOnboarding(false)}
           disabled={uploading || isLoading}
+          activeOpacity={0.88}
         >
-          <LinearGradient
-            colors={[colors.PrimaryRed, colors.DeepCrimson]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.gradientButton}
-          >
-            {(uploading || isLoading) ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <View style={styles.buttonContent}>
-                <Text style={styles.buttonText}>
-                  {imageUri ? 'Upload & Continue' : 'Continue'}
-                </Text>
-                <Ionicons name="arrow-forward" size={20} color="white" />
-              </View>
-            )}
-          </LinearGradient>
+          {uploading || isLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <View style={styles.btnContent}>
+              <Text style={webAuthCardStyles.primaryBtnText}>
+                {imageUri ? 'Upload & Finish' : 'Finish Setup'}
+              </Text>
+              <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
+            </View>
+          )}
         </TouchableOpacity>
 
         {!imageUri && (
-          <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
+          <TouchableOpacity
+            style={styles.skipBtn}
+            onPress={() => finishOnboarding(true)}
+            disabled={uploading || isLoading}
+          >
             <Text style={styles.skipText}>Skip for now</Text>
           </TouchableOpacity>
         )}
       </View>
-      </View>
-      <CustomModal 
-        visible={modalConfig.visible} 
-        title={modalConfig.title} 
-        message={modalConfig.message} 
-        isError={modalConfig.isError} 
-        onPrimaryPress={() => setModalConfig(prev => ({ ...prev, visible: false }))} 
+
+      <CustomModal
+        visible={modalConfig.visible}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        isError={modalConfig.isError}
+        onPrimaryPress={() => setModalConfig((prev) => ({ ...prev, visible: false }))}
       />
     </View>
   );
+
+  if (Platform.OS === 'web') {
+    return <WebAuthShell>{cardInner}</WebAuthShell>;
+  }
+
+  return (
+    <ScrollView contentContainerStyle={styles.nativeScroll} style={styles.nativeContainer}>
+      <View style={{ marginBottom: 20, alignItems: 'center' }}>
+        <PostsAppLogo variant="light" size="md" />
+      </View>
+      <View style={styles.nativeCard}>{cardInner}</View>
+    </ScrollView>
+  );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  content: {
-    flex: 1,
-    padding: 24,
-    paddingTop: Platform.OS === 'android' ? 48 : 60,
-    alignItems: 'center',
-  },
-  stepIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32,
-  },
-  stepDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#E2E8F0',
-  },
-  stepDotActive: {
-    backgroundColor: colors.PrimaryRed,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-  },
-  stepDotCompleted: {
-    backgroundColor: '#16A34A',
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-  },
-  stepLine: {
-    width: 30,
-    height: 2,
-    backgroundColor: '#E2E8F0',
-    marginHorizontal: 6,
-  },
-  stepLineCompleted: {
-    backgroundColor: '#16A34A',
-  },
-  iconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: colors.PrimaryRedAlpha10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 20,
-  },
-  avatarContainer: {
-    position: 'relative',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    marginBottom: 20,
-  },
-  avatarImage: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    borderWidth: 3,
-    borderColor: colors.PrimaryRed,
-  },
-  cameraOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 70,
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  editBadge: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.PrimaryRed,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-  },
-  changePhotoBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    backgroundColor: colors.PrimaryRedAlpha10,
-    gap: 8,
-    marginBottom: 16,
-  },
-  changePhotoText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.PrimaryRed,
-  },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 13,
-    marginTop: 8,
-    fontWeight: '500',
-  },
-  successText: {
-    color: '#16A34A',
-    fontSize: 13,
-    marginTop: 8,
-    fontWeight: '600',
-  },
-  bottomContainer: {
-    padding: 24,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  buttonContainer: {
-    width: '100%',
-    height: 56,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  gradientButton: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  skipBtn: {
-    alignItems: 'center',
-    paddingVertical: 14,
-  },
-  skipText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#94A3B8',
-  },
-  webOuter: {
-    backgroundColor: '#F5F5F7',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  webCard: {
-    width: '100%',
-    maxWidth: 520,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    padding: 24,
-    overflow: 'hidden',
-  },
-});
+const getStyles = (_colors: any) =>
+  StyleSheet.create({
+    cardBody: {
+      width: '100%',
+    },
+    stepHeader: {
+      marginBottom: 18,
+      gap: 8,
+    },
+    stepBadgeText: {
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 1,
+      color: '#D4191F',
+    },
+    stepBarsRow: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    stepBar: {
+      flex: 1,
+      height: 4,
+      borderRadius: 999,
+      backgroundColor: '#E5E7EB',
+    },
+    stepBarDone: {
+      backgroundColor: '#16A34A',
+    },
+    stepBarActive: {
+      backgroundColor: '#D4191F',
+    },
+    handleHighlight: {
+      color: '#111827',
+      fontWeight: '700',
+    },
+    avatarStage: {
+      alignItems: 'center',
+      paddingVertical: 14,
+      gap: 14,
+      marginBottom: 8,
+    },
+    avatarWrap: {
+      position: 'relative',
+      width: 124,
+      height: 124,
+      borderRadius: 62,
+    },
+    avatarImage: {
+      width: 124,
+      height: 124,
+      borderRadius: 62,
+      borderWidth: 3,
+      borderColor: '#D4191F',
+      backgroundColor: '#F3F4F6',
+    },
+    editBadge: {
+      position: 'absolute',
+      bottom: 2,
+      right: 2,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: '#D4191F',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 3,
+      borderColor: '#FFFFFF',
+    },
+    pickPhotoBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 9,
+      borderRadius: 999,
+      backgroundColor: '#FEF2F2',
+      borderWidth: 1,
+      borderColor: '#FECACA',
+    },
+    pickPhotoBtnText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#D4191F',
+    },
+    selectedText: {
+      color: '#16A34A',
+      fontSize: 12,
+      fontWeight: '700',
+      textAlign: 'center',
+      marginBottom: 10,
+    },
+    btnContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    skipBtn: {
+      alignItems: 'center',
+      paddingVertical: 10,
+    },
+    skipText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#6B7280',
+    },
+    nativeContainer: {
+      flex: 1,
+      backgroundColor: '#F7F6F2',
+    },
+    nativeScroll: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      padding: 20,
+    },
+    nativeCard: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 20,
+      padding: 24,
+      borderWidth: 1,
+      borderColor: '#E5E7EB',
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.06,
+      shadowRadius: 20,
+      elevation: 4,
+    },
+  });

@@ -2,8 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
-// This screen is now replaced by the 3-step onboarding flow
-// (UsernameSetup → LanguageSelection → TopicSelection)
+// This screen is replaced by the streamlined 2-step onboarding flow
+// (UsernameSetup → ProfileImageUpload)
 // Keeping it as a redirect for backwards compatibility
 export default function ProfileSetupScreen() {
   const navigation = useNavigation<any>();

@@ -29,7 +29,7 @@ interface AuthContextProps {
   signInWithGoogleNative: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   checkUsernameAvailability: (username: string) => Promise<{ available: boolean; suggestions: string[] }>;
-  updateOnboardingProfile: (data: { username?: string; language?: string; topics?: string[]; avatarUrl?: string }) => Promise<void>;
+  updateOnboardingProfile: (data: { username?: string; language?: string; topics?: string[]; avatarUrl?: string; onboarding_complete?: boolean }) => Promise<void>;
   uploadProfileImage: (imageUri: string) => Promise<string>;
   updateProfile: (username: string, bio: string) => Promise<void>;
   clearState: () => void;
@@ -1132,7 +1132,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // ─── Update Profile During Onboarding ───
-  const updateOnboardingProfile = async (data: { username?: string; language?: string; topics?: string[]; avatarUrl?: string }) => {
+  const updateOnboardingProfile = async (data: {
+    username?: string;
+    language?: string;
+    topics?: string[];
+    avatarUrl?: string;
+    onboarding_complete?: boolean;
+  }) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -1151,6 +1157,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updateData.selected_topics = data.topics;
         updateData.onboarding_complete = true;
       }
+      if (data.onboarding_complete !== undefined) {
+        updateData.onboarding_complete = data.onboarding_complete;
+      }
 
       // Use maybeSingle() to avoid the "Cannot coerce" error
       const { data: updated, error: uErr } = await supabase
@@ -1168,13 +1177,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (updated) {
         console.warn('[ONBOARDING] ✅ Profile updated successfully');
         setUserProfile(updated);
-        if (updated.onboarding_complete) setNeedsOnboarding(false);
+        saveProfileToCache(updated);
+        if (updated.onboarding_complete || data.onboarding_complete) setNeedsOnboarding(false);
       } else {
         // RLS might block returning updated data — re-fetch the profile
         console.warn('[ONBOARDING] Update returned no data, re-fetching profile...');
         const profile = await fetchProfile(userId);
-        if (profile) setUserProfile(profile);
-        if (data.topics) setNeedsOnboarding(false);
+        if (profile) {
+          const merged = { ...profile, ...updateData };
+          setUserProfile(merged);
+          saveProfileToCache(merged);
+        }
+        if (data.topics || data.onboarding_complete) setNeedsOnboarding(false);
       }
       setUpdateProfileSuccess(true);
     } catch (e: any) {
