@@ -198,10 +198,15 @@ export function injectSeoIntoTemplate(templateHtml, seo, bodyInnerHtml) {
   html = html.replace(/<\/head>/i, `    ${headTags}\n  </head>`);
 
   if (bodyInnerHtml) {
+    // Keep semantic SEO HTML off-screen for crawlers without flashing raw unstyled HTML to visitors
+    const hiddenSeoBlock = `<div id="seo-prerender-wrap" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none" aria-hidden="true">${bodyInnerHtml}</div>`;
+    html = html.replace(/<div id="seo-prerender-wrap"[\s\S]*?<\/main><\/div>/i, '');
     if (/<div id="root"><\/div>/i.test(html)) {
-      html = html.replace(/<div id="root"><\/div>/i, `<div id="root">${bodyInnerHtml}</div>`);
+      html = html.replace(/<div id="root"><\/div>/i, `<div id="root"></div>${hiddenSeoBlock}`);
+    } else if (/<div id="root"[^>]*>[\s\S]*?<\/div>/i.test(html)) {
+      html = html.replace(/<div id="root"[^>]*>[\s\S]*?<\/div>/i, `<div id="root"></div>${hiddenSeoBlock}`);
     } else {
-      html = html.replace(/<div id="root"[^>]*>[\s\S]*?<\/div>/i, `<div id="root">${bodyInnerHtml}</div>`);
+      html = html.replace(/<\/body>/i, `${hiddenSeoBlock}</body>`);
     }
   }
 

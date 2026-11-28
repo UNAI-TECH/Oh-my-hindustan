@@ -25,7 +25,6 @@ import { getOrCreateVisitorId } from '../../utils/visitorId';
 import { AppApi } from '../../api/services';
 import {
   WEB_NAV_CATEGORIES,
-  POPULAR_TAGS,
   getFormattedHeaderDate,
   buildArticleParams,
 } from './webPortalHelpers';
@@ -185,22 +184,15 @@ export function WebTopMasthead({
         </View>
       </View>
 
-      {/* 2. Crimson Masthead + Leaderboard Ad Slot */}
-      <LinearGradient
-        colors={['#C4161C', '#9E1111']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={[styles.masthead, isMobile && { paddingVertical: 12, paddingHorizontal: 12 }]}
-      >
+      {/* 2. White Masthead + Leaderboard Ad Slot */}
+      <View style={[styles.masthead, isMobile && { paddingVertical: 12, paddingHorizontal: 12 }]}>
         <View style={[styles.mastheadInner, !isDesktopWide && styles.mastheadInnerTablet]}>
           <TouchableOpacity
             style={[styles.brandCluster, isMobile && { gap: 10 }]}
             activeOpacity={0.9}
             onPress={onSelectHome}
           >
-            <View style={[styles.logoBadge, isMobile && { paddingHorizontal: 10, paddingVertical: 6 }]}>
-              <PostsAppLogo variant="dark" size={isMobile ? 'sm' : 'md'} />
-            </View>
+            <PostsAppLogo variant="light" size={isMobile ? 'sm' : 'md'} />
             <View style={[styles.taglineBlock, { flexShrink: 1 }]}>
               <Text style={[styles.taglineTitle, isMobile && { fontSize: 10, letterSpacing: 1 }]} numberOfLines={1}>
                 NEWS  •  POLICY  •  IDEAS
@@ -212,7 +204,11 @@ export function WebTopMasthead({
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.leaderboardSlot, !isDesktopWide && styles.leaderboardSlotTablet]}
+            style={[
+              styles.leaderboardSlot,
+              !isDesktopWide && styles.leaderboardSlotTablet,
+              isMobile && styles.leaderboardSlotMobile,
+            ]}
             activeOpacity={0.85}
             onPress={handleAdClick}
           >
@@ -238,12 +234,7 @@ export function WebTopMasthead({
                 </View>
               </View>
             ) : (
-              <LinearGradient
-                colors={['rgba(20, 20, 20, 0.52)', 'rgba(130, 12, 16, 0.48)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.leaderboardGradient}
-              >
+              <View style={styles.leaderboardGradient}>
                 {leaderboardAd ? (
                   <View style={styles.leaderboardContent}>
                     <View style={styles.sponsoredPill}>
@@ -281,11 +272,11 @@ export function WebTopMasthead({
                     )}
                   </View>
                 )}
-              </LinearGradient>
+              </View>
             )}
           </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </View>
     </View>
   );
 }
@@ -301,8 +292,8 @@ interface WebStickyNavBarProps {
   unreadNotifications: number;
   isAuthenticated: boolean;
   onLogout: () => Promise<void>;
-  feedMode: 'latest' | 'trending' | 'popular' | 'articles' | 'videos';
-  onChangeFeedMode: (mode: 'latest' | 'trending' | 'popular' | 'articles' | 'videos') => void;
+  feedMode: 'latest' | 'trending' | 'popular' | 'articles';
+  onChangeFeedMode: (mode: 'latest' | 'trending' | 'popular' | 'articles') => void;
 }
 
 export function WebStickyNavBar({
@@ -325,6 +316,7 @@ export function WebStickyNavBar({
   const isMobileNav = width < 768;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [desktopSearchOpen, setDesktopSearchOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [livePosts, setLivePosts] = useState<any[]>([]);
   const [liveCreators, setLiveCreators] = useState<any[]>([]);
@@ -517,6 +509,17 @@ export function WebStickyNavBar({
             >
               <Ionicons name={mobileSearchOpen ? 'close' : 'search'} size={17} color="#FFFFFF" />
             </TouchableOpacity>
+          ) : !desktopSearchOpen && searchQuery.trim().length === 0 ? (
+            <TouchableOpacity
+              onPress={() => {
+                setDesktopSearchOpen(true);
+                setSearchFocused(true);
+              }}
+              style={styles.searchIconToggleBtn}
+              accessibilityLabel="Open search"
+            >
+              <Ionicons name="search" size={17} color="#FFFFFF" />
+            </TouchableOpacity>
           ) : (
             <View style={styles.searchContainer}>
               <View style={[styles.searchBox, showLiveDropdown && styles.searchBoxFocused]}>
@@ -525,6 +528,7 @@ export function WebStickyNavBar({
                   placeholder="Search news..."
                   placeholderTextColor="#9CA3AF"
                   value={searchQuery}
+                  autoFocus
                   onChangeText={(q) => {
                     onChangeSearch(q);
                     setSearchFocused(true);
@@ -534,7 +538,12 @@ export function WebStickyNavBar({
                     setSearchFocused(true);
                   }}
                   onBlur={() => {
-                    blurTimerRef.current = setTimeout(() => setSearchFocused(false), 220);
+                    blurTimerRef.current = setTimeout(() => {
+                      setSearchFocused(false);
+                      if (!searchQuery.trim()) {
+                        setDesktopSearchOpen(false);
+                      }
+                    }, 220);
                   }}
                   onSubmitEditing={() => {
                     setSearchFocused(false);
@@ -542,22 +551,28 @@ export function WebStickyNavBar({
                   }}
                   returnKeyType="search"
                 />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => onChangeSearch('')}
-                    style={{ marginRight: 6 }}
-                    accessibilityLabel="Clear search"
-                  >
-                    <Ionicons name="close-circle" size={15} color="#9CA3AF" />
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                  onPress={() => {
+                    if (searchQuery.length > 0) {
+                      onChangeSearch('');
+                    } else {
+                      setSearchFocused(false);
+                      setDesktopSearchOpen(false);
+                    }
+                  }}
+                  style={{ marginRight: 6 }}
+                  accessibilityLabel={searchQuery.length > 0 ? 'Clear search' : 'Close search'}
+                >
+                  <Ionicons name={searchQuery.length > 0 ? 'close-circle' : 'close'} size={16} color="#9CA3AF" />
+                </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => {
                     setSearchFocused(false);
                     onSubmitSearch();
                   }}
+                  accessibilityLabel="Submit search"
                 >
-                  <Ionicons name="search" size={16} color="#9CA3AF" />
+                  <Ionicons name="search" size={16} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
 
@@ -747,20 +762,10 @@ export function WebStickyNavBar({
               <Text style={styles.drawerSectionTitle}>NAVIGATION</Text>
               {[
                 { label: 'Home Portal', icon: 'home-outline', route: 'Home' },
-                { label: 'Explore Creators', icon: 'compass-outline', route: 'Explore' },
-                { label: 'Creators Directory', icon: 'people-outline', route: 'CreatorsDirectory' },
-                { label: '24h Stories', icon: 'aperture-outline', route: 'StoryFeed' },
                 { label: 'Saved Library', icon: 'bookmark-outline', route: 'Library' },
                 { label: 'Search All', icon: 'search-outline', route: 'Search' },
-                {
-                  label: unreadNotifications > 0 ? `Notifications (${unreadNotifications})` : 'Notifications',
-                  icon: 'notifications-outline',
-                  route: 'Notifications',
-                },
                 { label: 'My Profile', icon: 'person-outline', route: 'Profile' },
-                { label: 'Settings', icon: 'settings-outline', route: 'Settings' },
                 { label: 'About PostsApp', icon: 'information-circle-outline', route: 'StaticInfo', params: { pageKey: 'about' } },
-                { label: 'Advertise', icon: 'megaphone-outline', route: 'StaticInfo', params: { pageKey: 'advertise' } },
               ].map((item: any) => (
                 <TouchableOpacity
                   key={`${item.route}-${item.label}`}
@@ -797,7 +802,6 @@ export function WebStickyNavBar({
                   { key: 'trending', label: t('common.trending', 'Trending') },
                   { key: 'popular', label: t('common.most_read', 'Most Read') },
                   { key: 'articles', label: t('common.articles', 'Articles') },
-                  { key: 'videos', label: t('common.videos', 'Videos') },
                 ] as const
               ).map((m) => (
                 <TouchableOpacity
@@ -875,26 +879,44 @@ export function WebPopularTagsBar({
   const [dbTags, setDbTags] = useState<Array<{ key: string; label: string }>>([]);
 
   useEffect(() => {
-    AppApi.getPopularTags(14)
-      .then((rows) => {
-        if (rows && rows.length > 0) {
-          setDbTags(
-            rows.map((r: any) => {
-              const rawName = (lang === 'ta' ? (r.name_ta || r.name_en) : r.name_en) || r.slug_en;
-              const normalized = `#${String(r.slug_en || r.name_en || rawName).replace(/^#/, '')}`;
-              const display = rawName.startsWith('#') ? rawName : `#${rawName}`;
-              return { key: normalized, label: display };
-            })
-          );
-        }
+    let active = true;
+    const loadPopularTags = () => {
+      AppApi.getPopularTags(20)
+        .then((rows) => {
+          if (!active) return;
+          if (rows && rows.length > 0) {
+            setDbTags(
+              rows.map((r: any) => {
+                const rawName = (lang === 'ta' ? (r.name_ta || r.name_en) : r.name_en) || r.slug_en;
+                const normalized = `#${String(r.slug_en || r.name_en || rawName).replace(/^#/, '')}`;
+                const display = rawName.startsWith('#') ? rawName : `#${rawName}`;
+                return { key: normalized, label: display };
+              })
+            );
+          } else {
+            setDbTags([]);
+          }
+        })
+        .catch(() => {});
+    };
+
+    loadPopularTags();
+
+    const channel = supabase
+      .channel(`web-popular-tags-${lang}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tags' }, () => {
+        loadPopularTags();
       })
-      .catch(() => {});
+      .subscribe();
+
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
   }, [lang]);
 
-  const tagsToRender =
-    dbTags.length > 0
-      ? dbTags
-      : POPULAR_TAGS.map((tg) => ({ key: tg, label: tg }));
+  if (dbTags.length === 0) return null;
+  const tagsToRender = dbTags;
 
   return (
     <View style={styles.tagsBar}>
@@ -1050,6 +1072,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   masthead: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
     paddingVertical: 18,
     paddingHorizontal: 20,
   },
@@ -1073,25 +1098,17 @@ const styles = StyleSheet.create({
     gap: 16,
     flexShrink: 0,
   },
-  logoBadge: {
-    backgroundColor: '#141414',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
   taglineBlock: {
     justifyContent: 'center',
   },
   taglineTitle: {
-    color: '#FFFFFF',
+    color: '#111827',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1.5,
   },
   taglineSub: {
-    color: 'rgba(255,255,255,0.82)',
+    color: '#374151',
     fontSize: 12,
     marginTop: 3,
   },
@@ -1101,15 +1118,20 @@ const styles = StyleSheet.create({
     maxWidth: 820,
     aspectRatio: 984 / 125,
     minHeight: 68,
-    borderRadius: 4,
+    borderRadius: 6,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
   },
   leaderboardSlotTablet: {
     flex: 0,
     width: '100%',
     maxWidth: '100%',
+  },
+  leaderboardSlotMobile: {
+    aspectRatio: undefined,
+    minHeight: 60,
   },
   leaderboardMediaWrap: {
     flex: 1,
@@ -1162,8 +1184,9 @@ const styles = StyleSheet.create({
   },
   leaderboardGradient: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 12,
     justifyContent: 'center',
   },
   leaderboardContent: {
@@ -1172,7 +1195,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   sponsoredPill: {
-    backgroundColor: '#D4191F',
+    backgroundColor: '#111827',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 3,
@@ -1192,23 +1215,23 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   leaderboardWhite: {
-    color: '#FFFFFF',
+    color: '#111827',
   },
   leaderboardAccent: {
-    color: '#DC2626',
+    color: '#111827',
   },
   leaderboardHeadline: {
-    color: '#FFFFFF',
+    color: '#111827',
     fontSize: 16,
     fontWeight: '800',
   },
   leaderboardDesc: {
-    color: 'rgba(255,255,255,0.85)',
+    color: '#374151',
     fontSize: 12,
     marginTop: 3,
   },
   leaderboardMeta: {
-    color: '#FCA5A5',
+    color: '#111827',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -1216,13 +1239,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   leaderboardSlotLabel: {
-    color: 'rgba(255,255,255,0.65)',
+    color: '#374151',
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.6,
   },
   leaderboardSlotDims: {
-    color: '#FCA5A5',
+    color: '#111827',
     fontSize: 11,
     fontWeight: '600',
     marginTop: 2,
@@ -1287,6 +1310,16 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     position: 'relative',
     zIndex: 250,
+  },
+  searchIconToggleBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 6,
+    backgroundColor: '#2A2A2A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
   },
   searchContainer: {
     position: 'relative',

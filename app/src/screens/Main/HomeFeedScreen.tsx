@@ -65,13 +65,13 @@ export default function HomeFeedScreen() {
   const [webCategory, setWebCategory] = useState(() => slugToCategory(route.params?.initialCategory));
   const [webSearchQuery, setWebSearchQuery] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
-  const [webFeedMode, setWebFeedMode] = useState<'latest' | 'trending' | 'popular' | 'articles' | 'videos'>('latest');
+  const [webFeedMode, setWebFeedMode] = useState<'latest' | 'trending' | 'popular' | 'articles'>('latest');
   const [categoryPoolItems, setCategoryPoolItems] = useState<FeedItem[]>([]);
   const [categorySyncTick, setCategorySyncTick] = useState(0);
   const [homepageConfig, setHomepageConfig] = useState<any | null>(null);
   const webScrollRef = useRef<ScrollView>(null);
   const loggedLeaderboardAdId = useRef<string | null>(null);
-  const tabs = ['For you', 'Trending', 'Headlines', 'Articles', 'Videos'];
+  const tabs = ['For you', 'Trending', 'Headlines', 'Articles'];
 
   React.useEffect(() => {
     let cancelled = false;
@@ -116,10 +116,14 @@ export default function HomeFeedScreen() {
     }
     const initMode = route.params?.initialFeedMode;
     if (initMode) {
-      setWebFeedMode(initMode);
-      if (initMode === 'trending') setSortBy('trending');
-      else if (initMode === 'popular') setSortBy('popular');
-      else if (initMode === 'latest') setSortBy('latest');
+      const normalizedMode =
+        initMode === 'trending' || initMode === 'popular' || initMode === 'articles'
+          ? initMode
+          : 'latest';
+      setWebFeedMode(normalizedMode);
+      if (normalizedMode === 'trending') setSortBy('trending');
+      else if (normalizedMode === 'popular') setSortBy('popular');
+      else if (normalizedMode === 'latest' || normalizedMode === 'articles') setSortBy('latest');
     }
   }, [route.params?.initialCategory, route.params?.initialFeedMode]);
 
@@ -190,14 +194,19 @@ export default function HomeFeedScreen() {
   }, [isWebDesktop, webCategory, sortBy, categorySyncTick]);
 
   React.useEffect(() => {
-    if (!isWebDesktop || webCategory === 'HOME') return;
+    if (!isWebDesktop) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
     const triggerSync = () => {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(() => setCategorySyncTick((t) => t + 1), 250);
+      timer = setTimeout(() => {
+        if (webCategory !== 'HOME') {
+          setCategorySyncTick((t) => t + 1);
+        }
+        refreshFeed();
+      }, 300);
     };
     const channel = supabase
-      .channel('home-category-realtime')
+      .channel('home-feed-realtime-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'Post' }, triggerSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'Vote' }, triggerSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'Comment' }, triggerSync)
@@ -289,7 +298,6 @@ export default function HomeFeedScreen() {
   const currentTabItems = useMemo(() => {
     if (activeTab === 'Trending' || activeTab === 'For you') return feedItems;
     if (activeTab === 'Articles') return feedItems.filter(it => [FeedItemType.NEWS, FeedItemType.UPDATE, FeedItemType.POLICY_TYPE, FeedItemType.PROMO].includes(it.type));
-    if (activeTab === 'Videos') return feedItems.filter(it => [FeedItemType.VIDEO, FeedItemType.DEBATE, FeedItemType.PROMO].includes(it.type));
     return feedItems;
   }, [feedItems, activeTab]);
 
@@ -323,10 +331,6 @@ export default function HomeFeedScreen() {
       items = items.filter((it) =>
         [FeedItemType.NEWS, FeedItemType.UPDATE, FeedItemType.POLICY_TYPE, FeedItemType.BLOG].includes(it.type)
       );
-    } else if (webFeedMode === 'videos') {
-      items = items.filter((it) =>
-        [FeedItemType.VIDEO, FeedItemType.DEBATE].includes(it.type) || !!it.videoUrl
-      );
     }
 
     if (webCategory !== 'HOME') {
@@ -349,6 +353,21 @@ export default function HomeFeedScreen() {
           (it.category || '').toLowerCase().includes(q) ||
           (it.authorName || '').toLowerCase().includes(q) ||
           (it.excerpt || '').toLowerCase().includes(q)
+      );
+    }
+
+    if (webFeedMode === 'trending') {
+      items = [...items].sort(
+        (a, b) =>
+          (b.isTrending ? 10000 : 0) +
+          (b.viewCount || 0) +
+          (b.upvoteCount || 0) -
+          ((a.isTrending ? 10000 : 0) + (a.viewCount || 0) + (a.upvoteCount || 0))
+      );
+    } else if (webFeedMode === 'popular') {
+      items = [...items].sort(
+        (a, b) =>
+          (b.viewCount || 0) + (b.upvoteCount || 0) - ((a.viewCount || 0) + (a.upvoteCount || 0))
       );
     }
 
@@ -468,7 +487,7 @@ export default function HomeFeedScreen() {
       ? homepageConfig.sections
       : defaults;
     return [...configured]
-      .filter((s: any) => s && s.visible !== false)
+      .filter((s: any) => s && s.visible !== false && String(s.key || '').toLowerCase() !== 'videos')
       .sort((a: any, b: any) => (a.order ?? 99) - (b.order ?? 99));
   }, [homepageConfig]);
 
@@ -504,11 +523,11 @@ export default function HomeFeedScreen() {
     setWebCategory('HOME');
   };
 
-  const handleWebFeedMode = (mode: 'latest' | 'trending' | 'popular' | 'articles' | 'videos') => {
+  const handleWebFeedMode = (mode: 'latest' | 'trending' | 'popular' | 'articles') => {
     setWebFeedMode(mode);
     if (mode === 'trending') setSortBy('trending');
     else if (mode === 'popular') setSortBy('popular');
-    else if (mode === 'latest') setSortBy('latest');
+    else setSortBy('latest');
   };
 
   const handleWebPressItem = (item: FeedItem) => {
@@ -573,6 +592,9 @@ export default function HomeFeedScreen() {
               <Text style={styles.webFilterText}>
                 Showing {filteredWebItems.length} stories
                 {webCategory !== 'HOME' ? ` in ${webCategory.replace('_', ' ')}` : ''}
+                {webFeedMode !== 'latest'
+                  ? ` • ${webFeedMode === 'popular' ? 'Most Read' : webFeedMode.charAt(0).toUpperCase() + webFeedMode.slice(1)}`
+                  : ''}
                 {activeTag ? ` • ${activeTag}` : ''}
                 {webSearchQuery.trim() ? ` • "${webSearchQuery.trim()}"` : ''}
               </Text>
@@ -677,7 +699,8 @@ export default function HomeFeedScreen() {
                     <WebFeaturedPosts
                       key={key}
                       title={sec.title || 'Trending Now'}
-                      maxItems={limit}
+                      maxItems={Math.max(limit, 8)}
+                      carousel
                       items={webSections.trendingNow}
                       onPressItem={handleWebPressItem}
                       onPressViewAll={() => handleWebFeedMode('trending')}
@@ -690,24 +713,11 @@ export default function HomeFeedScreen() {
                     <WebFeaturedPosts
                       key={key}
                       title={sec.title || 'Most Read'}
-                      maxItems={limit}
+                      maxItems={Math.max(limit, 8)}
+                      carousel
                       items={webSections.mostReadItems}
                       onPressItem={handleWebPressItem}
                       onPressViewAll={() => handleWebFeedMode('popular')}
-                    />
-                  );
-                }
-
-                if (key === 'videos') {
-                  if (webSections.videoItems.length === 0) return null;
-                  return (
-                    <WebFeaturedPosts
-                      key={key}
-                      title={sec.title || 'Video Reports'}
-                      maxItems={limit}
-                      items={webSections.videoItems}
-                      onPressItem={handleWebPressItem}
-                      onPressViewAll={() => handleWebFeedMode('videos')}
                     />
                   );
                 }

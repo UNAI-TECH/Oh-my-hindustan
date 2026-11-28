@@ -404,7 +404,67 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.get_creator_analytics(TEXT, TIMESTAMPTZ, TIMESTAMPTZ) TO authenticated;
 
--- 7. Ensure Supabase Realtime publication covers all live tables across Public, Creator & Admin
+-- 7. Performance Indexes (reduces sequential scans, Swap & Disk IO on Nano/Free tier)
+CREATE INDEX IF NOT EXISTS idx_vote_post_type ON public."Vote"("postId", type);
+CREATE INDEX IF NOT EXISTS idx_vote_user_post ON public."Vote"("userId", "postId");
+CREATE INDEX IF NOT EXISTS idx_comment_post ON public."Comment"("postId");
+CREATE INDEX IF NOT EXISTS idx_save_post ON public."Save"("postId");
+CREATE INDEX IF NOT EXISTS idx_save_user ON public."Save"("userId");
+CREATE INDEX IF NOT EXISTS idx_postview_post ON public."PostView"("postId");
+CREATE INDEX IF NOT EXISTS idx_postview_created ON public."PostView"(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_follow_following ON public."Follow"("followingId");
+CREATE INDEX IF NOT EXISTS idx_follow_follower ON public."Follow"("followerId");
+
+-- Optimize trending refresh so unchanged rows do not generate WAL / Disk IO writes
+CREATE OR REPLACE FUNCTION public.refresh_trending_scores()
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  updated_rows INT;
+BEGIN
+  UPDATE public."Post" p
+  SET trending_score = computed.next_score
+  FROM (
+    SELECT
+      id,
+      ROUND((
+        (
+          COALESCE(views_count, 0) * 1.0 +
+          COALESCE(likes_count, 0) * 5.0 +
+          COALESCE(comments_count, 0) * 4.0 +
+          CASE WHEN "isTrending" THEN 50.0 ELSE 0.0 END
+        ) / POWER(GREATEST(1.0, EXTRACT(EPOCH FROM (now() - COALESCE(published_at, "createdAt"::timestamptz))) / 3600.0 + 2.0), 1.35)
+      )::numeric, 4)::double precision AS next_score
+    FROM public."Post"
+    WHERE status = 'PUBLISHED' AND COALESCE(is_active, true) = true
+  ) computed
+  WHERE p.id = computed.id
+    AND p.trending_score IS DISTINCT FROM computed.next_score;
+
+  GET DIAGNOSTICS updated_rows = ROW_COUNT;
+  RETURN updated_rows;
+END;
+$$;
+
+-- Reduce pg_cron cadence to conserve Free-tier RAM & Disk IO
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    PERFORM cron.unschedule('postsapp-scheduled-publisher')
+    WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'postsapp-scheduled-publisher');
+    PERFORM cron.schedule('postsapp-scheduled-publisher', '*/5 * * * *', 'SELECT public.publish_due_scheduled_posts();');
+
+    PERFORM cron.unschedule('postsapp-refresh-trending')
+    WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'postsapp-refresh-trending');
+    PERFORM cron.schedule('postsapp-refresh-trending', '*/30 * * * *', 'SELECT public.refresh_trending_scores();');
+  END IF;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+-- 8. Ensure Supabase Realtime publication uses lightweight REPLICA IDENTITY DEFAULT on large tables
 DO $$
 DECLARE
   tbl TEXT;
@@ -435,7 +495,12 @@ BEGIN
         SELECT 1 FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = tbl
       ) THEN
-        EXECUTE format('ALTER TABLE public.%I REPLICA IDENTITY FULL;', tbl);
+        -- Keep DEFAULT (PK only) on heavy tables to avoid bloated WAL writes & Disk IO
+        IF tbl IN ('homepage_config', 'categories', 'tags') THEN
+          EXECUTE format('ALTER TABLE public.%I REPLICA IDENTITY FULL;', tbl);
+        ELSE
+          EXECUTE format('ALTER TABLE public.%I REPLICA IDENTITY DEFAULT;', tbl);
+        END IF;
         IF NOT EXISTS (
           SELECT 1 FROM pg_publication_tables
           WHERE pubname = 'supabase_realtime'
@@ -448,5 +513,19 @@ BEGIN
     END LOOP;
   END IF;
 END $$;
+
+-- 9. Popular Tags Admin Controls & Remove Video Reports Section from Homepage
+ALTER TABLE public.tags
+  ADD COLUMN IF NOT EXISTS is_popular BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS display_order INTEGER NOT NULL DEFAULT 0;
+
+UPDATE public.homepage_config
+SET sections = COALESCE((
+  SELECT jsonb_agg(elem ORDER BY (elem->>'order')::int)
+  FROM jsonb_array_elements(sections) AS elem
+  WHERE elem->>'key' <> 'videos'
+), '[]'::jsonb),
+updated_at = now()
+WHERE jsonb_typeof(sections) = 'array';
 
 NOTIFY pgrst, 'reload schema';

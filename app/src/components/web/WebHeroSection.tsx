@@ -152,7 +152,7 @@ export default function WebHeroSection({
         </View>
 
         {/* Right Column: Trending Now */}
-        <View style={[styles.sideColumn, !isDesktop && styles.columnTabletHalf]}>
+        <View style={[styles.sideColumn, !isDesktop && styles.columnTabletHalf, isMobile && styles.columnMobileFull]}>
           <SectionHeading title="Trending Now" />
           <View style={styles.trendingList}>
             {trendingNow.slice(0, 4).map((item, idx) => (
@@ -241,10 +241,11 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   columnMobileFull: {
-    flexBasis: '100%',
+    flexBasis: 'auto',
     width: '100%',
     minWidth: 0,
     flex: 0,
+    flexGrow: 0,
   },
   pickHeroCard: {
     height: 208,

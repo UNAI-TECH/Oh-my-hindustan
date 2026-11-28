@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Image,
+  ScrollView,
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
@@ -17,6 +18,7 @@ interface WebFeaturedPostsProps {
   onPressViewAll: () => void;
   title?: string;
   maxItems?: number;
+  carousel?: boolean;
 }
 
 export default function WebFeaturedPosts({
@@ -25,13 +27,75 @@ export default function WebFeaturedPosts({
   onPressViewAll,
   title = 'Featured Posts',
   maxItems = 4,
+  carousel = false,
 }: WebFeaturedPostsProps) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const isMobile = width < 640;
-  const visibleItems = items.slice(0, maxItems);
+  const scrollRef = useRef<ScrollView>(null);
+  const [scrollX, setScrollX] = useState(0);
+
+  const visibleItems = carousel
+    ? items.slice(0, Math.max(maxItems, 8))
+    : items.slice(0, Math.min(maxItems, 4));
 
   if (visibleItems.length === 0) return null;
+
+  const horizontalPad = isMobile ? 24 : 40;
+  const containerInnerWidth = Math.max(280, Math.min(width, 1280) - horizontalPad);
+  const gap = 18;
+  const carouselCardWidth = isDesktop
+    ? Math.floor((containerInnerWidth - gap * 3) / 4)
+    : isMobile
+      ? Math.max(248, containerInnerWidth - 36)
+      : Math.floor((containerInnerWidth - gap) / 2);
+
+  const stepWidth = (carouselCardWidth + gap) * (isDesktop ? 2 : 1);
+
+  const handleScrollBy = (direction: -1 | 1) => {
+    const nextX = Math.max(0, scrollX + direction * stepWidth);
+    scrollRef.current?.scrollTo({ x: nextX, animated: true });
+    setScrollX(nextX);
+  };
+
+  const renderCard = (item: FeedItem, cardStyle: any) => (
+    <TouchableOpacity
+      key={item.id}
+      style={[styles.card, cardStyle]}
+      activeOpacity={0.88}
+      onPress={() => onPressItem(item)}
+    >
+      <View style={styles.thumbContainer}>
+        {item.thumbnail ? (
+          <Image source={{ uri: item.thumbnail }} style={styles.thumbImage} />
+        ) : (
+          <View style={styles.thumbFallback}>
+            <Text style={styles.thumbFallbackText}>Featured</Text>
+          </View>
+        )}
+        <View style={styles.readPill}>
+          <Ionicons name="play" size={9} color="#FFFFFF" />
+          <Text style={styles.readPillText}>{estimateReadTime(item)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.cardBody}>
+        <Text style={styles.categoryText} numberOfLines={1}>
+          {(item.category || 'NEWS').toUpperCase()}
+        </Text>
+        <Text style={styles.titleText} numberOfLines={2}>
+          {item.title}
+        </Text>
+
+        <View style={styles.metaFooter}>
+          <Text style={styles.authorText} numberOfLines={1}>
+            {item.authorName || 'PostsApp Desk'}
+          </Text>
+          <Text style={styles.dateText}>{item.timestamp || 'Today'}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={[styles.container, isMobile && { paddingHorizontal: 12, marginTop: 24 }]}>
@@ -41,54 +105,55 @@ export default function WebFeaturedPosts({
           <Text style={styles.sectionHeadingText}>{title}</Text>
         </View>
 
-        <TouchableOpacity onPress={onPressViewAll}>
-          <Text style={styles.viewAllText}>View All Stories →</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.grid}>
-        {visibleItems.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={[
-              styles.card,
-              isDesktop ? styles.cardDesktop : isMobile ? styles.cardMobile : styles.cardTablet,
-            ]}
-            activeOpacity={0.88}
-            onPress={() => onPressItem(item)}
-          >
-            <View style={styles.thumbContainer}>
-              {item.thumbnail ? (
-                <Image source={{ uri: item.thumbnail }} style={styles.thumbImage} />
-              ) : (
-                <View style={styles.thumbFallback}>
-                  <Text style={styles.thumbFallbackText}>Featured</Text>
-                </View>
-              )}
-              <View style={styles.readPill}>
-                <Ionicons name="play" size={9} color="#FFFFFF" />
-                <Text style={styles.readPillText}>{estimateReadTime(item)}</Text>
-              </View>
+        <View style={styles.headerActions}>
+          {carousel && visibleItems.length > (isDesktop ? 4 : isMobile ? 1 : 2) && (
+            <View style={styles.carouselArrows}>
+              <TouchableOpacity
+                style={styles.arrowBtn}
+                onPress={() => handleScrollBy(-1)}
+                accessibilityLabel={`Previous ${title}`}
+              >
+                <Ionicons name="chevron-back" size={16} color="#111827" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.arrowBtn}
+                onPress={() => handleScrollBy(1)}
+                accessibilityLabel={`Next ${title}`}
+              >
+                <Ionicons name="chevron-forward" size={16} color="#111827" />
+              </TouchableOpacity>
             </View>
-
-            <View style={styles.cardBody}>
-              <Text style={styles.categoryText} numberOfLines={1}>
-                {(item.category || 'NEWS').toUpperCase()}
-              </Text>
-              <Text style={styles.titleText} numberOfLines={2}>
-                {item.title}
-              </Text>
-
-              <View style={styles.metaFooter}>
-                <Text style={styles.authorText} numberOfLines={1}>
-                  {item.authorName || 'PostsApp Desk'}
-                </Text>
-                <Text style={styles.dateText}>{item.timestamp || 'Today'}</Text>
-              </View>
-            </View>
+          )}
+          <TouchableOpacity onPress={onPressViewAll}>
+            <Text style={styles.viewAllText}>View All Stories →</Text>
           </TouchableOpacity>
-        ))}
+        </View>
       </View>
+
+      {carousel ? (
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.carouselTrack}
+          scrollEventThrottle={16}
+          onScroll={(e) => setScrollX(e.nativeEvent.contentOffset.x)}
+          decelerationRate="fast"
+        >
+          {visibleItems.map((item) =>
+            renderCard(item, { width: carouselCardWidth, flexShrink: 0 })
+          )}
+        </ScrollView>
+      ) : (
+        <View style={styles.grid}>
+          {visibleItems.map((item) =>
+            renderCard(
+              item,
+              isDesktop ? styles.cardDesktop : isMobile ? styles.cardMobile : styles.cardTablet
+            )
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -121,6 +186,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: '#111827',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  carouselArrows: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  arrowBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  carouselTrack: {
+    flexDirection: 'row',
+    gap: 18,
+    paddingBottom: 4,
   },
   viewAllText: {
     color: '#D4191F',

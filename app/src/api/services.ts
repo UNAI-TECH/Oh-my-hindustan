@@ -431,10 +431,20 @@ export const AppApi = {
   getPopularTags: async (limit = 16) => {
     const { data, error } = await supabase
       .from('tags')
-      .select('id, name_en, name_ta, slug_en, slug_ta')
+      .select('id, name_en, name_ta, slug_en, slug_ta, is_popular, display_order')
+      .eq('is_popular', true)
+      .order('display_order', { ascending: true })
       .order('created_at', { ascending: false })
       .limit(limit);
-    if (error) throw error;
+    if (error) {
+      const fallback = await supabase
+        .from('tags')
+        .select('id, name_en, name_ta, slug_en, slug_ta')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (fallback.error) throw fallback.error;
+      return fallback.data || [];
+    }
     return data || [];
   },
 

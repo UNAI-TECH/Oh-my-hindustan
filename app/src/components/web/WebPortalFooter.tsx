@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Linking,
   useWindowDimensions,
 } from 'react-native';
 import PostsAppLogo from '../PostsAppLogo';
@@ -14,7 +13,6 @@ import { supabase } from '../../lib/supabaseClient';
 import { AppApi } from '../../api/services';
 import { useSiteLanguage } from '../../context/SiteLanguageContext';
 import { useTranslation } from 'react-i18next';
-import { SITE_URL } from '../../seo/seoUtils';
 
 interface WebPortalFooterProps {
   onSelectCategory: (category: string) => void;
@@ -36,19 +34,37 @@ export default function WebPortalFooter({
   const [dbCategories, setDbCategories] = useState<Array<{ key: string; label: string }>>([]);
 
   useEffect(() => {
-    AppApi.getBilingualCategories()
-      .then((rows) => {
-        const visible = (rows || []).filter((c: any) => c.nav_visible !== false && c.name_en);
-        if (visible.length > 0) {
-          setDbCategories(
-            visible.slice(0, 10).map((c: any) => ({
-              key: String(c.name_en).toUpperCase(),
-              label: lang === 'ta' ? (c.name_ta || c.name_en) : c.name_en,
-            }))
-          );
-        }
+    let active = true;
+    const loadCategories = () => {
+      AppApi.getBilingualCategories()
+        .then((rows) => {
+          if (!active) return;
+          const visible = (rows || []).filter((c: any) => c.nav_visible !== false && c.name_en);
+          if (visible.length > 0) {
+            setDbCategories(
+              visible.slice(0, 10).map((c: any) => ({
+                key: String(c.name_en).toUpperCase(),
+                label: lang === 'ta' ? (c.name_ta || c.name_en) : c.name_en,
+              }))
+            );
+          }
+        })
+        .catch(() => {});
+    };
+
+    loadCategories();
+
+    const channel = supabase
+      .channel(`web-footer-cats-${lang}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
+        loadCategories();
       })
-      .catch(() => {});
+      .subscribe();
+
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
   }, [lang]);
 
   const footerCatList =
@@ -180,40 +196,12 @@ export default function WebPortalFooter({
               <Text style={styles.bottomLinkText}>{t('footer.about', 'About Us')}</Text>
             </TouchableOpacity>
             <Text style={styles.bottomDot}>•</Text>
-            <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'contact' })}>
-              <Text style={styles.bottomLinkText}>{t('footer.contact', 'Contact')}</Text>
-            </TouchableOpacity>
-            <Text style={styles.bottomDot}>•</Text>
-            <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'editorial-policy' })}>
-              <Text style={styles.bottomLinkText}>{t('footer.editorial_policy', 'Editorial Policy')}</Text>
-            </TouchableOpacity>
-            <Text style={styles.bottomDot}>•</Text>
-            <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'corrections-policy' })}>
-              <Text style={styles.bottomLinkText}>{t('footer.corrections_policy', 'Corrections')}</Text>
+            <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'terms' })}>
+              <Text style={styles.bottomLinkText}>{t('footer.terms', 'Terms of Service')}</Text>
             </TouchableOpacity>
             <Text style={styles.bottomDot}>•</Text>
             <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'privacy-policy' })}>
               <Text style={styles.bottomLinkText}>{t('footer.privacy_policy', 'Privacy Policy')}</Text>
-            </TouchableOpacity>
-            <Text style={styles.bottomDot}>•</Text>
-            <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'terms' })}>
-              <Text style={styles.bottomLinkText}>{t('footer.terms', 'Terms')}</Text>
-            </TouchableOpacity>
-            <Text style={styles.bottomDot}>•</Text>
-            <TouchableOpacity onPress={() => onNavigate('StaticInfo', { pageKey: 'advertise' })}>
-              <Text style={styles.bottomLinkText}>{t('footer.advertise', 'Advertise')}</Text>
-            </TouchableOpacity>
-            <Text style={styles.bottomDot}>•</Text>
-            <TouchableOpacity onPress={() => onNavigate('CreatorsDirectory')}>
-              <Text style={styles.bottomLinkText}>{t('footer.creators', 'Creators')}</Text>
-            </TouchableOpacity>
-            <Text style={styles.bottomDot}>•</Text>
-            <TouchableOpacity onPress={() => Linking.openURL(`${SITE_URL}/${lang}/rss.xml`)}>
-              <Text style={styles.bottomLinkText}>RSS</Text>
-            </TouchableOpacity>
-            <Text style={styles.bottomDot}>•</Text>
-            <TouchableOpacity onPress={() => Linking.openURL(`${SITE_URL}/sitemap.xml`)}>
-              <Text style={styles.bottomLinkText}>Sitemap</Text>
             </TouchableOpacity>
           </View>
         </View>
