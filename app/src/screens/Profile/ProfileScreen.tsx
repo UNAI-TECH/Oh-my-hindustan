@@ -9,13 +9,14 @@ import AppBottomNavBar from '../../components/BottomNavBar';
 import WebPageShell from '../../components/web/WebPageShell';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
+import { savePendingAuthReturn } from '../../utils/authReturn';
 
 export default function ProfileScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
-  const isWebDesktop = Platform.OS === 'web' && width >= 768;
+  const isWebDesktop = Platform.OS === 'web';
   const { userProfile, logout, isAuthenticated } = useAuth();
   const [selectedTab, setSelectedTab] = useState('Posts');
   const [stats, setStats] = useState({ posts: 0, saved: 0, following: 0, followers: 0 });
@@ -147,7 +148,38 @@ export default function ProfileScreen() {
 
   if (isWebDesktop) {
     return (
-      <WebPageShell maxWidth={920}>
+      <WebPageShell maxWidth={920} currentRoute="Profile">
+        {!isAuthenticated && !userProfile?.id ? (
+          <View style={[styles.webProfileCard, { padding: 36, alignItems: 'center' }]}>
+            <Ionicons name="person-circle-outline" size={56} color="#D4191F" />
+            <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827', marginTop: 12, textAlign: 'center' }}>
+              Sign in to view your Profile
+            </Text>
+            <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 6, textAlign: 'center', maxWidth: 380 }}>
+              Manage your reading preferences, saved stories, followed creators, and account settings.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
+              <TouchableOpacity
+                style={{ backgroundColor: '#D4191F', paddingHorizontal: 22, paddingVertical: 10, borderRadius: 6 }}
+                onPress={() => {
+                  savePendingAuthReturn({ screen: 'Profile' });
+                  navigation.navigate('Login');
+                }}
+              >
+                <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14 }}>Sign In</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB', paddingHorizontal: 18, paddingVertical: 10, borderRadius: 6 }}
+                onPress={() => {
+                  savePendingAuthReturn({ screen: 'Profile' });
+                  navigation.navigate('SignUp');
+                }}
+              >
+                <Text style={{ color: '#111827', fontWeight: '700', fontSize: 14 }}>Create Account</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
         <View style={styles.webProfileCard}>
           <View style={styles.webProfileTopBar}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -161,6 +193,7 @@ export default function ProfileScreen() {
           </View>
           <View style={{ paddingBottom: 24 }}>{profileInnerContent}</View>
         </View>
+        )}
       </WebPageShell>
     );
   }

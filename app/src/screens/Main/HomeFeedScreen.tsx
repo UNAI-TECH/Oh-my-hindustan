@@ -31,12 +31,13 @@ import {
   categoryToSlug,
   slugToCategory,
   buildArticleParams,
+  titleToSlug,
 } from '../../components/web/webPortalHelpers';
 import { openExternalUrl } from '../../utils/openExternalUrl';
 import { useSiteLanguage } from '../../context/SiteLanguageContext';
 import { getOrCreateVisitorId } from '../../utils/visitorId';
 import WebHeadSeo from '../../seo/WebHeadSeo';
-import { buildHomeSeoConfig } from '../../seo/seoUtils';
+import { buildHomeSeoConfig, SITE_URL } from '../../seo/seoUtils';
 
 const AD_MARKER = '__AD_PLACEHOLDER__';
 const APP_DOWNLOAD_URL = 'https://play.google.com/store/apps/details?id=com.unai.antigravity';
@@ -54,6 +55,7 @@ export default function HomeFeedScreen() {
   const { unreadCount } = useNotifications();
   const { width } = useWindowDimensions();
   const isWebDesktop = Platform.OS === 'web';
+  const showMobileWebBottomNav = Platform.OS === 'web' && width < 768;
   const numColumns = width >= 768 ? 2 : 1;
   const maxWidth = width >= 768 ? 1024 : '100%';
   
@@ -72,7 +74,37 @@ export default function HomeFeedScreen() {
   const tabs = ['For you', 'Trending', 'Headlines', 'Articles', 'Videos'];
 
   React.useEffect(() => {
-    AppApi.getHomepageConfig(lang).then(setHomepageConfig).catch(() => {});
+    let cancelled = false;
+    const loadHomepage = () => {
+      AppApi.getHomepageConfig(lang)
+        .then((cfg) => {
+          if (!cancelled) setHomepageConfig(cfg);
+        })
+        .catch(() => {});
+    };
+    loadHomepage();
+
+    const hpChannel = supabase
+      .channel(`homepage-config-realtime-${lang}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'homepage_config', filter: `language=eq.${lang}` },
+        (payload) => {
+          if (!cancelled) {
+            if (payload?.new && (payload.new as any).language === lang) {
+              setHomepageConfig(payload.new);
+            } else {
+              loadHomepage();
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(hpChannel);
+    };
   }, [lang]);
 
   React.useEffect(() => {
@@ -225,12 +257,32 @@ export default function HomeFeedScreen() {
   };
 
   const onShare = async (item: FeedItem) => {
+    const shareLang = item.language || lang || 'en';
+    const shareSlug = item.slug || titleToSlug(item.title) || item.id;
+    const shareUrl = `${SITE_URL}/${shareLang}/article/${encodeURIComponent(shareSlug)}`;
     try {
+      const visitorId = await getOrCreateVisitorId();
+      void supabase.rpc('record_post_share', {
+        p_post_id: item.id,
+        p_channel: 'feed_share',
+        p_visitor_key: userProfile?.id || visitorId,
+      });
+    } catch (_) {}
+
+    try {
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && typeof (navigator as any).share === 'function') {
+        await (navigator as any).share({ title: item.title, url: shareUrl });
+        return;
+      }
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+        return;
+      }
       await Share.share({
-        message: `${item.title}\n\nRead more on PostsApp:\nhttps://postsapp.com/post/${item.id}\n\nDownload the app: ${APP_DOWNLOAD_URL}`,
+        message: `${item.title}\n\nRead more on PostsApp:\n${shareUrl}\n\nDownload the app: ${APP_DOWNLOAD_URL}`,
       });
     } catch (error) {
-      console.error(error);
+      console.warn('Share skipped:', error);
     }
   };
 
@@ -305,11 +357,24 @@ export default function HomeFeedScreen() {
 
   const webSections = useMemo(() => {
     const pool = filteredWebItems;
-    const breakingFlagged = pool.filter((it) => it.is_breaking);
-    const breakingItems = (breakingFlagged.length > 0 ? breakingFlagged : pool).slice(0, 5);
+    const poolById = new Map(pool.map((p) => [p.id, p]));
 
+    const breakingCurated = Array.isArray(homepageConfig?.breaking_post_ids)
+      ? homepageConfig.breaking_post_ids.map((pid: string) => poolById.get(pid)).filter(Boolean) as FeedItem[]
+      : [];
+    const breakingFlagged = pool.filter((it) => it.is_breaking);
+    const breakingItems = (
+      breakingCurated.length > 0
+        ? breakingCurated
+        : breakingFlagged.length > 0
+          ? breakingFlagged
+          : pool
+    ).slice(0, 6);
+
+    const curatedLead = homepageConfig?.lead_post_id ? poolById.get(homepageConfig.lead_post_id) || null : null;
     const featuredFlagged = pool.filter((it) => it.is_featured);
     const mainNews =
+      curatedLead ||
       featuredFlagged.find((it) => !!it.thumbnail) ||
       pool.find((it) => !!it.thumbnail) ||
       featuredFlagged[0] ||
@@ -325,34 +390,53 @@ export default function HomeFeedScreen() {
           (b.upvoteCount || 0) -
           ((a.isTrending ? 10000 : 0) + (a.viewCount || 0) + (a.upvoteCount || 0))
       )
-      .slice(0, 4);
+      .slice(0, 8);
 
+    const curatedEditors = Array.isArray(homepageConfig?.editors_pick_ids)
+      ? homepageConfig.editors_pick_ids.map((pid: string) => poolById.get(pid)).filter(Boolean) as FeedItem[]
+      : [];
     const editorsFlagged = withoutMain.filter((it) => it.is_editors_pick);
     const editorsPicks =
-      editorsFlagged.length >= 3
-        ? editorsFlagged.slice(0, 3)
-        : [...editorsFlagged, ...withoutMain.filter((it) => !it.is_editors_pick)].slice(0, 3);
+      curatedEditors.length >= 3
+        ? curatedEditors.slice(0, 3)
+        : editorsFlagged.length >= 3
+          ? editorsFlagged.slice(0, 3)
+          : [...curatedEditors, ...editorsFlagged, ...withoutMain.filter((it) => !it.is_editors_pick)]
+              .filter((v, idx, arr) => arr.findIndex((x) => x.id === v.id) === idx)
+              .slice(0, 3);
 
     const usedIds = new Set<string>([
       ...(mainNews ? [mainNews.id] : []),
       ...editorsPicks.map((i) => i.id),
     ]);
+    const curatedFeatured = Array.isArray(homepageConfig?.featured_post_ids)
+      ? homepageConfig.featured_post_ids.map((pid: string) => poolById.get(pid)).filter(Boolean) as FeedItem[]
+      : [];
     const remainingForFeatured = [
+      ...curatedFeatured,
       ...featuredFlagged.filter((it) => !usedIds.has(it.id)),
       ...pool.filter((it) => !usedIds.has(it.id) && !it.is_featured),
-    ];
+    ].filter((v, idx, arr) => arr.findIndex((x) => x.id === v.id) === idx);
     const featuredItems =
       remainingForFeatured.length >= 4
-        ? remainingForFeatured.slice(0, 4)
-        : pool.slice(0, 4);
+        ? remainingForFeatured.slice(0, 8)
+        : pool.slice(0, 8);
 
-    featuredItems.forEach((i) => usedIds.add(i.id));
+    featuredItems.slice(0, 4).forEach((i) => usedIds.add(i.id));
     const remainingForExpress = pool.filter((it) => !usedIds.has(it.id));
     const expressPool = remainingForExpress.length >= 5 ? remainingForExpress : pool;
     const expressOneItems = expressPool.slice(0, 5);
     const expressTwoItems =
       expressPool.length > 5 ? expressPool.slice(5, 9) : pool.slice(0, 4);
     const extraItems = pool.slice(16);
+
+    const mostReadItems = [...pool]
+      .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))
+      .slice(0, 8);
+
+    const videoItems = pool
+      .filter((it) => it.type === FeedItemType.VIDEO || it.type === FeedItemType.DEBATE || !!it.videoUrl)
+      .slice(0, 8);
 
     return {
       breakingItems,
@@ -363,23 +447,30 @@ export default function HomeFeedScreen() {
       expressOneItems,
       expressTwoItems,
       extraItems,
+      mostReadItems,
+      videoItems,
     };
-  }, [filteredWebItems]);
+  }, [filteredWebItems, homepageConfig]);
 
   const homeSeoConfig = useMemo(
     () => (Platform.OS === 'web' ? buildHomeSeoConfig(lang) : null),
     [lang]
   );
 
-  const isSectionVisible = React.useCallback(
-    (sectionKey: string) => {
-      const sections = Array.isArray(homepageConfig?.sections) ? homepageConfig.sections : [];
-      if (sections.length === 0) return true;
-      const found = sections.find((s: any) => s.key === sectionKey);
-      return found ? found.visible !== false : true;
-    },
-    [homepageConfig]
-  );
+  const orderedHomepageSections = useMemo(() => {
+    const defaults = [
+      { key: 'breaking', title: 'Breaking News', visible: true, limit: 5, order: 1 },
+      { key: 'hero', title: 'Main News & Picks', visible: true, limit: 8, order: 2 },
+      { key: 'featured', title: 'Featured Posts', visible: true, limit: 4, order: 3 },
+      { key: 'latest', title: 'Latest News', visible: true, limit: 10, order: 4 },
+    ];
+    const configured = Array.isArray(homepageConfig?.sections) && homepageConfig.sections.length > 0
+      ? homepageConfig.sections
+      : defaults;
+    return [...configured]
+      .filter((s: any) => s && s.visible !== false)
+      .sort((a: any, b: any) => (a.order ?? 99) - (b.order ?? 99));
+  }, [homepageConfig]);
 
   const leaderboardAd = activeAds[0] ? { ...activeAds[0], __isAd: true as const } : null;
 
@@ -436,7 +527,7 @@ export default function HomeFeedScreen() {
         <ScrollView
           ref={webScrollRef}
           style={{ flex: 1, backgroundColor: '#F5F5F7' }}
-          contentContainerStyle={{ minHeight: '100%' }}
+          contentContainerStyle={[{ minHeight: '100%' }, showMobileWebBottomNav && { paddingBottom: 76 }]}
         >
           <WebTopMasthead
           onSelectHome={() => {
@@ -526,42 +617,119 @@ export default function HomeFeedScreen() {
             </View>
           ) : (
             <>
-              {isSectionVisible('breaking') && (
-                <WebBreakingTicker
-                  items={webSections.breakingItems}
-                  onPressItem={handleWebPressItem}
-                />
-              )}
+              {orderedHomepageSections.map((sec: any) => {
+                const key = String(sec.key || '').toLowerCase();
+                const limit = Number(sec.limit) > 0 ? Number(sec.limit) : 4;
 
-              {isSectionVisible('hero') && (
-                <WebHeroSection
-                  editorsPicks={webSections.editorsPicks}
-                  mainNews={webSections.mainNews}
-                  trendingNow={webSections.trendingNow}
-                  onPressItem={handleWebPressItem}
-                />
-              )}
+                if (key === 'breaking') {
+                  return (
+                    <WebBreakingTicker
+                      key={key}
+                      items={webSections.breakingItems.slice(0, Math.max(1, limit))}
+                      onPressItem={handleWebPressItem}
+                    />
+                  );
+                }
 
-              {isSectionVisible('featured') && (
-                <WebFeaturedPosts
-                  items={webSections.featuredItems}
-                  onPressItem={handleWebPressItem}
-                  onPressViewAll={() => navigation.navigate('Explore')}
-                />
-              )}
+                if (key === 'hero') {
+                  return (
+                    <WebHeroSection
+                      key={key}
+                      editorsPicks={webSections.editorsPicks}
+                      mainNews={webSections.mainNews}
+                      trendingNow={webSections.trendingNow.slice(0, 4)}
+                      onPressItem={handleWebPressItem}
+                    />
+                  );
+                }
 
-              {isSectionVisible('latest') && (
-                <WebExpressPosts
-                  expressOneItems={webSections.expressOneItems}
-                  expressTwoItems={webSections.expressTwoItems}
-                  extraItems={webSections.extraItems}
-                  activeAds={activeAds}
-                  onPressItem={handleWebPressItem}
-                  hasMore={hasMore}
-                  isLoading={isLoading}
-                  onLoadMore={loadMoreFeed}
-                />
-              )}
+                if (key === 'featured') {
+                  return (
+                    <WebFeaturedPosts
+                      key={key}
+                      title={sec.title || 'Featured Posts'}
+                      maxItems={limit}
+                      items={webSections.featuredItems}
+                      onPressItem={handleWebPressItem}
+                      onPressViewAll={() => navigation.navigate('Explore')}
+                    />
+                  );
+                }
+
+                if (key === 'latest') {
+                  return (
+                    <WebExpressPosts
+                      key={key}
+                      expressOneItems={webSections.expressOneItems}
+                      expressTwoItems={webSections.expressTwoItems}
+                      extraItems={webSections.extraItems}
+                      activeAds={activeAds}
+                      onPressItem={handleWebPressItem}
+                      hasMore={hasMore}
+                      isLoading={isLoading}
+                      onLoadMore={loadMoreFeed}
+                    />
+                  );
+                }
+
+                if (key === 'trending') {
+                  return (
+                    <WebFeaturedPosts
+                      key={key}
+                      title={sec.title || 'Trending Now'}
+                      maxItems={limit}
+                      items={webSections.trendingNow}
+                      onPressItem={handleWebPressItem}
+                      onPressViewAll={() => handleWebFeedMode('trending')}
+                    />
+                  );
+                }
+
+                if (key === 'most_read') {
+                  return (
+                    <WebFeaturedPosts
+                      key={key}
+                      title={sec.title || 'Most Read'}
+                      maxItems={limit}
+                      items={webSections.mostReadItems}
+                      onPressItem={handleWebPressItem}
+                      onPressViewAll={() => handleWebFeedMode('popular')}
+                    />
+                  );
+                }
+
+                if (key === 'videos') {
+                  if (webSections.videoItems.length === 0) return null;
+                  return (
+                    <WebFeaturedPosts
+                      key={key}
+                      title={sec.title || 'Video Reports'}
+                      maxItems={limit}
+                      items={webSections.videoItems}
+                      onPressItem={handleWebPressItem}
+                      onPressViewAll={() => handleWebFeedMode('videos')}
+                    />
+                  );
+                }
+
+                const customMatches = filteredWebItems.filter((it) =>
+                  matchesEditorialCategory(it, key) ||
+                  (it.category || '').toLowerCase().includes(key) ||
+                  (it.title || '').toLowerCase().includes(key)
+                );
+                if (customMatches.length === 0) return null;
+
+                return (
+                  <WebFeaturedPosts
+                    key={key}
+                    title={sec.title || sec.key}
+                    maxItems={limit}
+                    items={customMatches}
+                    onPressItem={handleWebPressItem}
+                    onPressViewAll={() => handleWebSelectCategory(sec.key.toUpperCase())}
+                  />
+                );
+              })}
             </>
           )}
 
@@ -571,6 +739,17 @@ export default function HomeFeedScreen() {
           />
         </View>
       </ScrollView>
+
+      {showMobileWebBottomNav && (
+        <AppBottomNavBar
+          currentRoute="Home"
+          onNavigate={(r) => navigation.navigate(r)}
+          onDoubleTapHome={() => {
+            webScrollRef.current?.scrollTo({ y: 0, animated: true });
+            refreshFeed();
+          }}
+        />
+      )}
       </View>
     );
   }
@@ -695,6 +874,7 @@ const formatCount = (n: number): string => {
 const FeedCard = ({ item, onClick, onShare }: { item: FeedItem, onClick: () => void, onShare: () => void }) => {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
+  const navigation = useNavigation<any>();
   const { likes, toggleLike } = useInteraction();
   
   const isLiked = !!likes[item.id];
@@ -746,7 +926,13 @@ const FeedCard = ({ item, onClick, onShare }: { item: FeedItem, onClick: () => v
             </View>
             
             <View style={styles.engagementBar}>
-              <TouchableOpacity onPress={() => toggleLike(item.id)} style={styles.engagementItem}>
+              <TouchableOpacity
+                onPress={async () => {
+                  const ok = await toggleLike(item.id);
+                  if (!ok) navigation.navigate('Login');
+                }}
+                style={styles.engagementItem}
+              >
                 <Ionicons name={isLiked ? "heart" : "heart-outline"} size={20} color={isLiked ? colors.PrimaryRed : colors.Slate500} />
                 <Text style={styles.engagementCount}>{formatCount(upvotes)}</Text>
               </TouchableOpacity>

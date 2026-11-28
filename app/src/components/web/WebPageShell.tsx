@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   RefreshControl,
+  Platform,
   useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -11,6 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { supabase } from '../../lib/supabaseClient';
 import { AdData } from '../AdCard';
+import AppBottomNavBar from '../BottomNavBar';
 import { WebTopMasthead, WebStickyNavBar } from './WebPortalHeader';
 import WebPortalFooter from './WebPortalFooter';
 import { categoryToSlug } from './webPortalHelpers';
@@ -19,6 +21,7 @@ import { openExternalUrl } from '../../utils/openExternalUrl';
 interface WebPageShellProps {
   children: React.ReactNode;
   activeCategory?: string;
+  currentRoute?: string;
   maxWidth?: number;
   refreshing?: boolean;
   onRefresh?: () => void;
@@ -34,6 +37,7 @@ interface WebPageShellProps {
 export default function WebPageShell({
   children,
   activeCategory = '',
+  currentRoute = '',
   maxWidth = 1280,
   refreshing = false,
   onRefresh,
@@ -43,6 +47,7 @@ export default function WebPageShell({
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const isMobile = width < 640;
+  const showMobileBottomNav = Platform.OS === 'web' && width < 768;
   const { userProfile, isAuthenticated, logout } = useAuth();
   const { unreadCount } = useNotifications();
   const scrollRef = useRef<ScrollView>(null);
@@ -108,52 +113,62 @@ export default function WebPageShell({
   };
 
   return (
-    <ScrollView
-      ref={scrollRef}
-      style={styles.scroll}
-      contentContainerStyle={styles.scrollContent}
-      refreshControl={
-        onRefresh ? (
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4191F" />
-        ) : undefined
-      }
-    >
-      <WebTopMasthead
-        onSelectHome={() => navigation.navigate('Home', { initialCategory: 'home' })}
-        onNavigate={(route, params) => navigation.navigate(route, params)}
-        savedCount={savedCount}
-        userProfile={userProfile}
-        isAuthenticated={isAuthenticated}
-        onScrollToNewsletter={() => scrollRef.current?.scrollToEnd({ animated: true })}
-        leaderboardAd={leaderboardAd}
-      />
+    <View style={{ flex: 1, backgroundColor: '#F5F5F7' }}>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, showMobileBottomNav && { paddingBottom: 76 }]}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4191F" />
+          ) : undefined
+        }
+      >
+        <WebTopMasthead
+          onSelectHome={() => navigation.navigate('Home', { initialCategory: 'home' })}
+          onNavigate={(route, params) => navigation.navigate(route, params)}
+          savedCount={savedCount}
+          userProfile={userProfile}
+          isAuthenticated={isAuthenticated}
+          onScrollToNewsletter={() => scrollRef.current?.scrollToEnd({ animated: true })}
+          leaderboardAd={leaderboardAd}
+        />
 
-      <WebStickyNavBar
-        activeCategory={activeCategory}
-        onSelectCategory={handleSelectCategory}
-        searchQuery={searchQuery}
-        onChangeSearch={setSearchQuery}
-        onSubmitSearch={handleSearchSubmit}
-        onPressWatchOnline={() => openExternalUrl('https://www.youtube.com/@postsapp')}
-        onNavigate={(route, params) => navigation.navigate(route, params)}
-        unreadNotifications={unreadCount}
-        isAuthenticated={isAuthenticated}
-        onLogout={logout}
-        feedMode="latest"
-        onChangeFeedMode={(mode) => navigation.navigate('Home', { initialFeedMode: mode })}
-      />
+        <WebStickyNavBar
+          activeCategory={activeCategory}
+          onSelectCategory={handleSelectCategory}
+          searchQuery={searchQuery}
+          onChangeSearch={setSearchQuery}
+          onSubmitSearch={handleSearchSubmit}
+          onPressWatchOnline={() => openExternalUrl('https://www.youtube.com/@postsapp')}
+          onNavigate={(route, params) => navigation.navigate(route, params)}
+          unreadNotifications={unreadCount}
+          isAuthenticated={isAuthenticated}
+          onLogout={logout}
+          feedMode="latest"
+          onChangeFeedMode={(mode) => navigation.navigate('Home', { initialFeedMode: mode })}
+        />
 
-      <View style={[styles.bodyOuter, isMobile && { paddingHorizontal: 12, paddingVertical: 14 }]}>
-        <View style={[styles.bodyInner, { maxWidth }]}>
-          {children}
+        <View style={[styles.bodyOuter, isMobile && { paddingHorizontal: 12, paddingVertical: 14 }]}>
+          <View style={[styles.bodyInner, { maxWidth }]}>
+            {children}
+          </View>
         </View>
-      </View>
 
-      <WebPortalFooter
-        onSelectCategory={handleSelectCategory}
-        onNavigate={(route, params) => navigation.navigate(route, params)}
-      />
-    </ScrollView>
+        <WebPortalFooter
+          onSelectCategory={handleSelectCategory}
+          onNavigate={(route, params) => navigation.navigate(route, params)}
+        />
+      </ScrollView>
+
+      {showMobileBottomNav && (
+        <AppBottomNavBar
+          currentRoute={currentRoute}
+          onNavigate={(route) => navigation.navigate(route)}
+          onDoubleTapHome={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+        />
+      )}
+    </View>
   );
 }
 

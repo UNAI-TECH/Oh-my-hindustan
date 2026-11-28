@@ -15,17 +15,21 @@ interface WebFeaturedPostsProps {
   items: FeedItem[];
   onPressItem: (item: FeedItem) => void;
   onPressViewAll: () => void;
+  title?: string;
+  maxItems?: number;
 }
 
 export default function WebFeaturedPosts({
   items,
   onPressItem,
   onPressViewAll,
+  title = 'Featured Posts',
+  maxItems = 4,
 }: WebFeaturedPostsProps) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const isMobile = width < 640;
-  const visibleItems = items.slice(0, 4);
+  const visibleItems = items.slice(0, maxItems);
 
   if (visibleItems.length === 0) return null;
 
@@ -34,7 +38,7 @@ export default function WebFeaturedPosts({
       <View style={styles.headerRow}>
         <View style={styles.sectionHeadingRow}>
           <View style={styles.sectionDash} />
-          <Text style={styles.sectionHeadingText}>Featured Posts</Text>
+          <Text style={styles.sectionHeadingText}>{title}</Text>
         </View>
 
         <TouchableOpacity onPress={onPressViewAll}>

@@ -25,6 +25,7 @@ import { buildArticleSeoConfig, SITE_URL } from '../../seo/seoUtils';
 import { useSiteLanguage } from '../../context/SiteLanguageContext';
 import { useTranslation } from 'react-i18next';
 import { openExternalUrl } from '../../utils/openExternalUrl';
+import { getOrCreateVisitorId } from '../../utils/visitorId';
 import {
   buildArticleParams,
   cacheArticleSlug,
@@ -52,7 +53,7 @@ export default function ArticleDetailScreen() {
   const routeId = route.params?.id;
   const routeSlug = route.params?.slug;
   const articleLookupKey = routeId || routeSlug || '';
-  const { userProfile, isAuthenticated } = useAuth();
+  const { userProfile, isAuthenticated, ensureAuthenticatedUser } = useAuth();
   const isGuestUser = !isAuthenticated && !userProfile?.id;
   const { lang: siteLang, setSiteLang, formatDate } = useSiteLanguage();
   const { t } = useTranslation();
@@ -330,7 +331,8 @@ export default function ArticleDetailScreen() {
   };
 
   const handleVote = async (voteType: 1 | -1) => {
-    if (!userProfile?.id) { promptLogin('Please login to vote'); return; }
+    const activeUser = userProfile?.id ? userProfile : await ensureAuthenticatedUser();
+    if (!activeUser?.id) { promptLogin('Please login to vote'); return; }
     
     // Save current state for rollback
     const prevUpvotes = upvotes;
@@ -344,7 +346,7 @@ export default function ArticleDetailScreen() {
         else setDownvotes(v => Math.max(0, v - 1));
         setMyVote(0);
         
-        const { error } = await supabase.from('Vote').delete().eq('postId', id).eq('userId', userProfile.id);
+        const { error } = await supabase.from('Vote').delete().eq('postId', id).eq('userId', activeUser.id);
         if (error) throw error;
       } else {
         // Optimistic Update: Switch or New vote
@@ -362,7 +364,7 @@ export default function ArticleDetailScreen() {
         setMyVote(voteType);
 
         // Check if existing vote
-        const { data: existing } = await supabase.from('Vote').select('id').eq('userId', userProfile.id).eq('postId', id).maybeSingle();
+        const { data: existing } = await supabase.from('Vote').select('id').eq('userId', activeUser.id).eq('postId', id).maybeSingle();
         
         if (existing) {
           const { error } = await supabase.from('Vote').update({ type: voteType }).eq('id', existing.id);
@@ -371,13 +373,13 @@ export default function ArticleDetailScreen() {
           const { error } = await supabase.from('Vote').insert({
             id: generateUUID(),
             postId: id,
-            userId: userProfile.id,
+            userId: activeUser.id,
             type: voteType,
           });
           if (error) throw error;
         }
         
-        if (voteType === 1) createNotification('LIKE', 'New Like', `${userProfile.username || 'Someone'} liked your post`);
+        if (voteType === 1) createNotification('LIKE', 'New Like', `${activeUser.username || 'Someone'} liked your post`);
       }
     } catch (e: any) {
       // Rollback
@@ -389,19 +391,20 @@ export default function ArticleDetailScreen() {
   };
 
   const handleSave = async () => {
-    if (!userProfile?.id) { promptLogin('Please login to save posts'); return; }
+    const activeUser = userProfile?.id ? userProfile : await ensureAuthenticatedUser();
+    if (!activeUser?.id) { promptLogin('Please login to save posts'); return; }
     const prevSaved = isSaved;
     try {
       // Optimistic
       setIsSaved(!isSaved);
       
       if (prevSaved) {
-        const { error } = await supabase.from('Save').delete().eq('userId', userProfile.id).eq('postId', id);
+        const { error } = await supabase.from('Save').delete().eq('userId', activeUser.id).eq('postId', id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from('Save').insert({
           id: generateUUID(),
-          userId: userProfile.id,
+          userId: activeUser.id,
           postId: id,
         });
         if (error) throw error;
@@ -415,7 +418,8 @@ export default function ArticleDetailScreen() {
 
 
   const handleFollow = async () => {
-    if (!userProfile?.id || !postAuthorId) { 
+    const activeUser = userProfile?.id ? userProfile : await ensureAuthenticatedUser();
+    if (!activeUser?.id || !postAuthorId) { 
       promptLogin('Please login to follow creators');
       return; 
     }
@@ -451,7 +455,8 @@ export default function ArticleDetailScreen() {
   };
 
   const handleCommentVote = async (commentId: string, type: 1 | -1) => {
-    if (!userProfile?.id) { promptLogin('Please login to vote on comments'); return; }
+    const activeUser = userProfile?.id ? userProfile : await ensureAuthenticatedUser();
+    if (!activeUser?.id) { promptLogin('Please login to vote on comments'); return; }
     try {
       await AppApi.voteComment(commentId, type);
       fetchComments(); // Instead of building optimistic map, we just wait for real-time or refetch
@@ -462,7 +467,8 @@ export default function ArticleDetailScreen() {
 
   const submitComment = async () => {
     if (!newComment.trim()) return;
-    if (!userProfile?.id) { promptLogin('Please login to comment'); return; }
+    const activeUser = userProfile?.id ? userProfile : await ensureAuthenticatedUser();
+    if (!activeUser?.id) { promptLogin('Please login to comment'); return; }
     
     const commentContent = newComment.trim();
     const prevComments = [...comments];
@@ -475,13 +481,13 @@ export default function ArticleDetailScreen() {
         id: tempId,
         content: commentContent,
         postId: id,
-        userId: userProfile.id,
+        userId: activeUser.id,
         parentId: replyingToId,
         createdAt: new Date().toISOString(),
         User: {
-          id: userProfile.id,
-          username: userProfile.username,
-          avatarUrl: userProfile.avatarUrl
+          id: activeUser.id,
+          username: activeUser.username,
+          avatarUrl: activeUser.avatarUrl
         },
         upvotes: 0,
         downvotes: 0,
@@ -500,7 +506,7 @@ export default function ArticleDetailScreen() {
         .insert({
           id: generateUUID(),
           postId: id,
-          userId: userProfile.id,
+          userId: activeUser.id,
           content: commentContent,
           parentId: replyingToId,
           createdAt: now,
@@ -508,7 +514,7 @@ export default function ArticleDetailScreen() {
         });
         
       if (error) throw error;
-      createNotification('COMMENT', 'New Comment', `${userProfile.username || 'Someone'} commented on your post`);
+      createNotification('COMMENT', 'New Comment', `${activeUser.username || 'Someone'} commented on your post`);
       
       // Re-fetch to get the real ID and proper data
       fetchComments();
@@ -605,16 +611,44 @@ export default function ArticleDetailScreen() {
     return `${origin}/${shareLang}/article/${encodeURIComponent(shareSlug)}`;
   }, [selectedArticle?.language, selectedArticle?.slug, selectedArticle?.title, id]);
 
-  const onShare = useCallback(async () => {
+  const recordShare = useCallback(async (channel: string) => {
+    if (!id) return;
     try {
-      const shareTitle = selectedArticle?.title || 'Check this out';
+      const visitorId = await getOrCreateVisitorId();
+      await supabase.rpc('record_post_share', {
+        p_post_id: id,
+        p_channel: channel,
+        p_visitor_key: userProfile?.id || visitorId,
+      });
+    } catch (_) {}
+  }, [id, userProfile?.id]);
+
+  const onShare = useCallback(async () => {
+    const shareTitle = selectedArticle?.title || 'Check this out';
+    void recordShare('native_share');
+    try {
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && typeof (navigator as any).share === 'function') {
+        await (navigator as any).share({ title: shareTitle, url: shareUrl });
+        return;
+      }
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+        setModalConfig({ visible: true, title: 'Link Copied', message: 'Article URL copied to clipboard.', isError: false });
+        return;
+      }
       await Share.share({
         message: `${shareTitle}\n\nRead more on PostsApp:\n${shareUrl}\n\nDownload the app: ${APP_DOWNLOAD_URL}`,
       });
-    } catch (e) {}
-  }, [selectedArticle?.title, shareUrl]);
+    } catch (_) {
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl).catch(() => {});
+        setModalConfig({ visible: true, title: 'Link Copied', message: 'Article URL copied to clipboard.', isError: false });
+      }
+    }
+  }, [selectedArticle?.title, shareUrl, recordShare]);
 
   const handleCopyShareLink = useCallback(async () => {
+    void recordShare('copy_link');
     try {
       if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
         await navigator.clipboard.writeText(shareUrl);
@@ -623,7 +657,7 @@ export default function ArticleDetailScreen() {
         await Share.share({ message: shareUrl });
       }
     } catch (_) {}
-  }, [shareUrl]);
+  }, [shareUrl, recordShare]);
 
   const articleSeoConfig = React.useMemo(() => {
     if (Platform.OS !== 'web') return null;
@@ -1065,21 +1099,30 @@ export default function ArticleDetailScreen() {
             <Text style={{ fontSize: 12, fontWeight: '700', color: colors.Slate500, marginRight: 4 }}>{t('common.share', 'Share')}:</Text>
             <TouchableOpacity
               style={styles.webActionBtn}
-              onPress={() => openExternalUrl(`https://api.whatsapp.com/send?text=${encodeURIComponent(`${title} ${shareUrl}`)}`)}
+              onPress={() => {
+                void recordShare('whatsapp');
+                openExternalUrl(`https://api.whatsapp.com/send?text=${encodeURIComponent(`${title} ${shareUrl}`)}`);
+              }}
             >
               <Ionicons name="logo-whatsapp" size={14} color="#16A34A" />
               <Text style={styles.webActionText}>WhatsApp</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.webActionBtn}
-              onPress={() => openExternalUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(shareUrl)}`)}
+              onPress={() => {
+                void recordShare('x');
+                openExternalUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(shareUrl)}`);
+              }}
             >
               <Ionicons name="logo-twitter" size={14} color="#111827" />
               <Text style={styles.webActionText}>X</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.webActionBtn}
-              onPress={() => openExternalUrl(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(title)}`)}
+              onPress={() => {
+                void recordShare('telegram');
+                openExternalUrl(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(title)}`);
+              }}
             >
               <Ionicons name="paper-plane-outline" size={14} color="#0284C7" />
               <Text style={styles.webActionText}>Telegram</Text>

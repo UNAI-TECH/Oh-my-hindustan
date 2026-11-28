@@ -10,8 +10,8 @@ const FOLLOWS_CACHE_KEY = 'global_follows_cache';
 interface InteractionContextProps {
   likes: Record<string, boolean>;
   follows: Record<string, boolean>;
-  toggleLike: (postId: string) => Promise<void>;
-  toggleFollow: (creatorId: string) => Promise<void>;
+  toggleLike: (postId: string) => Promise<boolean>;
+  toggleFollow: (creatorId: string) => Promise<boolean>;
   initializeInteractions: () => Promise<void>;
 }
 
@@ -20,7 +20,7 @@ const InteractionContext = createContext<InteractionContextProps | undefined>(un
 export const InteractionProvider = ({ children }: { children: ReactNode }) => {
   const [likes, setLikes] = useState<Record<string, boolean>>({});
   const [follows, setFollows] = useState<Record<string, boolean>>({});
-  const { userProfile } = useAuth();
+  const { userProfile, ensureAuthenticatedUser } = useAuth();
   const [isInitialized, setIsInitialized] = useState(false);
 
   // 1. Load instantly from cache
@@ -101,8 +101,9 @@ export const InteractionProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [userProfile?.id]);
 
-  const toggleLike = async (postId: string) => {
-    if (!userProfile?.id) return;
+  const toggleLike = async (postId: string): Promise<boolean> => {
+    const activeUser = userProfile?.id ? userProfile : await ensureAuthenticatedUser();
+    if (!activeUser?.id) return false;
 
     const isLiked = !!likes[postId];
     const newLikes = { ...likes };
@@ -118,34 +119,34 @@ export const InteractionProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       if (isLiked) {
-        // Remove like
-        await supabase
+        const { error } = await supabase
           .from('Vote')
           .delete()
-          .match({ userId: userProfile.id, postId });
+          .match({ userId: activeUser.id, postId });
+        if (error) throw error;
       } else {
-        // Add like
-        await supabase
+        const { error } = await supabase
           .from('Vote')
           .upsert({
              id: generateUUID(),
-             userId: userProfile.id, 
+             userId: activeUser.id,
              postId,
              type: 1,
              createdAt: new Date().toISOString()
           }, { onConflict: 'userId,postId' });
-          
-          // NOTE: We rely on database edge functions/triggers to increment post counts
+        if (error) throw error;
       }
+      return true;
     } catch (e) {
-      // Revert optimism on failure
       setLikes(likes);
       console.error('Like toggle failed', e);
+      return false;
     }
   };
 
-  const toggleFollow = async (creatorId: string) => {
-    if (!userProfile?.id || creatorId === userProfile.id) return;
+  const toggleFollow = async (creatorId: string): Promise<boolean> => {
+    const activeUser = userProfile?.id ? userProfile : await ensureAuthenticatedUser();
+    if (!activeUser?.id || creatorId === activeUser.id) return false;
 
     const isFollowing = !!follows[creatorId];
     const newFollows = { ...follows };
@@ -161,23 +162,27 @@ export const InteractionProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       if (isFollowing) {
-        await supabase
+        const { error } = await supabase
           .from('Follow')
           .delete()
-          .match({ followerId: userProfile.id, followingId: creatorId });
+          .match({ followerId: activeUser.id, followingId: creatorId });
+        if (error) throw error;
       } else {
-        await supabase
+        const { error } = await supabase
           .from('Follow')
           .insert({
             id: generateUUID(),
-            followerId: userProfile.id,
+            followerId: activeUser.id,
             followingId: creatorId,
             createdAt: new Date().toISOString()
           });
+        if (error) throw error;
       }
+      return true;
     } catch (e) {
-      setFollows(follows); // Revert
+      setFollows(follows);
       console.error('Follow toggle failed', e);
+      return false;
     }
   };
 

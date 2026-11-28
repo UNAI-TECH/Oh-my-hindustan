@@ -265,18 +265,20 @@ export function WebTopMasthead({
                       <Text style={styles.sponsoredPillText}>SPONSORED</Text>
                     </View>
                     <View style={styles.leaderboardTextWrap}>
-                      <Text style={styles.leaderboardTitleRow} numberOfLines={1}>
+                      <Text style={[styles.leaderboardTitleRow, isMobile && { fontSize: 13 }]} numberOfLines={1}>
                         <Text style={styles.leaderboardWhite}>BANNER </Text>
                         <Text style={styles.leaderboardAccent}>ADVERTISEMENT</Text>
                       </Text>
                       <Text style={styles.leaderboardDesc} numberOfLines={1}>
-                        PostsApp Annual Policy & Infrastructure Conclave 2026 — Register Now
+                        PostsApp Annual Policy & Infrastructure Conclave 2026
                       </Text>
                     </View>
-                    <View style={styles.leaderboardSlotRight}>
-                      <Text style={styles.leaderboardSlotLabel}>LEADERBOARD SLOT</Text>
-                      <Text style={styles.leaderboardSlotDims}>984 × 125 px →</Text>
-                    </View>
+                    {!isMobile && (
+                      <View style={styles.leaderboardSlotRight}>
+                        <Text style={styles.leaderboardSlotLabel}>LEADERBOARD SLOT</Text>
+                        <Text style={styles.leaderboardSlotDims}>984 × 125 px →</Text>
+                      </View>
+                    )}
                   </View>
                 )}
               </LinearGradient>
@@ -332,9 +334,21 @@ export function WebStickyNavBar({
   const blurTimerRef = useRef<any>(null);
 
   useEffect(() => {
-    AppApi.getBilingualCategories()
-      .then((cats) => setDbCategories(cats || []))
-      .catch(() => {});
+    const loadCats = () => {
+      AppApi.getBilingualCategories()
+        .then((cats) => setDbCategories(cats || []))
+        .catch(() => {});
+    };
+    loadCats();
+
+    const ch = supabase
+      .channel('header-categories-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, loadCats)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, []);
 
   const navCategories = React.useMemo(() => {

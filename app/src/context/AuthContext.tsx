@@ -25,6 +25,7 @@ interface AuthContextProps {
   verifySignupOtp: (email: string, token: string) => Promise<boolean>;
   sendPasswordReset: (email: string) => Promise<boolean>;
   finalizeWebAuthCallback: (callbackUrl: string) => Promise<void>;
+  ensureAuthenticatedUser: () => Promise<any | null>;
   signInWithGoogleNative: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   checkUsernameAvailability: (username: string) => Promise<{ available: boolean; suggestions: string[] }>;
@@ -149,6 +150,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     authUser: any,
     extra?: { fullName?: string; mobile?: string }
   ) => {
+    // 1. Prefer authoritative SECURITY DEFINER RPC (handles triggers, RLS & email linking atomically)
+    try {
+      const { data: rpcProfile, error: rpcErr } = await supabase.rpc('ensure_citizen_profile');
+      if (!rpcErr && rpcProfile?.id) {
+        const extraUpdates: Record<string, any> = {};
+        if (extra?.fullName?.trim() && !rpcProfile.channel_name) {
+          extraUpdates.channel_name = extra.fullName.trim();
+        }
+        if (extra?.mobile?.trim() && !rpcProfile.phone) {
+          extraUpdates.phone = extra.mobile.trim();
+        }
+        if (Object.keys(extraUpdates).length > 0) {
+          extraUpdates.updatedAt = new Date().toISOString();
+          const { data: updated } = await supabase
+            .from('User')
+            .update(extraUpdates)
+            .eq('id', authUser.id)
+            .select()
+            .maybeSingle();
+          return updated || { ...rpcProfile, ...extraUpdates };
+        }
+        return rpcProfile;
+      }
+    } catch (_) {
+      // Fallback to direct table lookup/upsert if RPC is not yet deployed
+    }
+
     const existing = await fetchProfile(authUser.id, true);
     if (existing) {
       const updates: Record<string, any> = {};
@@ -162,8 +190,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (extra?.mobile?.trim() && !existing.phone) {
         updates.phone = extra.mobile.trim();
       }
-      if (!existing.avatarUrl && authUser.user_metadata?.avatar_url) {
-        updates.avatarUrl = authUser.user_metadata.avatar_url;
+      if (!existing.avatarUrl && (authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture)) {
+        updates.avatarUrl = authUser.user_metadata.avatar_url || authUser.user_metadata.picture;
+      }
+      if (!existing.account_status) {
+        updates.account_status = 'active';
       }
       if (Object.keys(updates).length > 0) {
         updates.updatedAt = new Date().toISOString();
@@ -184,25 +215,68 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       authUser.user_metadata?.full_name ||
       authUser.user_metadata?.name ||
       null;
+    const avatar = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || null;
     const insertPayload: Record<string, any> = {
       id: authUser.id,
       email: (authUser.email || '').toLowerCase(),
+      password: 'oauth_managed',
       role: 'CITIZEN',
+      account_status: 'active',
       onboarding_complete: false,
       createdAt: now,
       updatedAt: now,
     };
     if (displayName) insertPayload.channel_name = displayName;
     if (extra?.mobile?.trim()) insertPayload.phone = extra.mobile.trim();
-    if (authUser.user_metadata?.avatar_url) insertPayload.avatarUrl = authUser.user_metadata.avatar_url;
+    if (avatar) insertPayload.avatarUrl = avatar;
 
-    const { data: inserted } = await supabase
+    const { data: inserted, error: upsertErr } = await supabase
       .from('User')
       .upsert(insertPayload, { onConflict: 'id' })
       .select()
       .maybeSingle();
 
+    if (upsertErr) {
+      console.warn('[AUTH] ensureUserRow upsert error:', upsertErr.message);
+    }
+
     return inserted || (await fetchProfile(authUser.id, true)) || insertPayload;
+  };
+
+  // ─── Reconcile authenticated session on-demand (prevents stale Login Required prompts) ───
+  const ensureAuthenticatedUser = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        if (userProfile || isAuthenticated) {
+          setAuthState(null, false);
+        }
+        return null;
+      }
+
+      if (userProfile?.id === session.user.id && isAuthenticated) {
+        return userProfile;
+      }
+
+      const profile = await ensureUserRow(session.user);
+      if (profile?.role === 'CREATOR' || profile?.role === 'ADMIN') {
+        await supabase.auth.signOut();
+        setAuthState(null, false);
+        return null;
+      }
+
+      const resolved = profile || {
+        id: session.user.id,
+        email: session.user.email || '',
+        role: 'CITIZEN',
+        onboarding_complete: false,
+      };
+      setAuthState(resolved, true);
+      return resolved;
+    } catch (e) {
+      console.warn('[AUTH] ensureAuthenticatedUser error:', e);
+      return userProfile?.id ? userProfile : null;
+    }
   };
 
   // ─── Check for existing session on mount ───
@@ -263,7 +337,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (event === 'SIGNED_OUT') {
         setAuthState(null, false);
-      } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+      } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED') && session?.user) {
         const profile = await ensureUserRow(session.user);
         if (profile?.role === 'CREATOR' || profile?.role === 'ADMIN') {
           await supabase.auth.signOut();
@@ -273,8 +347,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Web cross-tab & window focus realtime auth sync
+    const syncCrossTabSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const profile = await ensureUserRow(session.user);
+          if (profile?.role !== 'CREATOR' && profile?.role !== 'ADMIN') {
+            setAuthState(profile, true);
+          }
+        } else {
+          setAuthState(null, false);
+        }
+      } catch (_) {}
+    };
+
+    const handleStorage = (e: StorageEvent) => {
+      if (!e.key || e.key.includes('auth-token') || e.key === PROFILE_CACHE_KEY) {
+        void syncCrossTabSession();
+      }
+    };
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        void syncCrossTabSession();
+      }
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.addEventListener('storage', handleStorage);
+      document.addEventListener('visibilitychange', handleVisibility);
+    }
+
+    return () => {
+      subscription.unsubscribe();
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.removeEventListener('storage', handleStorage);
+        document.removeEventListener('visibilitychange', handleVisibility);
+      }
+    };
   }, []);
+
+  // ─── Realtime User profile updates ───
+  useEffect(() => {
+    if (!userProfile?.id) return;
+    const channel = supabase
+      .channel(`user-profile-realtime-${userProfile.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'User', filter: `id=eq.${userProfile.id}` },
+        (payload) => {
+          if (payload?.new) {
+            setAuthState(payload.new, true);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userProfile?.id]);
 
 
   // ─── Email/Mobile/Username Password Login ───
@@ -738,9 +870,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!session) {
         const hasCode = /[?&#]code=([^&#]+)/.test(callbackUrl);
         if (hasCode) {
-          const { data: exchanged, error: exErr } = await supabase.auth.exchangeCodeForSession(callbackUrl);
-          if (exErr) throw exErr;
-          session = exchanged.session;
+          try {
+            const { data: exchanged, error: exErr } = await supabase.auth.exchangeCodeForSession(callbackUrl);
+            if (exErr) throw exErr;
+            session = exchanged.session;
+          } catch (exErr) {
+            // detectSessionInUrl may have completed exchange concurrently; re-check getSession
+            await new Promise((r) => setTimeout(r, 300));
+            const recheck = await supabase.auth.getSession();
+            if (recheck.data?.session) {
+              session = recheck.data.session;
+            } else {
+              throw exErr;
+            }
+          }
         } else {
           const { accessToken, refreshToken } = extractTokensFromUrl(callbackUrl);
           if (accessToken && refreshToken) {
@@ -752,6 +895,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             session = setRes.session;
           }
         }
+      }
+
+      if (!session?.user) {
+        // Last short wait in case Supabase detectSessionInUrl promise is still resolving
+        await new Promise((r) => setTimeout(r, 400));
+        const finalCheck = await supabase.auth.getSession();
+        session = finalCheck.data?.session ?? null;
       }
 
       if (!session?.user) {
@@ -771,9 +921,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setAuthState(profile, true);
       setLoginSuccess(true);
     } finally {
-      setTimeout(() => {
-        isHandlingOAuthRef.current = false;
-      }, 600);
+      isHandlingOAuthRef.current = false;
     }
   };
 
@@ -1082,7 +1230,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider value={{
       isLoading, error, loginSuccess, signupSuccess, updateProfileSuccess,
       isAuthenticated, needsOnboarding, userProfile,
-      login, register, verifySignupOtp, sendPasswordReset, finalizeWebAuthCallback,
+      login, register, verifySignupOtp, sendPasswordReset, finalizeWebAuthCallback, ensureAuthenticatedUser,
       signInWithGoogleNative, signInWithGoogle, checkUsernameAvailability,
       updateOnboardingProfile, uploadProfileImage, updateProfile, clearState, logout
     }}>

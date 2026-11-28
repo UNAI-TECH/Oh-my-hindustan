@@ -1,14 +1,19 @@
 import { Platform } from 'react-native';
 
-export interface PendingAuthReturn {
-  screen: 'ArticleDetail';
-  params: {
-    id?: string;
-    slug?: string;
-    title?: string;
-    lang?: 'en' | 'ta';
-  };
-}
+export type PendingAuthReturn =
+  | {
+      screen: 'ArticleDetail';
+      params: {
+        id?: string;
+        slug?: string;
+        title?: string;
+        lang?: 'en' | 'ta';
+      };
+    }
+  | {
+      screen: 'Home' | 'Explore' | 'Library' | 'Profile' | 'CreatorProfile' | 'Search';
+      params?: Record<string, any>;
+    };
 
 const STORAGE_KEY = 'postsapp_pending_auth_return';
 let memoryReturnTarget: PendingAuthReturn | null = null;
@@ -26,6 +31,19 @@ export function savePendingAuthReturn(target: PendingAuthReturn | null) {
       // ignore storage quota failures
     }
   }
+}
+
+export function getPendingAuthReturn(): PendingAuthReturn | null {
+  if (memoryReturnTarget) return memoryReturnTarget;
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.sessionStorage) {
+    try {
+      const raw = window.sessionStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+  }
+  return null;
 }
 
 export function consumePendingAuthReturn(): PendingAuthReturn | null {
@@ -57,5 +75,18 @@ export function navigateAfterAuth(navigation: any) {
     });
     return;
   }
-  navigation.reset({ index: 0, routes: [{ name: 'Home', params: { initialCategory: 'home' } }] });
+  if (target?.screen && target.screen !== 'Home') {
+    navigation.reset({
+      index: 1,
+      routes: [
+        { name: 'Home', params: { initialCategory: 'home' } },
+        { name: target.screen, ...(target.params ? { params: target.params } : {}) },
+      ],
+    });
+    return;
+  }
+  navigation.reset({
+    index: 0,
+    routes: [{ name: 'Home', params: target?.params || { initialCategory: 'home' } }],
+  });
 }

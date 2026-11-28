@@ -110,7 +110,7 @@ export default function WebHeroSection({
           <SectionHeading title="Main News" />
           {mainNews ? (
             <TouchableOpacity
-              style={[styles.mainNewsCard, isMobile && { minHeight: 300 }]}
+              style={[styles.mainNewsCard, isMobile && styles.mainNewsCardMobile]}
               activeOpacity={0.92}
               onPress={() => onPressItem(mainNews)}
             >
@@ -123,7 +123,7 @@ export default function WebHeroSection({
               )}
               <LinearGradient
                 colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.92)']}
-                style={styles.mainNewsOverlay}
+                style={[styles.mainNewsOverlay, isMobile && { padding: 16 }]}
               >
                 <View style={styles.badgeRow}>
                   <View style={styles.redReadPill}>
@@ -137,12 +137,12 @@ export default function WebHeroSection({
                   </View>
                 </View>
 
-                <Text style={styles.mainNewsTitle} numberOfLines={3}>
+                <Text style={[styles.mainNewsTitle, isMobile && { fontSize: 20, lineHeight: 26 }]} numberOfLines={3}>
                   {mainNews.title}
                 </Text>
 
                 {mainNews.excerpt ? (
-                  <Text style={styles.mainNewsExcerpt} numberOfLines={2}>
+                  <Text style={[styles.mainNewsExcerpt, isMobile && { fontSize: 12, lineHeight: 17, marginTop: 6 }]} numberOfLines={2}>
                     {stripHtml(mainNews.excerpt)}
                   </Text>
                 ) : null}
@@ -348,6 +348,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#171717',
     position: 'relative',
+  },
+  mainNewsCardMobile: {
+    flex: 0,
+    minHeight: 220,
+    height: 240,
+    width: '100%',
   },
   mainNewsOverlay: {
     flex: 1,

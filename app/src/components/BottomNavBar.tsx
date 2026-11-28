@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useAppTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRef } from 'react';
@@ -14,10 +14,10 @@ export default function AppBottomNavBar({ currentRoute, onNavigate, onDoubleTapH
   const styles = getStyles(colors);
   const lastTap = useRef<number>(0);
   const items = [
-    { label: 'Home', route: 'Home', icon: 'home' },
-    { label: 'Explore', route: 'Explore', icon: 'compass-outline' },
-    { label: 'Stories', route: 'StoryFeed', icon: 'aperture' },
-    { label: 'Library', route: 'Library', icon: 'library' }
+    { label: 'Home', route: 'Home', activeIcon: 'home', inactiveIcon: 'home-outline' },
+    { label: 'Explore', route: 'Explore', activeIcon: 'compass', inactiveIcon: 'compass-outline' },
+    { label: 'Library', route: 'Library', activeIcon: 'bookmark', inactiveIcon: 'bookmark-outline' },
+    { label: 'Profile', route: 'Profile', activeIcon: 'person', inactiveIcon: 'person-outline' },
   ];
 
   return (
@@ -29,6 +29,7 @@ export default function AppBottomNavBar({ currentRoute, onNavigate, onDoubleTapH
           <TouchableOpacity
             key={item.route}
             style={styles.navItem}
+            activeOpacity={0.8}
             onPress={() => {
               if (item.route === 'Home' && currentRoute === 'Home') {
                 const now = Date.now();
@@ -38,23 +39,27 @@ export default function AppBottomNavBar({ currentRoute, onNavigate, onDoubleTapH
                 }
                 lastTap.current = now;
               }
-              
+
               if (currentRoute !== item.route) {
                 onNavigate(item.route);
               }
             }}
           >
-            <Ionicons 
-              name={item.icon as any} 
-              size={24} 
-              color={isSelected ? colors.PrimaryRed : colors.Slate500} 
-            />
+            <View style={[styles.activeIndicator, isSelected && styles.activeIndicatorVisible]} />
+            <View style={[styles.iconWrap, isSelected && styles.iconWrapActive]}>
+              <Ionicons
+                name={(isSelected ? item.activeIcon : item.inactiveIcon) as any}
+                size={21}
+                color={isSelected ? '#D4191F' : '#6B7280'}
+              />
+            </View>
 
             <Text
               style={[
                 styles.label,
-                { color: isSelected ? colors.PrimaryRed : colors.SlateText, opacity: isSelected ? 1 : 0.4 }
+                { color: isSelected ? '#D4191F' : '#6B7280', fontWeight: isSelected ? '800' : '600' },
               ]}
+              numberOfLines={1}
             >
               {item.label}
             </Text>
@@ -65,28 +70,64 @@ export default function AppBottomNavBar({ currentRoute, onNavigate, onDoubleTapH
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    height: 80,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingBottom: 20, // safe area padding generally
-  },
-  navItem: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  label: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    marginTop: 4,
-  }
-});
+const getStyles = (_colors: any) =>
+  StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      height: Platform.OS === 'web' ? 64 : 74,
+      backgroundColor: '#FFFFFF',
+      borderTopWidth: 1,
+      borderTopColor: '#E5E7EB',
+      elevation: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      justifyContent: 'space-around',
+      alignItems: 'center',
+      paddingBottom: Platform.OS === 'web' ? 4 : 14,
+      paddingTop: 2,
+      ...(Platform.OS === 'web'
+        ? ({
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 900,
+            backdropFilter: 'blur(10px)',
+          } as any)
+        : {}),
+    },
+    navItem: {
+      flex: 1,
+      height: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+      position: 'relative',
+    },
+    activeIndicator: {
+      position: 'absolute',
+      top: 0,
+      width: 28,
+      height: 3,
+      borderBottomLeftRadius: 3,
+      borderBottomRightRadius: 3,
+      backgroundColor: 'transparent',
+    },
+    activeIndicatorVisible: {
+      backgroundColor: '#D4191F',
+    },
+    iconWrap: {
+      paddingHorizontal: 14,
+      paddingVertical: 3,
+      borderRadius: 14,
+    },
+    iconWrapActive: {
+      backgroundColor: '#FEF2F2',
+    },
+    label: {
+      fontSize: 11,
+      marginTop: 2,
+      letterSpacing: 0.2,
+    },
+  });

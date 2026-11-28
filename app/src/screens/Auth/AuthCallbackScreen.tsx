@@ -9,7 +9,7 @@ import PostsAppLogo from '../../components/PostsAppLogo';
 
 export default function AuthCallbackScreen() {
   const navigation = useNavigation<any>();
-  const { finalizeWebAuthCallback, needsOnboarding, isAuthenticated } = useAuth();
+  const { finalizeWebAuthCallback, ensureAuthenticatedUser, needsOnboarding, isAuthenticated, userProfile } = useAuth();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [processing, setProcessing] = useState(true);
 
@@ -33,8 +33,8 @@ export default function AuthCallbackScreen() {
 
           await finalizeWebAuthCallback(window.location.href);
         } else {
-          const { data } = await supabase.auth.getSession();
-          if (!data.session) throw new Error('No active session received.');
+          const activeUser = await ensureAuthenticatedUser();
+          if (!activeUser) throw new Error('No active session received.');
         }
       } catch (err: any) {
         if (active) {
@@ -48,17 +48,17 @@ export default function AuthCallbackScreen() {
     return () => {
       active = false;
     };
-  }, [finalizeWebAuthCallback]);
+  }, []);
 
   useEffect(() => {
-    if (isAuthenticated && !errorMsg) {
+    if (isAuthenticated && userProfile?.id && !errorMsg) {
       if (needsOnboarding) {
         navigation.reset({ index: 0, routes: [{ name: 'UsernameSetup' }] });
       } else {
         navigateAfterAuth(navigation);
       }
     }
-  }, [isAuthenticated, needsOnboarding, errorMsg, navigation]);
+  }, [isAuthenticated, userProfile?.id, needsOnboarding, errorMsg, navigation]);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F7F6F2', justifyContent: 'center', alignItems: 'center', padding: 24 }}>

@@ -11,6 +11,7 @@ import { buildArticleParams } from '../../components/web/webPortalHelpers';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { supabase } from '../../lib/supabaseClient';
+import { savePendingAuthReturn } from '../../utils/authReturn';
 
 type LibraryTab = 'saved' | 'liked' | 'commented';
 type FilterType = 'All' | 'Blogs' | 'Posts' | 'Videos' | 'News';
@@ -24,14 +25,14 @@ const TAB_CONFIG: { key: LibraryTab; icon: string; label: string; color: string;
 export default function LibraryScreen() {
   const { colors } = useAppTheme();
   const navigation = useNavigation<any>();
-  const { userProfile } = useAuth();
+  const { userProfile, isAuthenticated } = useAuth();
   const { unreadCount } = useNotifications();
   const [activeTab, setActiveTab] = useState<LibraryTab>('saved');
   const [activeFilter, setActiveFilter] = useState<FilterType>('All');
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { width } = useWindowDimensions();
-  const isWebDesktop = Platform.OS === 'web' && width >= 768;
+  const isWebDesktop = Platform.OS === 'web';
   const isTablet = width >= 768;
   const numColumns = isTablet ? 2 : 1;
 
@@ -215,7 +216,28 @@ export default function LibraryScreen() {
 
   if (isWebDesktop) {
     return (
-      <WebPageShell maxWidth={1280}>
+      <WebPageShell maxWidth={1280} currentRoute="Library">
+        {!isAuthenticated && !userId ? (
+          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB', padding: 36, alignItems: 'center', marginVertical: 16 }}>
+            <Ionicons name="bookmark-outline" size={44} color="#D4191F" />
+            <Text style={{ fontSize: 19, fontWeight: '800', color: '#111827', marginTop: 12, textAlign: 'center' }}>
+              Sign in to access your Library
+            </Text>
+            <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 6, textAlign: 'center', maxWidth: 380 }}>
+              View your saved stories, liked articles, and discussion history across devices.
+            </Text>
+            <TouchableOpacity
+              style={{ marginTop: 18, backgroundColor: '#D4191F', paddingHorizontal: 22, paddingVertical: 10, borderRadius: 6 }}
+              onPress={() => {
+                savePendingAuthReturn({ screen: 'Library' });
+                navigation.navigate('Login');
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14 }}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+        <>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <View style={{ width: 14, height: 3, backgroundColor: '#D4191F' }} />
@@ -335,6 +357,8 @@ export default function LibraryScreen() {
               </TouchableOpacity>
             ))}
           </View>
+        )}
+        </>
         )}
       </WebPageShell>
     );

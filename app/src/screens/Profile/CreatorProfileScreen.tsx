@@ -25,7 +25,7 @@ export default function CreatorProfileScreen() {
   const { width } = useWindowDimensions();
   const isWebDesktop = Platform.OS === 'web';
   const { authorId, authorName: paramAuthorName } = route.params || {};
-  const { userProfile } = useAuth();
+  const { userProfile, ensureAuthenticatedUser } = useAuth();
   const { lang } = useSiteLanguage();
 
   const [creator, setCreator] = useState<any>(null);
@@ -136,7 +136,8 @@ export default function CreatorProfileScreen() {
   );
 
   const handleFollow = async () => {
-    if (!userProfile?.id || !resolvedAuthorId) { 
+    const activeUser = userProfile?.id ? userProfile : await ensureAuthenticatedUser();
+    if (!activeUser?.id || !resolvedAuthorId) { 
       setModalConfig({
         visible: true,
         title: 'Login Required',

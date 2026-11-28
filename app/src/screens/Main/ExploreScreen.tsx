@@ -25,7 +25,8 @@ export default function ExploreScreen() {
   const styles = getStyles(colors);
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
-  const isWebDesktop = Platform.OS === 'web' && width >= 768;
+  const isWebDesktop = Platform.OS === 'web';
+  const isMobileWeb = Platform.OS === 'web' && width < 640;
   const { feedItems, isLoading: feedLoading } = useFeed();
   const { isAuthenticated, userProfile } = useAuth();
   const { unreadCount } = useNotifications();
@@ -178,7 +179,7 @@ export default function ExploreScreen() {
 
   if (isWebDesktop) {
     return (
-      <WebPageShell maxWidth={1280} refreshing={refreshing} onRefresh={onRefresh}>
+      <WebPageShell maxWidth={1280} currentRoute="Explore" refreshing={refreshing} onRefresh={onRefresh}>
         <View style={styles.webHeaderRow}>
           <View style={styles.webTitleRow}>
             <View style={styles.webDash} />
@@ -234,7 +235,13 @@ export default function ExploreScreen() {
             {contentFeed.map((item, index) => (
               <View
                 key={`explore-web-${item.id}-${index}`}
-                style={width >= 1024 ? styles.webCardWrapDesktop : styles.webCardWrapTablet}
+                style={
+                  isMobileWeb
+                    ? styles.webCardWrapMobile
+                    : width >= 1024
+                      ? styles.webCardWrapDesktop
+                      : styles.webCardWrapTablet
+                }
               >
                 {renderContentItem({ item, index })}
               </View>
@@ -633,6 +640,11 @@ const getStyles = (colors: any) => StyleSheet.create({
     flexGrow: 1,
     minWidth: 260,
     marginHorizontal: -16,
+  },
+  webCardWrapMobile: {
+    width: '100%',
+    minWidth: 0,
+    marginHorizontal: -12,
   },
   webEmptyBox: {
     backgroundColor: '#FFFFFF',
