@@ -137,7 +137,7 @@ export default function CreatorProfileScreen() {
 
   const handleFollow = async () => {
     const activeUser = userProfile?.id ? userProfile : await ensureAuthenticatedUser();
-    if (!activeUser?.id || !resolvedAuthorId) { 
+    if (!activeUser?.id) { 
       setModalConfig({
         visible: true,
         title: 'Login Required',
@@ -147,6 +147,7 @@ export default function CreatorProfileScreen() {
       }); 
       return; 
     }
+    if (!resolvedAuthorId) return;
     
     setFollowerCount(c => isFollowed ? Math.max(0, c - 1) : c + 1);
     await toggleFollow(resolvedAuthorId);

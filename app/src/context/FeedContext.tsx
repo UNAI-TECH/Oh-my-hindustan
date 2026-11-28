@@ -14,6 +14,7 @@ interface FeedContextProps {
   feedItems: FeedItem[];
   selectedArticle: FeedItem | null;
   isLoading: boolean;
+  isArticleLoading: boolean;
   isRefreshing: boolean;
   error: string | null;
   hasMore: boolean;
@@ -135,6 +136,7 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<FeedItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isArticleLoading, setIsArticleLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
@@ -261,7 +263,7 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const fetchArticle = async (idOrSlug: string, preferredLang?: 'en' | 'ta') => {
-    setIsLoading(true);
+    setIsArticleLoading(true);
     try {
       let decodedSlug = idOrSlug;
       try {
@@ -270,7 +272,7 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
       const normalizedSlug = decodedSlug.trim().toLowerCase();
 
       const localItem = feedItems.find(
-        it => it.id === idOrSlug || it.slug === normalizedSlug || titleToSlug(it.title) === normalizedSlug
+        it => it.id === idOrSlug || (it.slug || '').toLowerCase() === normalizedSlug || titleToSlug(it.title) === normalizedSlug
       );
       if (localItem) {
         cacheArticleSlug(localItem.id, localItem.slug || localItem.title);
@@ -291,7 +293,7 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
       console.error('Article fetch error:', e);
       setSelectedArticle(null);
     } finally {
-      setIsLoading(false);
+      setIsArticleLoading(false);
     }
   };
 
@@ -344,6 +346,7 @@ export const FeedProvider = ({ children }: { children: ReactNode }) => {
       feedItems, 
       selectedArticle, 
       isLoading, 
+      isArticleLoading,
       isRefreshing, 
       hasMore,
       sortBy,

@@ -53,6 +53,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isHandlingOAuthRef = useRef(false);
   // Guard: prevents onAuthStateChange from racing with registration flow
   const isRegisteringRef = useRef(false);
+  // Deduplicate concurrent ensureUserRow calls during boot / auth events
+  const ensureInFlightRef = useRef<Record<string, Promise<any>>>({});
 
   // ─── Cache Helpers ───
   const saveProfileToCache = async (profile: any) => {
@@ -150,6 +152,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     authUser: any,
     extra?: { fullName?: string; mobile?: string }
   ) => {
+    const key = authUser?.id;
+    if (key && ensureInFlightRef.current[key] && !extra?.fullName && !extra?.mobile) {
+      return ensureInFlightRef.current[key];
+    }
+
+    const run = async () => {
     // 1. Prefer authoritative SECURITY DEFINER RPC (handles triggers, RLS & email linking atomically)
     try {
       const { data: rpcProfile, error: rpcErr } = await supabase.rpc('ensure_citizen_profile');
@@ -241,10 +249,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     return inserted || (await fetchProfile(authUser.id, true)) || insertPayload;
+    };
+
+    if (!key || extra?.fullName || extra?.mobile) {
+      return run();
+    }
+    const promise = run().finally(() => {
+      delete ensureInFlightRef.current[key];
+    });
+    ensureInFlightRef.current[key] = promise;
+    return promise;
   };
 
   // ─── Reconcile authenticated session on-demand (prevents stale Login Required prompts) ───
   const ensureAuthenticatedUser = async () => {
+    if (userProfile?.id && isAuthenticated) {
+      return userProfile;
+    }
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
@@ -254,7 +275,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
 
-      if (userProfile?.id === session.user.id && isAuthenticated) {
+      if (userProfile?.id === session.user.id) {
+        setIsAuthenticated(true);
         return userProfile;
       }
 

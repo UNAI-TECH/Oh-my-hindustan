@@ -59,7 +59,7 @@ export default function ArticleDetailScreen() {
   const { t } = useTranslation();
   const preferredRouteLang = route.params?.lang === 'ta' || route.params?.lang === 'en' ? route.params.lang : siteLang;
   
-  const { selectedArticle, isLoading, fetchArticle } = useFeed();
+  const { selectedArticle, isArticleLoading, fetchArticle } = useFeed();
 
   const decodedRouteSlug = React.useMemo(() => {
     if (!routeSlug) return '';
@@ -78,14 +78,14 @@ export default function ArticleDetailScreen() {
         selectedArticle.id === decodedRouteSlug ||
         titleToSlug(selectedArticle.title) === decodedRouteSlug ||
         isUuid(decodedRouteSlug) ||
-        !isLoading;
+        !isArticleLoading;
       if (slugMatches) return selectedArticle.id;
     }
     if (routeSlug && isUuid(String(routeSlug))) {
       return String(routeSlug);
     }
     return undefined;
-  }, [routeId, selectedArticle?.id, selectedArticle?.title, decodedRouteSlug, routeSlug, isLoading]);
+  }, [routeId, selectedArticle?.id, selectedArticle?.title, decodedRouteSlug, routeSlug, isArticleLoading]);
   const [upvotes, setUpvotes] = useState(0);
   const [downvotes, setDownvotes] = useState(0);
   const [myVote, setMyVote] = useState<1 | -1 | 0>(0);
@@ -137,8 +137,21 @@ export default function ArticleDetailScreen() {
     return () => { s1.remove(); s2.remove(); };
   }, []);
   
+  const prevArticleResetRef = useRef<{ key?: string; lang?: string }>({});
   // Reset all state when navigating to a different post
   useEffect(() => {
+    const prev = prevArticleResetRef.current;
+    prevArticleResetRef.current = { key: articleLookupKey, lang: preferredRouteLang };
+    if (
+      prev.key &&
+      prev.key !== articleLookupKey &&
+      prev.lang === preferredRouteLang &&
+      selectedArticle?.id &&
+      selectedArticle.id === articleLookupKey
+    ) {
+      setIsReady(true);
+      return;
+    }
     setUpvotes(0);
     setDownvotes(0);
     setMyVote(0);
@@ -218,10 +231,10 @@ export default function ArticleDetailScreen() {
       selectedArticle.id === routeId ||
       selectedArticle.id === articleLookupKey ||
       titleToSlug(selectedArticle.title) === decodedRouteSlug ||
-      (!isLoading && !!selectedArticle.id);
+      (!isArticleLoading && !!selectedArticle.id);
     if (!isCurrentMatch) return;
 
-    const targetSlug = cacheArticleSlug(selectedArticle.id, selectedArticle.title);
+    const targetSlug = selectedArticle.slug || cacheArticleSlug(selectedArticle.id, selectedArticle.title);
     navigation.setOptions({ title: selectedArticle.title });
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       document.title = `${selectedArticle.title} | PostsApp`;
@@ -239,36 +252,50 @@ export default function ArticleDetailScreen() {
   }, [
     selectedArticle?.id,
     selectedArticle?.title,
+    selectedArticle?.slug,
     routeId,
     articleLookupKey,
     decodedRouteSlug,
     routeSlug,
     route.params?.title,
-    isLoading,
+    isArticleLoading,
     navigation,
   ]);
 
   const fetchInteractions = useCallback(async () => {
     if (!id) return;
     try {
-      const { count: upCount } = await supabase.from('Vote').select('id', { count: 'exact', head: true }).eq('postId', id).eq('type', 1);
-      const { count: downCount } = await supabase.from('Vote').select('id', { count: 'exact', head: true }).eq('postId', id).eq('type', -1);
-      const { count: cCount } = await supabase.from('Comment').select('id', { count: 'exact', head: true }).eq('postId', id).neq('content', '[SYSTEM_REPOST]');
-      const { count: rCount } = await supabase.from('Comment').select('id', { count: 'exact', head: true }).eq('postId', id).eq('content', '[SYSTEM_REPOST]');
-      const { count: vCount } = await supabase.from('PostView').select('id', { count: 'exact', head: true }).eq('postId', id);
-      const { data: postData } = await supabase.from('Post').select('authorId').eq('id', id).single();
-      if (postData?.authorId) setPostAuthorId(postData.authorId);
+      const [
+        upRes,
+        downRes,
+        cRes,
+        vRes,
+        postRes,
+        myVoteRes,
+        savedRes,
+      ] = await Promise.all([
+        supabase.from('Vote').select('id', { count: 'exact', head: true }).eq('postId', id).eq('type', 1),
+        supabase.from('Vote').select('id', { count: 'exact', head: true }).eq('postId', id).eq('type', -1),
+        supabase.from('Comment').select('id', { count: 'exact', head: true }).eq('postId', id).neq('content', '[SYSTEM_REPOST]'),
+        supabase.from('PostView').select('id', { count: 'exact', head: true }).eq('postId', id),
+        supabase.from('Post').select('authorId').eq('id', id).single(),
+        userProfile?.id
+          ? supabase.from('Vote').select('type').eq('postId', id).eq('userId', userProfile.id).maybeSingle()
+          : Promise.resolve({ data: null } as any),
+        userProfile?.id
+          ? supabase.from('Save').select('id').eq('postId', id).eq('userId', userProfile.id).maybeSingle()
+          : Promise.resolve({ data: null } as any),
+      ]);
 
-      setUpvotes(upCount || 0);
-      setDownvotes(downCount || 0);
-      setCommentsCount(cCount || 0);
-      setViewCount(vCount || 0);
+      if (postRes?.data?.authorId) setPostAuthorId(postRes.data.authorId);
+      setUpvotes(upRes.count || 0);
+      setDownvotes(downRes.count || 0);
+      setCommentsCount(cRes.count || 0);
+      setViewCount(vRes.count || 0);
 
       if (userProfile?.id) {
-        const { data: myVoteData } = await supabase.from('Vote').select('type').eq('postId', id).eq('userId', userProfile.id).maybeSingle();
-        setMyVote(myVoteData?.type || 0);
-        const { data: savedData } = await supabase.from('Save').select('id').eq('postId', id).eq('userId', userProfile.id).maybeSingle();
-        setIsSaved(!!savedData);
+        setMyVote(myVoteRes?.data?.type || 0);
+        setIsSaved(!!savedRes?.data);
       }
     } catch (e: any) {
       console.warn('Fetch interactions error:', e?.message);
@@ -420,11 +447,20 @@ export default function ArticleDetailScreen() {
 
   const handleFollow = async () => {
     const activeUser = userProfile?.id ? userProfile : await ensureAuthenticatedUser();
-    if (!activeUser?.id || !postAuthorId) { 
+    if (!activeUser?.id) {
       promptLogin('Please login to follow creators');
-      return; 
+      return;
     }
-    await toggleFollow(postAuthorId);
+    let effectiveAuthorId = postAuthorId || selectedArticle?.authorId || selectedArticle?.author?.id || null;
+    if (!effectiveAuthorId && id) {
+      const { data: postRow } = await supabase.from('Post').select('authorId').eq('id', id).maybeSingle();
+      if (postRow?.authorId) {
+        effectiveAuthorId = postRow.authorId;
+        setPostAuthorId(postRow.authorId);
+      }
+    }
+    if (!effectiveAuthorId) return;
+    await toggleFollow(effectiveAuthorId);
   };
 
   const fetchComments = async () => {
@@ -663,7 +699,7 @@ export default function ArticleDetailScreen() {
   const articleSeoConfig = React.useMemo(() => {
     if (Platform.OS !== 'web') return null;
     if (!selectedArticle) {
-      if (isLoading) return null;
+      if (isArticleLoading) return null;
       return {
         title: 'Article Unavailable | PostsApp',
         description: t('editorial.article_unavailable_desc', 'This article may have been archived, removed, or moved to another URL.'),
@@ -678,10 +714,10 @@ export default function ArticleDetailScreen() {
       categorySlug: categoryToSlug(selectedArticle.category),
       categoryName: selectedArticle.category,
     });
-  }, [selectedArticle, isLoading, siteLang, t]);
+  }, [selectedArticle, isArticleLoading, siteLang, t]);
 
   // Early returns — AFTER all hooks
-  if (isLoading && !selectedArticle) {
+  if (isArticleLoading && !selectedArticle) {
     if (isWebDesktop) {
       return (
         <WebPageShell maxWidth={920}>
@@ -716,7 +752,8 @@ export default function ArticleDetailScreen() {
   }
 
   const { title, category, authorName, authorImage, subtitle, thumbnail, type, content, excerpt, quote, authorNameCustom, authorPosition, hashtags } = selectedArticle;
-  const isFollowing = postAuthorId ? !!follows[postAuthorId] : false;
+  const effectiveAuthorId = postAuthorId || selectedArticle.authorId || selectedArticle.author?.id || null;
+  const isFollowing = effectiveAuthorId ? !!follows[effectiveAuthorId] : false;
   const relatedCardStyle = isWebDesktop ? styles.relatedCardWeb : { width: (width - 48) / 2 };
   const publishedDateStr = formatDate(selectedArticle.published_at || selectedArticle.createdAt);
   const updatedDateStr =

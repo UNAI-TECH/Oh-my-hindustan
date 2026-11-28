@@ -14,23 +14,32 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+const webStorage =
+  Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage
+    ? window.localStorage
+    : AsyncStorage;
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: AsyncStorage,
+    storage: webStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: Platform.OS === 'web',
+    // Prevent 5000ms navigator.locks deadlocks across concurrent requests / unmounts on web
+    lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<any>) => {
+      return await fn();
+    },
   },
   global: {
-    // Add timeout and exponential backoff retry to all fetch requests — prevents infinite loading/failures on slow mobile data
+    // Fast timeout + single retry on transient network drops so pages never spin endlessly
     fetch: async (url, options = {}) => {
       let lastError: any;
-      const maxRetries = 3;
-      
+      const maxRetries = 1;
+
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout per attempt
-        
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
         try {
           const res = await fetch(url, {
             ...options,
@@ -41,16 +50,15 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
         } catch (error: any) {
           clearTimeout(timeoutId);
           lastError = error;
-          
-          // Only retry on strict network errors or timeouts
-          const isNetworkError = error.name === 'AbortError' || (error.message && error.message.toLowerCase().includes('network'));
+
+          const isNetworkError =
+            error.name === 'AbortError' ||
+            (error.message && error.message.toLowerCase().includes('network'));
           if (!isNetworkError || attempt === maxRetries) {
             throw error;
           }
-          
-          // Exponential backoff
-          const delay = 1000 * Math.pow(2, attempt);
-          await new Promise(resolve => setTimeout(resolve, delay));
+
+          await new Promise((resolve) => setTimeout(resolve, 400));
         }
       }
       throw lastError;

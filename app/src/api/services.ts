@@ -214,7 +214,7 @@ export const AppApi = {
   getPost: async (id: string) => {
     const { data: post, error } = await supabase
       .from('Post')
-      .select(POST_SELECT_FIELDS)
+      .select(`${POST_FEED_SELECT_FIELDS}, content_json`)
       .eq('id', id)
       .eq('status', 'PUBLISHED')
       .or('is_active.eq.true,is_active.is.null')
@@ -222,13 +222,11 @@ export const AppApi = {
 
     if (error) throw error;
 
-    const votes = post.Vote || [];
-    const allComments = post.Comment || [];
-    const upvotes = votes.filter((v: any) => v.type === 1).length;
-    const downvotes = votes.filter((v: any) => v.type === -1).length;
-    const realComments = Math.max(post.comments_count || 0, allComments.filter((c: any) => c.content !== '[SYSTEM_REPOST]').length);
-    const reposts = allComments.filter((c: any) => c.content === '[SYSTEM_REPOST]').length;
-    const viewCount = Math.max(post.views_count || 0, post.PostView ? post.PostView.length : 0);
+    const upvotes = Number(post.likes_count || 0);
+    const downvotes = 0;
+    const realComments = Number(post.comments_count || 0);
+    const reposts = 0;
+    const viewCount = Number(post.views_count || 0);
 
     let translations: Array<{ id: string; title: string; language: 'en' | 'ta'; slug: string }> = [];
     if (post.translation_group_id) {
@@ -328,9 +326,10 @@ export const AppApi = {
         .from('Post')
         .select('id, slug, title')
         .eq('language', preferredLang)
-        .eq('slug', cleanSlug)
+        .ilike('slug', cleanSlug)
         .eq('status', 'PUBLISHED')
         .or('is_active.eq.true,is_active.is.null')
+        .limit(1)
         .maybeSingle();
       if (exactLang?.id) {
         cacheArticleSlug(exactLang.id, exactLang.slug || exactLang.title);
@@ -341,7 +340,7 @@ export const AppApi = {
     const { data: anyLangSlug } = await supabase
       .from('Post')
       .select('id, slug, title')
-      .eq('slug', cleanSlug)
+      .ilike('slug', cleanSlug)
       .eq('status', 'PUBLISHED')
       .or('is_active.eq.true,is_active.is.null')
       .limit(1)
